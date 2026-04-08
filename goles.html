@@ -56,11 +56,11 @@
         <div id="resultsWrapper" class="hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="card p-4">
-                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución Prob. Over 0.5 HT (Local)</h4>
+                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución Prob. Goles (Local)</h4>
                     <canvas id="chartHomeTime"></canvas>
                 </div>
                 <div class="card p-4">
-                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución Prob. Over 0.5 HT (Visita)</h4>
+                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución Prob. Goles (Visita)</h4>
                     <canvas id="chartAwayTime"></canvas>
                 </div>
             </div>
@@ -91,7 +91,7 @@
         const getData = () => JSON.parse(localStorage.getItem("footballData")) || [];
         let charts = {};
 
-        function getSegmentPercentages(liga, teamName, type, over05HTProb = 0) {
+        function getSegmentPercentages(liga, teamName, type, over05HTProb = 0, over25FTProb = 0) {
             const dataEntry = getData().find(t => t.liga === liga && t.tipo === type);
             if (!dataEntry || !dataEntry.tabla) return null;
 
@@ -114,7 +114,8 @@
             });
             const leagueAvg = leagueTotals.map(v => leagueGrandTotal > 0 ? (v / leagueGrandTotal * 100).toFixed(1) : 0);
 
-            const probDistribution = team.segments.map((s, idx) => {
+            // Probabilidad Over 0.5 HT Distribuida (Solo segmentos 0, 1, 2)
+            const probHTDist = team.segments.map((s, idx) => {
                 if (idx > 2) return 0;
                 const weight0_45 = (parseFloat(teamScored[0]) + parseFloat(teamConceded[0]) + parseFloat(leagueAvg[0])) +
                                    (parseFloat(teamScored[1]) + parseFloat(teamConceded[1]) + parseFloat(leagueAvg[1])) +
@@ -123,7 +124,14 @@
                 return weight0_45 > 0 ? (over05HTProb * (currentWeight / weight0_45)).toFixed(1) : 0;
             });
 
-            return { teamScored, teamConceded, leagueAvg, probDistribution };
+            // Probabilidad Over 2.5 FT Distribuida (Segmentos 0 a 5)
+            const probFTDist = team.segments.map((s, idx) => {
+                const totalWeight = team.segments.reduce((acc, _, i) => acc + (parseFloat(teamScored[i]) + parseFloat(teamConceded[i]) + parseFloat(leagueAvg[i])), 0);
+                const currentWeight = (parseFloat(teamScored[idx]) + parseFloat(teamConceded[idx]) + parseFloat(leagueAvg[idx]));
+                return totalWeight > 0 ? (over25FTProb * (currentWeight / totalWeight)).toFixed(1) : 0;
+            });
+
+            return { teamScored, teamConceded, leagueAvg, probHTDist, probFTDist };
         }
 
         function renderChart(canvasId, label, dataObj) {
@@ -153,9 +161,17 @@
                         },
                         {
                             label: 'Prob. Over 0.5 HT (%)',
-                            data: dataObj.probDistribution,
+                            data: dataObj.probHTDist,
                             backgroundColor: 'rgba(59, 130, 246, 0.8)', 
                             borderColor: 'rgb(59, 130, 246)',
+                            borderWidth: 2,
+                            hidden: false
+                        },
+                        {
+                            label: 'Prob. Over 2.5 FT (%)',
+                            data: dataObj.probFTDist,
+                            backgroundColor: 'rgba(139, 92, 246, 0.8)', 
+                            borderColor: 'rgb(139, 92, 246)',
                             borderWidth: 2,
                             hidden: false
                         },
@@ -282,18 +298,19 @@
             document.getElementById('resultsWrapper').classList.remove('hidden');
 
             const htLambdas = getLambdas(liga, home, away, true);
+            const ftLambdas = getLambdas(liga, home, away, false);
+            
             const probOver05HT = htLambdas ? calculateOverProb(htLambdas, 0.5) : 0;
+            const probOver25FT = ftLambdas ? calculateOverProb(ftLambdas, 2.5) : 0;
 
-            const homeSegments = getSegmentPercentages(liga, home, 'Time Segment Home', probOver05HT);
-            const awaySegments = getSegmentPercentages(liga, away, 'Time Segment Away', probOver05HT);
+            const homeSegments = getSegmentPercentages(liga, home, 'Time Segment Home', probOver05HT, probOver25FT);
+            const awaySegments = getSegmentPercentages(liga, away, 'Time Segment Away', probOver05HT, probOver25FT);
             
             if(homeSegments) renderChart('chartHomeTime', 'Local', homeSegments);
             if(awaySegments) renderChart('chartAwayTime', 'Visitante', awaySegments);
 
-            const ftL = getLambdas(liga, home, away, false);
-            const htL = getLambdas(liga, home, away, true);
-            if (ftL) renderOU('ft', ftL, [0.5, 1.5, 2.5, 3.5, 4.5]);
-            if (htL) renderOU('ht', htL, [0.5, 1.5, 2.5]);
+            if (ftLambdas) renderOU('ft', ftLambdas, [0.5, 1.5, 2.5, 3.5, 4.5]);
+            if (htLambdas) renderOU('ht', htLambdas, [0.5, 1.5, 2.5]);
         }
 
         function renderOU(prefix, lambdas, lines) {
@@ -318,15 +335,12 @@
                 
                 const row = document.createElement('div');
                 
-                // LÓGICA DE RESALTADO BG-EMERALD-100
                 let highlightClass = "";
                 const valPercent = parseFloat(probOverPercent);
                 
-                // Condición 1: Over 0.5 HT >= 70%
                 if (prefix === 'ht' && line === 0.5 && valPercent >= 70) {
                     highlightClass = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
                 }
-                // Condición 2: Over 2.5 FT >= 55%
                 else if (prefix === 'ft' && line === 2.5 && valPercent >= 55) {
                     highlightClass = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
                 }
