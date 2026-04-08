@@ -20,18 +20,10 @@
             <p class="text-slate-500 uppercase text-xs tracking-widest mt-2">Distribución de Goles Totales</p>
             
             <div class="mt-6 flex flex-wrap justify-center gap-2">
-                <a href="data.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">
-                    📁 Gestión de Datos
-                </a>
-                <a href="index.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">
-                    🎯 1X2 FT/HT
-                </a>
-                <a href="goles.html" class="bg-green-50 text-green-700 border border-green-200 py-2 px-4 rounded-md text-sm font-bold shadow-sm">
-                    ⚽ Goles O/U
-                </a>
-                <a href="btts.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">
-                    🔄 BTTS
-                </a>
+                <a href="data.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">📁 Gestión de Datos</a>
+                <a href="index.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">🎯 1X2 FT/HT</a>
+                <a href="goles.html" class="bg-green-50 text-green-700 border border-green-200 py-2 px-4 rounded-md text-sm font-bold shadow-sm">⚽ Goles O/U</a>
+                <a href="btts.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">🔄 BTTS</a>
             </div>
         </header>
 
@@ -39,67 +31,71 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Liga</label>
-                    <select id="selectLeague" onchange="updateTeams()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <select id="selectLeague" onchange="updateTeams(); saveMatchSelection();" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
                         <option value="">Seleccionar Liga</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Local</label>
-                    <select id="homeTeam" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <select id="homeTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
                         <option value="">--</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Visitante</label>
-                    <select id="awayTeam" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <select id="awayTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
                         <option value="">--</option>
                     </select>
                 </div>
             </div>
-
-            <button onclick="mainCalculation()" class="w-full mt-6 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition font-bold text-lg">
-                ANALIZAR GOLES
-            </button>
+            <button onclick="mainCalculation()" class="w-full mt-6 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition font-bold text-lg">ANALIZAR GOLES</button>
         </div>
 
         <div id="resultsWrapper" class="hidden space-y-6">
-            
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="card p-6 border-t-4 border-green-500">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Full Time (90 min)</h3>
                     <div id="ftXgDisplay" class="mb-4 text-sm font-medium text-slate-600"></div>
                     <div class="overflow-hidden rounded-lg border border-gray-200">
-                        <div class="grid grid-cols-3 grid-header p-2 text-center">
-                            <div>Mercado</div><div>Over</div><div>Under</div>
-                        </div>
+                        <div class="grid grid-cols-3 grid-header p-2 text-center"><div>Mercado</div><div>Over</div><div>Under</div></div>
                         <div id="ftOuTable" class="divide-y divide-gray-100"></div>
                     </div>
                 </div>
-
                 <div class="card p-6 border-t-4 border-indigo-500">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Half Time (45 min)</h3>
                     <div id="htXgDisplay" class="mb-4 text-sm font-medium text-slate-600"></div>
                     <div class="overflow-hidden rounded-lg border border-gray-200">
-                        <div class="grid grid-cols-3 grid-header p-2 text-center">
-                            <div>Mercado</div><div>Over</div><div>Under</div>
-                        </div>
+                        <div class="grid grid-cols-3 grid-header p-2 text-center"><div>Mercado</div><div>Over</div><div>Under</div></div>
                         <div id="htOuTable" class="divide-y divide-gray-100"></div>
                     </div>
                 </div>
             </div>
-
         </div>
-
-        <div id="emptyState" class="text-center py-12 text-gray-400">
-            Los datos aparecerán aquí una vez realices el cálculo.
-        </div>
+        <div id="emptyState" class="text-center py-12 text-gray-400">Selecciona liga y equipos para calcular.</div>
     </div>
 
     <script>
-        /* ==========================================
-           LOGICA DE DATOS
-           ========================================== */
         const getData = () => JSON.parse(localStorage.getItem("footballData")) || [];
+
+        function saveMatchSelection() {
+            const selection = {
+                liga: document.getElementById('selectLeague').value,
+                home: document.getElementById('homeTeam').value,
+                away: document.getElementById('awayTeam').value
+            };
+            sessionStorage.setItem("selectedMatch", JSON.stringify(selection));
+        }
+
+        function loadMatchSelection() {
+            const saved = JSON.parse(sessionStorage.getItem("selectedMatch"));
+            if (saved && saved.liga) {
+                document.getElementById('selectLeague').value = saved.liga;
+                updateTeams();
+                document.getElementById('homeTeam').value = saved.home;
+                document.getElementById('awayTeam').value = saved.away;
+                if(saved.home && saved.away) mainCalculation();
+            }
+        }
 
         function init() {
             const data = getData();
@@ -110,6 +106,7 @@
                 opt.value = opt.textContent = l;
                 leagueSelect.appendChild(opt);
             });
+            loadMatchSelection();
         }
 
         function updateTeams() {
@@ -118,67 +115,39 @@
             const aSel = document.getElementById('awayTeam');
             hSel.innerHTML = aSel.innerHTML = '<option value="">--</option>';
             if (!liga) return;
-
             const tHome = getData().find(t => t.liga === liga && t.tipo === 'Home');
             const tAway = getData().find(t => t.liga === liga && t.tipo === 'Away');
-
             if(tHome) tHome.tabla.forEach(t => hSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
             if(tAway) tAway.tabla.forEach(t => aSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
         }
 
-        /* ==========================================
-           MATEMÁTICAS (POISSON)
-           ========================================== */
         function factorial(n) { return n <= 1 ? 1 : n * factorial(n - 1); }
-        
-        function poisson(k, lambda) {
-            return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
-        }
+        function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k); }
 
         function getLambdas(liga, homeName, awayName, isHT) {
             const hType = isHT ? "First Half Home" : "Home";
             const aType = isHT ? "First Half Away" : "Away";
             const dataH = getData().find(t => t.liga === liga && t.tipo === hType);
             const dataA = getData().find(t => t.liga === liga && t.tipo === aType);
-
             if (!dataH || !dataA) return null;
-
             const lAvgH = dataH.tabla.reduce((s, t) => s + t.GF, 0) / dataH.tabla.reduce((s, t) => s + t.GP, 0);
             const lAvgA = dataA.tabla.reduce((s, t) => s + t.GF, 0) / dataA.tabla.reduce((s, t) => s + t.GP, 0);
-
             const eH = dataH.tabla.find(t => t.equipo === homeName);
             const eA = dataA.tabla.find(t => t.equipo === awayName);
             if (!eH || !eA) return null;
-
-            const attH = (eH.GF / eH.GP) / lAvgH;
-            const defH = (eH.GA / eH.GP) / lAvgA; // Recibidos local vs promedio anotado visita
-            const attA = (eA.GF / eA.GP) / lAvgA;
-            const defA = (eA.GA / eA.GP) / lAvgH; // Recibidos visita vs promedio anotado local
-
-            return {
-                h: attH * defA * lAvgH,
-                a: attA * defH * lAvgA
-            };
+            return { h: (eH.GF/eH.GP)/(lAvgH) * (eA.GA/eA.GP)/(lAvgH) * lAvgH, a: (eA.GF/eA.GP)/(lAvgA) * (eH.GA/eH.GP)/(lAvgA) * lAvgA };
         }
 
-        /* ==========================================
-           PROCESAMIENTO DE MERCADOS
-           ========================================== */
         function mainCalculation() {
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
             const away = document.getElementById('awayTeam').value;
-
-            if (!liga || !home || !away) return alert("Selecciona liga y equipos.");
-
+            if (!liga || !home || !away) return;
             const ftL = getLambdas(liga, home, away, false);
             const htL = getLambdas(liga, home, away, true);
-
-            if (!ftL) return alert("Datos de tabla FT incompletos.");
-
+            if (!ftL) return;
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('resultsWrapper').classList.remove('hidden');
-
             renderOU('ft', ftL, [0.5, 1.5, 2.5, 3.5, 4.5]);
             renderOU('ht', htL, [0.5, 1.5, 2.5]);
         }
@@ -187,16 +156,8 @@
             const container = document.getElementById(`${prefix}OuTable`);
             const xgEl = document.getElementById(`${prefix}XgDisplay`);
             container.innerHTML = "";
-
-            if (!lambdas) {
-                container.innerHTML = '<div class="p-4 text-xs text-red-500">Datos HT no disponibles en LocalStorage</div>';
-                xgEl.innerHTML = "";
-                return;
-            }
-
+            if (!lambdas) { container.innerHTML = '<div class="p-4 text-xs text-red-500">Datos no disponibles</div>'; return; }
             xgEl.innerHTML = `xG esperado: ${(lambdas.h + lambdas.a).toFixed(2)} goles`;
-
-            // Matriz de probabilidad (0 a 8 goles para mayor precisión en sumatoria)
             const probTotalGoles = new Array(11).fill(0); 
             for (let i = 0; i <= 7; i++) {
                 for (let j = 0; j <= 7; j++) {
@@ -204,25 +165,16 @@
                     if (i + j <= 10) probTotalGoles[i + j] += p;
                 }
             }
-
             lines.forEach(line => {
                 let probUnder = 0;
-                for (let g = 0; g < line; g++) {
-                    probUnder += probTotalGoles[g];
-                }
+                for (let g = 0; g < line; g++) probUnder += probTotalGoles[g];
                 const probOver = 1 - probUnder;
-
                 const row = document.createElement('div');
                 row.className = "grid grid-cols-3 p-3 text-center text-sm items-center";
-                row.innerHTML = `
-                    <div class="font-bold text-slate-700">${line}</div>
-                    <div class="text-green-600 font-semibold">${(probOver * 100).toFixed(1)}%</div>
-                    <div class="text-red-600 font-semibold">${(probUnder * 100).toFixed(1)}%</div>
-                `;
+                row.innerHTML = `<div class="font-bold text-slate-700">${line}</div><div class="text-green-600 font-semibold">${(probOver * 100).toFixed(1)}%</div><div class="text-red-600 font-semibold">${(probUnder * 100).toFixed(1)}%</div>`;
                 container.appendChild(row);
             });
         }
-
         init();
     </script>
 </body>
