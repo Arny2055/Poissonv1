@@ -318,9 +318,16 @@
                 
                 const row = document.createElement('div');
                 
-                // MEJORA: Resaltado bg-emerald-100 si Over 0.5 HT >= 70%
+                // LÓGICA DE RESALTADO BG-EMERALD-100
                 let highlightClass = "";
-                if (prefix === 'ht' && line === 0.5 && parseFloat(probOverPercent) >= 70) {
+                const valPercent = parseFloat(probOverPercent);
+                
+                // Condición 1: Over 0.5 HT >= 70%
+                if (prefix === 'ht' && line === 0.5 && valPercent >= 70) {
+                    highlightClass = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
+                }
+                // Condición 2: Over 2.5 FT >= 55%
+                else if (prefix === 'ft' && line === 2.5 && valPercent >= 55) {
                     highlightClass = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
                 }
 
