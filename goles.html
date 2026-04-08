@@ -56,11 +56,11 @@
         <div id="resultsWrapper" class="hidden space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="card p-4">
-                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Goles por Segmento (Local)</h4>
+                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución de Probabilidad (Local)</h4>
                     <canvas id="chartHomeTime"></canvas>
                 </div>
                 <div class="card p-4">
-                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Goles por Segmento (Visita)</h4>
+                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución de Probabilidad (Visita)</h4>
                     <canvas id="chartAwayTime"></canvas>
                 </div>
             </div>
@@ -91,23 +91,19 @@
         const getData = () => JSON.parse(localStorage.getItem("footballData")) || [];
         let charts = {};
 
-        // Función mejorada para obtener porcentajes de anotados y concedidos
-        function getSegmentPercentages(liga, teamName, type) {
+        function getSegmentPercentages(liga, teamName, type, over05Prob = 0) {
             const dataEntry = getData().find(t => t.liga === liga && t.tipo === type);
             if (!dataEntry || !dataEntry.tabla) return null;
 
             const team = dataEntry.tabla.find(t => t.equipo === teamName);
             if (!team) return null;
 
-            // Totales del equipo
             const totalScored = team.segments.reduce((acc, curr) => acc + curr.s, 0);
             const totalConceded = team.segments.reduce((acc, curr) => acc + curr.c, 0);
 
-            // Porcentajes del equipo
             const teamScored = team.segments.map(s => totalScored > 0 ? (s.s / totalScored * 100).toFixed(1) : 0);
             const teamConceded = team.segments.map(s => totalConceded > 0 ? (s.c / totalConceded * 100).toFixed(1) : 0);
 
-            // Promedio de la liga (solo anotados para la línea de referencia)
             let leagueTotals = [0, 0, 0, 0, 0, 0];
             let leagueGrandTotal = 0;
             dataEntry.tabla.forEach(t => {
@@ -118,7 +114,14 @@
             });
             const leagueAvg = leagueTotals.map(v => leagueGrandTotal > 0 ? (v / leagueGrandTotal * 100).toFixed(1) : 0);
 
-            return { teamScored, teamConceded, leagueAvg };
+            // NUEVA LÓGICA: Distribución de la probabilidad Poisson según tendencia
+            // Usamos el promedio de (Anotados + Concedidos + Liga) para ponderar dónde es más probable el gol
+            const probDistribution = team.segments.map((s, idx) => {
+                const weight = (parseFloat(teamScored[idx]) + parseFloat(teamConceded[idx]) + parseFloat(leagueAvg[idx])) / 3;
+                return (over05Prob * (weight / 100)).toFixed(1);
+            });
+
+            return { teamScored, teamConceded, leagueAvg, probDistribution };
         }
 
         function renderChart(canvasId, label, dataObj) {
@@ -133,24 +136,32 @@
                         {
                             label: 'Anotados (%)',
                             data: dataObj.teamScored,
-                            backgroundColor: 'rgba(34, 197, 94, 0.7)', // Verde
+                            backgroundColor: 'rgba(34, 197, 94, 0.4)',
                             borderColor: 'rgb(34, 197, 94)',
                             borderWidth: 1
                         },
                         {
                             label: 'Concedidos (%)',
                             data: dataObj.teamConceded,
-                            backgroundColor: 'rgba(239, 68, 68, 0.7)', // Rojo
+                            backgroundColor: 'rgba(239, 68, 68, 0.4)',
                             borderColor: 'rgb(239, 68, 68)',
                             borderWidth: 1
                         },
                         {
+                            label: 'Prob. Poisson (%)',
+                            data: dataObj.probDistribution,
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)', // Azul fuerte para la probabilidad
+                            borderColor: 'rgb(59, 130, 246)',
+                            borderWidth: 2
+                        },
+                        {
                             label: 'Prom. Liga (%)',
                             data: dataObj.leagueAvg,
-                            backgroundColor: 'rgba(148, 163, 184, 0.3)',
                             borderColor: 'rgb(148, 163, 184)',
-                            borderWidth: 1,
+                            borderWidth: 2,
                             type: 'line',
+                            pointRadius: 0,
+                            fill: false,
                             tension: 0.4
                         }
                     ]
@@ -158,17 +169,11 @@
                 options: {
                     responsive: true,
                     scales: { 
-                        y: { 
-                            beginAtZero: true, 
-                            max: 100, 
-                            ticks: { callback: v => v + '%' } 
-                        } 
+                        y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } 
                     },
                     plugins: { 
-                        legend: { 
-                            position: 'bottom', 
-                            labels: { boxWidth: 12, font: { size: 10 } } 
-                        } 
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } },
+                        tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${context.raw}%` } }
                     }
                 }
             });
@@ -235,6 +240,19 @@
             return { h: (eH.GF/eH.GP)/(lAvgH) * (eA.GA/eA.GP)/(lAvgH) * lAvgH, a: (eA.GF/eA.GP)/(lAvgA) * (eH.GA/eH.GP)/(lAvgA) * lAvgA };
         }
 
+        function calculateOverProb(lambdas, line) {
+            const probTotalGoles = new Array(11).fill(0); 
+            for (let i = 0; i <= 7; i++) {
+                for (let j = 0; j <= 7; j++) {
+                    const p = poisson(i, lambdas.h) * poisson(j, lambdas.a);
+                    if (i + j <= 10) probTotalGoles[i + j] += p;
+                }
+            }
+            let probUnder = 0;
+            for (let g = 0; g < line; g++) probUnder += probTotalGoles[g];
+            return (1 - probUnder) * 100;
+        }
+
         function mainCalculation() {
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
@@ -244,8 +262,12 @@
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('resultsWrapper').classList.remove('hidden');
 
-            const homeSegments = getSegmentPercentages(liga, home, 'Time Segment Home');
-            const awaySegments = getSegmentPercentages(liga, away, 'Time Segment Away');
+            // Calcular Probabilidades Base para la distribución
+            const ftLambdas = getLambdas(liga, home, away, false);
+            const probOver05FT = ftLambdas ? calculateOverProb(ftLambdas, 0.5) : 0;
+
+            const homeSegments = getSegmentPercentages(liga, home, 'Time Segment Home', probOver05FT);
+            const awaySegments = getSegmentPercentages(liga, away, 'Time Segment Away', probOver05FT);
             
             if(homeSegments) renderChart('chartHomeTime', 'Local', homeSegments);
             if(awaySegments) renderChart('chartAwayTime', 'Visitante', awaySegments);
@@ -262,6 +284,7 @@
             container.innerHTML = "";
             if (!lambdas) { container.innerHTML = '<div class="p-4 text-xs text-red-500">Datos no disponibles</div>'; return; }
             xgEl.innerHTML = `xG esperado: ${(lambdas.h + lambdas.a).toFixed(2)} goles`;
+            
             const probTotalGoles = new Array(11).fill(0); 
             for (let i = 0; i <= 7; i++) {
                 for (let j = 0; j <= 7; j++) {
