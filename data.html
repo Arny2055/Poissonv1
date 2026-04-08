@@ -10,6 +10,7 @@
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .table-container { overflow-x: auto; }
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.75rem; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -39,33 +40,36 @@
             
             <div class="lg:col-span-1 space-y-6">
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-slate-700">Importar Datos</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-slate-700">Importar Multi-Tablas</h2>
                     
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Liga</label>
-                            <input type="text" id="leagueName" placeholder="Ej: Premier League" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
+                            <label class="block text-sm font-medium text-gray-700">Nombre de la Liga</label>
+                            <input type="text" id="leagueName" placeholder="Ej: Serie A" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500">
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Tipo de Tabla</label>
-                            <select id="tableType" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
-                                <option value="Home">Home</option>
-                                <option value="Away">Away</option>
-                                <option value="First Half Home">First Half Home</option>
-                                <option value="First Half Away">First Half Away</option>
-                                <option value="Second Half Home">Second Half Home</option>
-                                <option value="Second Half Away">Second Half Away</option>
-                            </select>
+                            <label class="block text-xs font-bold text-blue-600 uppercase">1. Home FT</label>
+                            <textarea id="dataHomeFT" rows="4" placeholder="Pegar tabla Home FT aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Datos (Pegar texto)</label>
-                            <textarea id="rawTableData" rows="8" placeholder="1 Inter Milan 16 12 2 2 44 15 +29 38 2.38" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-xs"></textarea>
+                            <label class="block text-xs font-bold text-blue-600 uppercase">2. Away FT</label>
+                            <textarea id="dataAwayFT" rows="4" placeholder="Pegar tabla Away FT aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
                         </div>
 
-                        <button onclick="saveCurrentTable()" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition font-medium">
-                            Guardar Tabla
+                        <div>
+                            <label class="block text-xs font-bold text-orange-600 uppercase">3. Home 1T (HT)</label>
+                            <textarea id="dataHomeHT" rows="4" placeholder="Pegar tabla Home 1T aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-orange-600 uppercase">4. Away 1T (HT)</label>
+                            <textarea id="dataAwayHT" rows="4" placeholder="Pegar tabla Away 1T aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
+                        </div>
+
+                        <button onclick="saveAllTables()" class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition font-bold shadow-lg">
+                            Guardar Todas las Tablas
                         </button>
                     </div>
                 </div>
@@ -92,58 +96,65 @@
     </div>
 
     <script>
-        /* ==========================================
-           CORE LOGIC & STORAGE
-           ========================================== */
-        
         let footballData = JSON.parse(localStorage.getItem("footballData")) || [];
 
-        function saveCurrentTable() {
+        function saveAllTables() {
             const league = document.getElementById('leagueName').value.trim();
-            const type = document.getElementById('tableType').value;
-            const rawData = document.getElementById('rawTableData').value.trim();
-
-            if (!league || !rawData) {
-                alert("Por favor completa el nombre de la liga y los datos.");
+            if (!league) {
+                alert("Por favor, ingresa el nombre de la liga.");
                 return;
             }
 
-            const parsedRows = parseRawData(rawData);
-            
-            if (parsedRows.length === 0) {
-                alert("No se detectaron datos válidos. Verifica que los datos contengan el formato: [Pos] Equipo GP W D L GF GA GD Pts");
-                return;
+            const inputs = [
+                { id: 'dataHomeFT', type: 'Home' },
+                { id: 'dataAwayFT', type: 'Away' },
+                { id: 'dataHomeHT', type: 'First Half Home' },
+                { id: 'dataAwayHT', type: 'First Half Away' }
+            ];
+
+            let count = 0;
+
+            inputs.forEach(input => {
+                const rawData = document.getElementById(input.id).value.trim();
+                if (rawData) {
+                    const parsedRows = parseRawData(rawData);
+                    if (parsedRows.length > 0) {
+                        const newEntry = {
+                            liga: league,
+                            tipo: input.type,
+                            fecha: new Date().toISOString().split('T')[0],
+                            tabla: parsedRows
+                        };
+                        // Filtramos para no duplicar misma liga y tipo
+                        footballData = footballData.filter(item => !(item.liga === league && item.tipo === input.type));
+                        footballData.push(newEntry);
+                        count++;
+                        document.getElementById(input.id).value = '';
+                    }
+                }
+            });
+
+            if (count > 0) {
+                localStorage.setItem("footballData", JSON.stringify(footballData));
+                alert(`Se han guardado/actualizado ${count} tablas para la liga ${league}.`);
+                renderData();
+            } else {
+                alert("No se detectaron datos válidos en los campos.");
             }
-
-            const newEntry = {
-                liga: league,
-                tipo: type,
-                fecha: new Date().toISOString().split('T')[0],
-                tabla: parsedRows
-            };
-
-            footballData = footballData.filter(item => !(item.liga === league && item.tipo === type));
-            footballData.push(newEntry);
-
-            localStorage.setItem("footballData", JSON.stringify(footballData));
-            alert("Tabla guardada correctamente");
-            renderData();
-            document.getElementById('rawTableData').value = '';
         }
 
-        /* Lógica mejorada para aceptar formatos con o sin índice inicial y con o sin PPG al final */
         function parseRawData(text) {
             const lines = text.split('\n');
             const result = [];
             
             lines.forEach(line => {
                 const cleanLine = line.trim();
-                if (!cleanLine || cleanLine.includes('GP') || cleanLine.includes('table')) return;
+                // Saltamos líneas vacías o encabezados
+                if (!cleanLine || cleanLine.includes('GP') || cleanLine.includes('table') || cleanLine.length < 5) return;
 
-                // Regex flexible:
-                // 1. Opcionalmente un número al inicio (posición)
-                // 2. Nombre del equipo (letras y espacios)
-                // 3. 7 a 9 bloques numéricos (GP, W, D, L, GF, GA, GD, Pts, PPG opcional)
+                // Regex flexible para capturar:
+                // [Opcional Pos] [Nombre Equipo] [GP] [W] [D] [L] [GF] [GA] [GD] [Pts] [Opcional PPG]
+                // Soporta: "1 Inter Milan 16 12..." o "Inter Milan 16 12..."
                 const regex = /^(?:\d+\s+)?(.*?)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([\+\-]?\d+)\s+(\d+)(?:\s+[\d\.]+)?$/;
                 
                 const match = cleanLine.match(regex);
@@ -174,9 +185,13 @@
                 container.innerHTML = '<div class="card p-8 text-center text-gray-400">No hay datos almacenados.</div>';
                 return;
             }
-            footballData.forEach((entry, index) => {
+            
+            // Ordenamos por liga para que aparezcan juntas
+            const sortedData = [...footballData].sort((a, b) => a.liga.localeCompare(b.liga));
+
+            sortedData.forEach((entry, index) => {
                 const section = document.createElement('div');
-                section.className = 'card p-6';
+                section.className = 'card p-6 mb-4';
                 let rowsHtml = entry.tabla.map(row => `
                     <tr class="border-b border-gray-100 hover:bg-gray-50">
                         <td class="py-2 font-medium text-gray-800">${row.equipo}</td>
@@ -190,10 +205,11 @@
                         <td class="text-center py-2 font-bold">${row.Pts}</td>
                     </tr>
                 `).join('');
+
                 section.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <h3 class="text-lg font-bold text-slate-800">${entry.liga} - ${entry.tipo}</h3>
+                            <h3 class="text-lg font-bold text-slate-800">${entry.liga} - <span class="text-blue-600">${entry.tipo}</span></h3>
                             <span class="text-xs text-slate-400 font-mono">Actualizado: ${entry.fecha}</span>
                         </div>
                         <button onclick="deleteEntry(${index})" class="text-red-400 hover:text-red-600 text-sm">Eliminar</button>
@@ -242,7 +258,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = `stats_export_${new Date().getTime()}.json`;
+            a.download = `betags_export_${new Date().getTime()}.json`;
             a.click();
         }
 
