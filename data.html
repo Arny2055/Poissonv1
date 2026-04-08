@@ -23,7 +23,7 @@
                 <a href="data.html" class="bg-blue-50 text-blue-700 border border-blue-200 py-2 px-4 rounded-md text-sm font-bold shadow-sm">
                     📁 Gestión de Datos
                 </a>
-                <a href="1x2.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">
+                <a href="index.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">
                     🎯 1X2 FT/HT
                 </a>
                 <a href="goles.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">
@@ -122,7 +122,6 @@
                 tabla: parsedRows
             };
 
-            // Evitar duplicados (Misma liga + mismo tipo)
             footballData = footballData.filter(item => !(item.liga === league && item.tipo === type));
             footballData.push(newEntry);
 
@@ -132,63 +131,42 @@
             document.getElementById('rawTableData').value = '';
         }
 
-        /* ==========================================
-           PARSING INTELIGENTE
-           ========================================== */
-
         function parseRawData(text) {
             const lines = text.split('\n');
             const result = [];
-
             lines.forEach(line => {
-                // Regex para capturar Nombre Equipo y números al final
-                // Soporta nombres con espacios
                 const regex = /^(.*?)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(-?\+?\d+)$/;
                 const match = line.trim().match(regex);
-
                 if (match) {
                     const equipo = match[1];
-                    const gp = parseInt(match[2]);
-                    const w = parseInt(match[3]);
-                    const d = parseInt(match[4]);
-                    const l = parseInt(match[5]);
                     const gf = parseInt(match[6]);
                     const ga = parseInt(match[7]);
-                    const pts = parseInt(match[8]);
-
                     result.push({
                         equipo: equipo,
-                        GP: gp,
-                        W: w,
-                        D: d,
-                        L: l,
+                        GP: parseInt(match[2]),
+                        W: parseInt(match[3]),
+                        D: parseInt(match[4]),
+                        L: parseInt(match[5]),
                         GF: gf,
                         GA: ga,
-                        GD: gf - ga, // Cálculo automático
-                        Pts: pts
+                        GD: gf - ga,
+                        Pts: parseInt(match[8])
                     });
                 }
             });
             return result;
         }
 
-        /* ==========================================
-           UI RENDERING
-           ========================================== */
-
         function renderData() {
             const container = document.getElementById('dataDisplay');
             container.innerHTML = '';
-
             if (footballData.length === 0) {
                 container.innerHTML = '<div class="card p-8 text-center text-gray-400">No hay datos almacenados.</div>';
                 return;
             }
-
             footballData.forEach((entry, index) => {
                 const section = document.createElement('div');
                 section.className = 'card p-6';
-                
                 let rowsHtml = entry.tabla.map(row => `
                     <tr class="border-b border-gray-100 hover:bg-gray-50">
                         <td class="py-2 font-medium text-gray-800">${row.equipo}</td>
@@ -202,7 +180,6 @@
                         <td class="text-center py-2 font-bold">${row.Pts}</td>
                     </tr>
                 `).join('');
-
                 section.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
                         <div>
@@ -234,10 +211,6 @@
             });
         }
 
-        /* ==========================================
-           UTILITIES & POISSON PREP
-           ========================================== */
-
         function deleteEntry(index) {
             if (confirm("¿Eliminar esta tabla?")) {
                 footballData.splice(index, 1);
@@ -266,7 +239,6 @@
         function importData(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -277,36 +249,12 @@
                         renderData();
                         alert("Datos importados correctamente");
                     }
-                } catch (err) {
-                    alert("Error: El archivo JSON no es válido.");
-                }
+                } catch (err) { alert("Error: El archivo JSON no es válido."); }
             };
             reader.readAsText(file);
         }
 
-        // --- FUNCIONES PARA INTEGRACIÓN FUTURA (POISSON) ---
-        
-        /**
-         * Obtiene estadísticas por liga.
-         * @param {string} leagueName - Nombre exacto de la liga.
-         * @returns {Array} Listado de tablas encontradas.
-         */
-        window.getStatsByLeague = function(leagueName) {
-            return footballData.filter(d => d.liga === leagueName);
-        };
-
-        /**
-         * Obtiene una tabla específica (Home o Away) para una liga.
-         * @param {string} league - Nombre liga.
-         * @param {string} type - 'Home' o 'Away'.
-         */
-        window.getSpecificTable = function(league, type) {
-            return footballData.find(d => d.liga === league && d.tipo === type);
-        };
-
-        // Inicializar
         renderData();
-
     </script>
 </body>
 </html>
