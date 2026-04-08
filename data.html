@@ -11,6 +11,9 @@
         .table-container { overflow-x: auto; }
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.75rem; }
+        .bg-win { background-color: #dcfce7; } /* Scored > Conceded */
+        .bg-draw { background-color: #fef9c3; } /* Scored = Conceded */
+        .bg-loss { background-color: #fee2e2; } /* Scored < Conceded */
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -50,22 +53,32 @@
 
                         <div>
                             <label class="block text-xs font-bold text-blue-600 uppercase">1. Home FT</label>
-                            <textarea id="dataHomeFT" rows="4" placeholder="Pegar tabla Home FT aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
+                            <textarea id="dataHomeFT" rows="3" placeholder="Pegar tabla Home FT aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-blue-600 uppercase">2. Away FT</label>
-                            <textarea id="dataAwayFT" rows="4" placeholder="Pegar tabla Away FT aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
+                            <textarea id="dataAwayFT" rows="3" placeholder="Pegar tabla Away FT aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-orange-600 uppercase">3. Home 1T (HT)</label>
-                            <textarea id="dataHomeHT" rows="4" placeholder="Pegar tabla Home 1T aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
+                            <textarea id="dataHomeHT" rows="3" placeholder="Pegar tabla Home 1T aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
                         </div>
 
                         <div>
                             <label class="block text-xs font-bold text-orange-600 uppercase">4. Away 1T (HT)</label>
-                            <textarea id="dataAwayHT" rows="4" placeholder="Pegar tabla Away 1T aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
+                            <textarea id="dataAwayHT" rows="3" placeholder="Pegar tabla Away 1T aquí..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-green-600 uppercase">5. Goals Home (Time Segment)</label>
+                            <textarea id="dataTimeHome" rows="3" placeholder="Pegar tabla Goals per time segment (home)..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold text-green-600 uppercase">6. Goals Away (Time Segment)</label>
+                            <textarea id="dataTimeAway" rows="3" placeholder="Pegar tabla Goals per time segment (away)..." class="mt-1 block w-full border border-gray-300 rounded-md p-2"></textarea>
                         </div>
 
                         <button onclick="saveAllTables()" class="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition font-bold shadow-lg">
@@ -116,7 +129,9 @@
                 { id: 'dataHomeFT', type: 'Home' },
                 { id: 'dataAwayFT', type: 'Away' },
                 { id: 'dataHomeHT', type: 'First Half Home' },
-                { id: 'dataAwayHT', type: 'First Half Away' }
+                { id: 'dataAwayHT', type: 'First Half Away' },
+                { id: 'dataTimeHome', type: 'Time Segment Home' },
+                { id: 'dataTimeAway', type: 'Time Segment Away' }
             ];
 
             let count = 0;
@@ -124,13 +139,14 @@
             inputs.forEach(input => {
                 const rawData = document.getElementById(input.id).value.trim();
                 if (rawData) {
-                    const parsedRows = parseRawData(rawData);
+                    const parsedRows = input.id.includes('Time') ? parseTimeSegmentData(rawData) : parseRawData(rawData);
                     if (parsedRows.length > 0) {
                         const newEntry = {
                             liga: league,
                             tipo: input.type,
                             fecha: new Date().toISOString().split('T')[0],
-                            tabla: parsedRows
+                            tabla: parsedRows,
+                            isTimeSegment: input.id.includes('Time')
                         };
                         footballData = footballData.filter(item => !(item.liga === league && item.tipo === input.type));
                         footballData.push(newEntry);
@@ -143,7 +159,7 @@
             if (count > 0) {
                 localStorage.setItem("footballData", JSON.stringify(footballData));
                 alert(`Se han guardado/actualizado ${count} tablas para la liga ${league}.`);
-                updateLeagueFilter(); // Actualiza el selector de ligas
+                updateLeagueFilter();
                 renderData();
             } else {
                 alert("No se detectaron datos válidos en los campos.");
@@ -153,20 +169,17 @@
         function parseRawData(text) {
             const lines = text.split('\n');
             const result = [];
-            
             lines.forEach(line => {
                 const cleanLine = line.trim();
-                if (!cleanLine || cleanLine.includes('GP') || cleanLine.includes('table') || cleanLine.length < 5) return;
+                if (!cleanLine || cleanLine.includes('GP') || cleanLine.includes('table')) return;
 
                 const regex = /^(?:\d+\s+)?(.*?)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([\+\-]?\d+)\s+(\d+)(?:\s+[\d\.]+)?$/;
-                
                 const match = cleanLine.match(regex);
                 if (match) {
-                    const equipo = match[1].trim();
                     const gf = parseInt(match[6]);
                     const ga = parseInt(match[7]);
                     result.push({
-                        equipo: equipo,
+                        equipo: match[1].trim(),
                         GP: parseInt(match[2]),
                         W: parseInt(match[3]),
                         D: parseInt(match[4]),
@@ -181,12 +194,46 @@
             return result;
         }
 
-        // Actualiza las opciones del Select basándose en las ligas guardadas
+        function parseTimeSegmentData(text) {
+            const lines = text.split('\n');
+            const result = [];
+            lines.forEach(line => {
+                const cleanLine = line.trim();
+                if (!cleanLine || cleanLine.includes('0-15') || cleanLine.includes('Goals')) return;
+
+                // Regex para capturar Nombre Equipo y los 6 bloques de "X-Y"
+                const regex = /^(.*?)\s+(\d+-\d+)\s+(\d+-\d+)\s+(\d+-\d+)\s+(\d+-\d+)\s+(\d+-\d+)\s+(\d+-\d+)$/;
+                const match = cleanLine.match(regex);
+                
+                if (match) {
+                    const segments = [];
+                    let maxDiff = -1;
+                    let boldIdx = -1;
+
+                    for(let i=2; i<=7; i++) {
+                        const [s, c] = match[i].split('-').map(Number);
+                        const diff = Math.abs(s - c);
+                        if (diff > maxDiff) {
+                            maxDiff = diff;
+                            boldIdx = i-2;
+                        }
+                        segments.push({ s, c, raw: match[i] });
+                    }
+
+                    result.push({
+                        equipo: match[1].trim(),
+                        segments: segments,
+                        boldIdx: boldIdx
+                    });
+                }
+            });
+            return result;
+        }
+
         function updateLeagueFilter() {
             const filter = document.getElementById('leagueFilter');
             const currentSelection = filter.value;
             const leagues = [...new Set(footballData.map(item => item.liga))].sort();
-            
             filter.innerHTML = '<option value="">-- Selecciona una liga guardada --</option>';
             leagues.forEach(league => {
                 const option = document.createElement('option');
@@ -194,14 +241,12 @@
                 option.textContent = league;
                 filter.appendChild(option);
             });
-            
             filter.value = currentSelection;
         }
 
         function renderData() {
             const container = document.getElementById('dataDisplay');
             const selectedLeague = document.getElementById('leagueFilter').value;
-            
             container.innerHTML = '';
 
             if (footballData.length === 0) {
@@ -214,52 +259,88 @@
                 return;
             }
             
-            // Filtrar solo las tablas de la liga seleccionada
             const filteredData = footballData.filter(item => item.liga === selectedLeague);
 
             filteredData.forEach((entry) => {
                 const section = document.createElement('div');
                 section.className = 'card p-6 mb-4';
-                let rowsHtml = entry.tabla.map(row => `
-                    <tr class="border-b border-gray-100 hover:bg-gray-50">
-                        <td class="py-2 font-medium text-gray-800">${row.equipo}</td>
-                        <td class="text-center py-2">${row.GP}</td>
-                        <td class="text-center py-2">${row.W}</td>
-                        <td class="text-center py-2">${row.D}</td>
-                        <td class="text-center py-2">${row.L}</td>
-                        <td class="text-center py-2 font-semibold text-blue-600">${row.GF}</td>
-                        <td class="text-center py-2 font-semibold text-red-600">${row.GA}</td>
-                        <td class="text-center py-2 text-gray-500">${row.GD > 0 ? '+' + row.GD : row.GD}</td>
-                        <td class="text-center py-2 font-bold">${row.Pts}</td>
-                    </tr>
-                `).join('');
+                
+                let contentHtml = '';
+
+                if (entry.isTimeSegment) {
+                    // Renderizado para tablas de tiempo
+                    let rowsTime = entry.tabla.map(row => {
+                        let tds = row.segments.map((seg, idx) => {
+                            let colorClass = seg.s > seg.c ? 'bg-win' : (seg.s === seg.c ? 'bg-draw' : 'bg-loss');
+                            let weight = idx === row.boldIdx ? 'font-black underline' : '';
+                            return `<td class="text-center py-2 ${colorClass} ${weight} border border-white">${seg.raw}</td>`;
+                        }).join('');
+                        return `<tr class="border-b border-gray-100"><td class="py-2 font-medium">${row.equipo}</td>${tds}</tr>`;
+                    }).join('');
+
+                    contentHtml = `
+                        <div class="table-container">
+                            <table class="w-full text-xs text-left border-collapse">
+                                <thead>
+                                    <tr class="text-gray-500 border-b">
+                                        <th class="pb-2">Equipo</th>
+                                        <th class="pb-2 text-center">0-15</th>
+                                        <th class="pb-2 text-center">16-30</th>
+                                        <th class="pb-2 text-center">31-45*</th>
+                                        <th class="pb-2 text-center">46-60</th>
+                                        <th class="pb-2 text-center">61-75</th>
+                                        <th class="pb-2 text-center">76-90*</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rowsTime}</tbody>
+                            </table>
+                        </div>`;
+                } else {
+                    // Renderizado estándar (GF, GA, Pts...)
+                    let rowsHtml = entry.tabla.map(row => `
+                        <tr class="border-b border-gray-100 hover:bg-gray-50">
+                            <td class="py-2 font-medium text-gray-800">${row.equipo}</td>
+                            <td class="text-center py-2">${row.GP}</td>
+                            <td class="text-center py-2">${row.W}</td>
+                            <td class="text-center py-2">${row.D}</td>
+                            <td class="text-center py-2">${row.L}</td>
+                            <td class="text-center py-2 font-semibold text-blue-600">${row.GF}</td>
+                            <td class="text-center py-2 font-semibold text-red-600">${row.GA}</td>
+                            <td class="text-center py-2 text-gray-500">${row.GD > 0 ? '+' + row.GD : row.GD}</td>
+                            <td class="text-center py-2 font-bold">${row.Pts}</td>
+                        </tr>
+                    `).join('');
+
+                    contentHtml = `
+                        <div class="table-container">
+                            <table class="w-full text-sm text-left">
+                                <thead>
+                                    <tr class="text-gray-400 border-b">
+                                        <th class="pb-2 font-medium uppercase">Equipo</th>
+                                        <th class="pb-2 text-center font-medium">GP</th>
+                                        <th class="pb-2 text-center font-medium">W</th>
+                                        <th class="pb-2 text-center font-medium">D</th>
+                                        <th class="pb-2 text-center font-medium">L</th>
+                                        <th class="pb-2 text-center font-medium">GF</th>
+                                        <th class="pb-2 text-center font-medium">GA</th>
+                                        <th class="pb-2 text-center font-medium">GD</th>
+                                        <th class="pb-2 text-center font-medium">Pts</th>
+                                    </tr>
+                                </thead>
+                                <tbody>${rowsHtml}</tbody>
+                            </table>
+                        </div>`;
+                }
 
                 section.innerHTML = `
                     <div class="flex justify-between items-start mb-4">
                         <div>
                             <h3 class="text-lg font-bold text-slate-800">${entry.liga} - <span class="text-blue-600">${entry.tipo}</span></h3>
-                            <span class="text-xs text-slate-400 font-mono">Actualizado: ${entry.fecha}</span>
+                            <span class="text-xs text-slate-400 font-mono">Actualizado: ${entry.fecha} ${entry.isTimeSegment ? ' (Segments Mode)' : ''}</span>
                         </div>
                         <button onclick="deleteEntry('${entry.liga}', '${entry.tipo}')" class="text-red-400 hover:text-red-600 text-sm">Eliminar</button>
                     </div>
-                    <div class="table-container">
-                        <table class="w-full text-sm text-left">
-                            <thead>
-                                <tr class="text-gray-400 border-b">
-                                    <th class="pb-2 font-medium uppercase">Equipo</th>
-                                    <th class="pb-2 text-center font-medium">GP</th>
-                                    <th class="pb-2 text-center font-medium">W</th>
-                                    <th class="pb-2 text-center font-medium">D</th>
-                                    <th class="pb-2 text-center font-medium">L</th>
-                                    <th class="pb-2 text-center font-medium">GF</th>
-                                    <th class="pb-2 text-center font-medium">GA</th>
-                                    <th class="pb-2 text-center font-medium">GD</th>
-                                    <th class="pb-2 text-center font-medium">Pts</th>
-                                </tr>
-                            </thead>
-                            <tbody>${rowsHtml}</tbody>
-                        </table>
-                    </div>
+                    ${contentHtml}
                 `;
                 container.appendChild(section);
             });
@@ -311,7 +392,6 @@
             reader.readAsText(file);
         }
 
-        // Inicialización
         updateLeagueFilter();
         renderData();
     </script>
