@@ -114,17 +114,12 @@
             });
             const leagueAvg = leagueTotals.map(v => leagueGrandTotal > 0 ? (v / leagueGrandTotal * 100).toFixed(1) : 0);
 
-            // CORRECCIÓN: La probabilidad Over 0.5 HT solo se distribuye en los primeros 3 segmentos (0-45 min)
             const probDistribution = team.segments.map((s, idx) => {
-                if (idx > 2) return 0; // Segmentos 46-90 quedan en 0 para Poisson HT
-                
-                // Calculamos peso relativo solo del primer tiempo
+                if (idx > 2) return 0;
                 const weight0_45 = (parseFloat(teamScored[0]) + parseFloat(teamConceded[0]) + parseFloat(leagueAvg[0])) +
                                    (parseFloat(teamScored[1]) + parseFloat(teamConceded[1]) + parseFloat(leagueAvg[1])) +
                                    (parseFloat(teamScored[2]) + parseFloat(teamConceded[2]) + parseFloat(leagueAvg[2]));
-                
                 const currentWeight = (parseFloat(teamScored[idx]) + parseFloat(teamConceded[idx]) + parseFloat(leagueAvg[idx]));
-                
                 return weight0_45 > 0 ? (over05HTProb * (currentWeight / weight0_45)).toFixed(1) : 0;
             });
 
@@ -145,21 +140,24 @@
                             data: dataObj.teamScored,
                             backgroundColor: 'rgba(34, 197, 94, 0.3)',
                             borderColor: 'rgb(34, 197, 94)',
-                            borderWidth: 1
+                            borderWidth: 1,
+                            hidden: true // Oculto por defecto
                         },
                         {
                             label: 'Concedidos (%)',
                             data: dataObj.teamConceded,
                             backgroundColor: 'rgba(239, 68, 68, 0.3)',
                             borderColor: 'rgb(239, 68, 68)',
-                            borderWidth: 1
+                            borderWidth: 1,
+                            hidden: true // Oculto por defecto
                         },
                         {
                             label: 'Prob. Over 0.5 HT (%)',
                             data: dataObj.probDistribution,
                             backgroundColor: 'rgba(59, 130, 246, 0.8)', 
                             borderColor: 'rgb(59, 130, 246)',
-                            borderWidth: 2
+                            borderWidth: 2,
+                            hidden: false // Visible por defecto (Barra azul)
                         },
                         {
                             label: 'Prom. Liga (%)',
@@ -169,7 +167,8 @@
                             type: 'line',
                             pointRadius: 0,
                             fill: false,
-                            tension: 0.4
+                            tension: 0.4,
+                            hidden: true // Oculto por defecto
                         }
                     ]
                 },
@@ -179,7 +178,22 @@
                         y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } 
                     },
                     plugins: { 
-                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } }
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { boxWidth: 10, font: { size: 9 } },
+                            // Al tocar la leyenda, cambia la visibilidad
+                            onClick: function(e, legendItem, legend) {
+                                const index = legendItem.datasetIndex;
+                                const ci = legend.chart;
+                                if (ci.isDatasetVisible(index)) {
+                                    ci.hide(index);
+                                    legendItem.hidden = true;
+                                } else {
+                                    ci.show(index);
+                                    legendItem.hidden = false;
+                                }
+                            }
+                        }
                     }
                 }
             });
@@ -268,7 +282,6 @@
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('resultsWrapper').classList.remove('hidden');
 
-            // CORRECCIÓN: Calcular la probabilidad específica del primer tiempo (HT)
             const htLambdas = getLambdas(liga, home, away, true);
             const probOver05HT = htLambdas ? calculateOverProb(htLambdas, 0.5) : 0;
 
