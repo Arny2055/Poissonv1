@@ -39,19 +39,19 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Liga</label>
-                    <select id="selectLeague" onchange="updateTeams()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <select id="selectLeague" onchange="updateTeams(); saveMatchSelection();" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
                         <option value="">Seleccionar Liga</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Local (Home)</label>
-                    <select id="homeTeam" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <select id="homeTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
                         <option value="">--</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Visitante (Away)</label>
-                    <select id="awayTeam" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <select id="awayTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
                         <option value="">--</option>
                     </select>
                 </div>
@@ -104,11 +104,27 @@
     </div>
 
     <script>
-        /* ==========================================
-           DATA HANDLING
-           ========================================== */
-        
         const getData = () => JSON.parse(localStorage.getItem("footballData")) || [];
+
+        function saveMatchSelection() {
+            const selection = {
+                liga: document.getElementById('selectLeague').value,
+                home: document.getElementById('homeTeam').value,
+                away: document.getElementById('awayTeam').value
+            };
+            sessionStorage.setItem("selectedMatch", JSON.stringify(selection));
+        }
+
+        function loadMatchSelection() {
+            const saved = JSON.parse(sessionStorage.getItem("selectedMatch"));
+            if (saved && saved.liga) {
+                document.getElementById('selectLeague').value = saved.liga;
+                updateTeams();
+                document.getElementById('homeTeam').value = saved.home;
+                document.getElementById('awayTeam').value = saved.away;
+                if(saved.home && saved.away) mainCalculation();
+            }
+        }
 
         function init() {
             const data = getData();
@@ -121,6 +137,7 @@
                 opt.textContent = liga;
                 leagueSelect.appendChild(opt);
             });
+            loadMatchSelection();
         }
 
         function updateTeams() {
@@ -133,7 +150,6 @@
 
             if (!liga) return;
 
-            // Obtenemos los equipos de la tabla "Home" para el local y "Away" para el visitante
             const homeTable = getTable(liga, 'Home');
             const awayTable = getTable(liga, 'Away');
 
@@ -158,10 +174,6 @@
 
         const getTable = (liga, tipo) => getData().find(t => t.liga === liga && t.tipo === tipo);
 
-        /* ==========================================
-           POISSON LOGIC
-           ========================================== */
-
         function poisson(k, lambda) {
             return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
         }
@@ -173,10 +185,6 @@
             return res;
         }
 
-        /* ==========================================
-           CALCULATION ENGINE
-           ========================================== */
-
         function calculateXG(liga, teamHomeName, teamAwayName, isHT = false) {
             const homeType = isHT ? "First Half Home" : "Home";
             const awayType = isHT ? "First Half Away" : "Away";
@@ -186,13 +194,11 @@
 
             if (!tHome || !tAway) return null;
 
-            // Promedios Liga
             const leagueAvgGF_H = tHome.tabla.reduce((s, t) => s + t.GF, 0) / tHome.tabla.reduce((s, t) => s + t.GP, 0);
             const leagueAvgGA_H = tHome.tabla.reduce((s, t) => s + t.GA, 0) / tHome.tabla.reduce((s, t) => s + t.GP, 0);
             const leagueAvgGF_A = tAway.tabla.reduce((s, t) => s + t.GF, 0) / tAway.tabla.reduce((s, t) => s + t.GP, 0);
             const leagueAvgGA_A = tAway.tabla.reduce((s, t) => s + t.GA, 0) / tAway.tabla.reduce((s, t) => s + t.GP, 0);
 
-            // Datos Equipos Específicos
             const eHome = tHome.tabla.find(t => t.equipo === teamHomeName);
             const eAway = tAway.tabla.find(t => t.equipo === teamAwayName);
 
@@ -211,17 +217,13 @@
 
         function getProbabilities(lambdas) {
             if (!lambdas) return null;
-
             const pHome = [];
             const pAway = [];
-
             for (let i = 0; i <= 5; i++) {
                 pHome.push(poisson(i, lambdas.lambdaHome));
                 pAway.push(poisson(i, lambdas.lambdaAway));
             }
-
             let win = 0, draw = 0, loss = 0;
-
             for (let h = 0; h <= 5; h++) {
                 for (let a = 0; a <= 5; a++) {
                     const prob = pHome[h] * pAway[a];
@@ -230,44 +232,24 @@
                     else loss += prob;
                 }
             }
-
-            return { 
-                win: win * 100, 
-                draw: draw * 100, 
-                loss: loss * 100,
-                xh: lambdas.lambdaHome.toFixed(2),
-                xa: lambdas.lambdaAway.toFixed(2)
-            };
+            return { win: win * 100, draw: draw * 100, loss: loss * 100, xh: lambdas.lambdaHome.toFixed(2), xa: lambdas.lambdaAway.toFixed(2) };
         }
-
-        /* ==========================================
-           MAIN EXECUTION & UI
-           ========================================== */
 
         function mainCalculation() {
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
             const away = document.getElementById('awayTeam').value;
 
-            if (!liga || !home || !away) {
-                alert("Completa todos los campos");
-                return;
-            }
+            if (!liga || !home || !away) return;
 
             const ftXg = calculateXG(liga, home, away, false);
             const htXg = calculateXG(liga, home, away, true);
-
             const ftRes = getProbabilities(ftXg);
             const htRes = getProbabilities(htXg);
 
-            if (!ftRes) {
-                alert("No hay suficientes datos (Home/Away) para esta liga.");
-                return;
-            }
-
+            if (!ftRes) return;
             document.getElementById('noDataMessage').classList.add('hidden');
             document.getElementById('resultsContainer').classList.remove('hidden');
-
             displayResults('ft', ftRes);
             displayResults('ht', htRes);
         }
@@ -276,44 +258,20 @@
             const container1x2 = document.getElementById(`${prefix}1x2`);
             const containerDC = document.getElementById(`${prefix}DC`);
             const xgEl = document.getElementById(`${prefix}XG`);
-
             if (!res) {
-                container1x2.innerHTML = '<p class="text-red-400">Datos insuficientes (Falta tabla HT)</p>';
-                containerDC.innerHTML = '';
-                xgEl.innerHTML = '';
+                container1x2.innerHTML = '<p class="text-red-400">Datos insuficientes</p>';
                 return;
             }
-
-            // 1X2 UI
             container1x2.innerHTML = `
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
-                    <span>Local (1)</span> <span class="font-bold text-blue-600">${res.win.toFixed(2)}%</span>
-                </div>
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
-                    <span>Empate (X)</span> <span class="font-bold text-gray-600">${res.draw.toFixed(2)}%</span>
-                </div>
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
-                    <span>Visitante (2)</span> <span class="font-bold text-red-600">${res.loss.toFixed(2)}%</span>
-                </div>
-            `;
-
-            // Doble Oportunidad UI
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>Local (1)</span> <span class="font-bold text-blue-600">${res.win.toFixed(2)}%</span></div>
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>Empate (X)</span> <span class="font-bold text-gray-600">${res.draw.toFixed(2)}%</span></div>
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>Visitante (2)</span> <span class="font-bold text-red-600">${res.loss.toFixed(2)}%</span></div>`;
             containerDC.innerHTML = `
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
-                    <span>1X</span> <span class="font-bold">${(res.win + res.draw).toFixed(2)}%</span>
-                </div>
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
-                    <span>X2</span> <span class="font-bold">${(res.loss + res.draw).toFixed(2)}%</span>
-                </div>
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded">
-                    <span>12</span> <span class="font-bold">${(res.win + res.loss).toFixed(2)}%</span>
-                </div>
-            `;
-
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>1X</span> <span class="font-bold">${(res.win + res.draw).toFixed(2)}%</span></div>
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>X2</span> <span class="font-bold">${(res.loss + res.draw).toFixed(2)}%</span></div>
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>12</span> <span class="font-bold">${(res.win + res.loss).toFixed(2)}%</span></div>`;
             xgEl.innerHTML = `Probabilidad proyectada (Expected Goals): <b>Local: ${res.xh}</b> | <b>Visitante: ${res.xa}</b>`;
         }
-
-        // Cargar ligas al iniciar
         init();
     </script>
 </body>
