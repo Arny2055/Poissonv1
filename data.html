@@ -139,15 +139,18 @@
             inputs.forEach(input => {
                 const rawData = document.getElementById(input.id).value.trim();
                 if (rawData) {
-                    const parsedRows = input.id.includes('Time') ? parseTimeSegmentData(rawData) : parseRawData(rawData);
+                    const isTime = input.id.includes('Time');
+                    const parsedRows = isTime ? parseTimeSegmentData(rawData) : parseRawData(rawData);
+                    
                     if (parsedRows.length > 0) {
                         const newEntry = {
                             liga: league,
                             tipo: input.type,
                             fecha: new Date().toISOString().split('T')[0],
                             tabla: parsedRows,
-                            isTimeSegment: input.id.includes('Time')
+                            isTimeSegment: isTime
                         };
+                        // Eliminar versión previa de la misma tabla antes de guardar la nueva
                         footballData = footballData.filter(item => !(item.liga === league && item.tipo === input.type));
                         footballData.push(newEntry);
                         count++;
@@ -201,7 +204,6 @@
                 const cleanLine = line.trim();
                 if (!cleanLine || cleanLine.includes('0-15') || cleanLine.includes('Goals')) return;
 
-                // Regex para capturar Nombre Equipo y los 6 bloques de "X-Y"
                 const regex = /^(.*?)\s+(\d+-\d+)\s+(\d+-\d+)\s+(\d+-\d+)\s+(\d+-\d+)\s+(\d+-\d+)\s+(\d+-\d+)$/;
                 const match = cleanLine.match(regex);
                 
@@ -268,7 +270,6 @@
                 let contentHtml = '';
 
                 if (entry.isTimeSegment) {
-                    // Renderizado para tablas de tiempo
                     let rowsTime = entry.tabla.map(row => {
                         let tds = row.segments.map((seg, idx) => {
                             let colorClass = seg.s > seg.c ? 'bg-win' : (seg.s === seg.c ? 'bg-draw' : 'bg-loss');
@@ -296,7 +297,6 @@
                             </table>
                         </div>`;
                 } else {
-                    // Renderizado estándar (GF, GA, Pts...)
                     let rowsHtml = entry.tabla.map(row => `
                         <tr class="border-b border-gray-100 hover:bg-gray-50">
                             <td class="py-2 font-medium text-gray-800">${row.equipo}</td>
