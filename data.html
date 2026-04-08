@@ -88,8 +88,15 @@
             </div>
 
             <div class="lg:col-span-2 space-y-6">
+                <div class="card p-6 border-l-4 border-blue-500">
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Seleccionar Liga para visualizar:</label>
+                    <select id="leagueFilter" onchange="renderData()" class="block w-full border border-gray-300 rounded-md shadow-sm p-3 bg-white text-lg font-semibold text-slate-800 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">-- Selecciona una liga guardada --</option>
+                    </select>
+                </div>
+
                 <div id="dataDisplay" class="space-y-6">
-                    </div>
+                </div>
             </div>
 
         </div>
@@ -125,7 +132,6 @@
                             fecha: new Date().toISOString().split('T')[0],
                             tabla: parsedRows
                         };
-                        // Filtramos para no duplicar misma liga y tipo
                         footballData = footballData.filter(item => !(item.liga === league && item.tipo === input.type));
                         footballData.push(newEntry);
                         count++;
@@ -137,6 +143,7 @@
             if (count > 0) {
                 localStorage.setItem("footballData", JSON.stringify(footballData));
                 alert(`Se han guardado/actualizado ${count} tablas para la liga ${league}.`);
+                updateLeagueFilter(); // Actualiza el selector de ligas
                 renderData();
             } else {
                 alert("No se detectaron datos válidos en los campos.");
@@ -149,12 +156,8 @@
             
             lines.forEach(line => {
                 const cleanLine = line.trim();
-                // Saltamos líneas vacías o encabezados
                 if (!cleanLine || cleanLine.includes('GP') || cleanLine.includes('table') || cleanLine.length < 5) return;
 
-                // Regex flexible para capturar:
-                // [Opcional Pos] [Nombre Equipo] [GP] [W] [D] [L] [GF] [GA] [GD] [Pts] [Opcional PPG]
-                // Soporta: "1 Inter Milan 16 12..." o "Inter Milan 16 12..."
                 const regex = /^(?:\d+\s+)?(.*?)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([\+\-]?\d+)\s+(\d+)(?:\s+[\d\.]+)?$/;
                 
                 const match = cleanLine.match(regex);
@@ -178,18 +181,43 @@
             return result;
         }
 
+        // Actualiza las opciones del Select basándose en las ligas guardadas
+        function updateLeagueFilter() {
+            const filter = document.getElementById('leagueFilter');
+            const currentSelection = filter.value;
+            const leagues = [...new Set(footballData.map(item => item.liga))].sort();
+            
+            filter.innerHTML = '<option value="">-- Selecciona una liga guardada --</option>';
+            leagues.forEach(league => {
+                const option = document.createElement('option');
+                option.value = league;
+                option.textContent = league;
+                filter.appendChild(option);
+            });
+            
+            filter.value = currentSelection;
+        }
+
         function renderData() {
             const container = document.getElementById('dataDisplay');
+            const selectedLeague = document.getElementById('leagueFilter').value;
+            
             container.innerHTML = '';
+
             if (footballData.length === 0) {
                 container.innerHTML = '<div class="card p-8 text-center text-gray-400">No hay datos almacenados.</div>';
                 return;
             }
-            
-            // Ordenamos por liga para que aparezcan juntas
-            const sortedData = [...footballData].sort((a, b) => a.liga.localeCompare(b.liga));
 
-            sortedData.forEach((entry, index) => {
+            if (!selectedLeague) {
+                container.innerHTML = '<div class="card p-8 text-center text-blue-400 font-medium">Selecciona una liga arriba para ver sus tablas estadísticas.</div>';
+                return;
+            }
+            
+            // Filtrar solo las tablas de la liga seleccionada
+            const filteredData = footballData.filter(item => item.liga === selectedLeague);
+
+            filteredData.forEach((entry) => {
                 const section = document.createElement('div');
                 section.className = 'card p-6 mb-4';
                 let rowsHtml = entry.tabla.map(row => `
@@ -212,7 +240,7 @@
                             <h3 class="text-lg font-bold text-slate-800">${entry.liga} - <span class="text-blue-600">${entry.tipo}</span></h3>
                             <span class="text-xs text-slate-400 font-mono">Actualizado: ${entry.fecha}</span>
                         </div>
-                        <button onclick="deleteEntry(${index})" class="text-red-400 hover:text-red-600 text-sm">Eliminar</button>
+                        <button onclick="deleteEntry('${entry.liga}', '${entry.tipo}')" class="text-red-400 hover:text-red-600 text-sm">Eliminar</button>
                     </div>
                     <div class="table-container">
                         <table class="w-full text-sm text-left">
@@ -237,10 +265,11 @@
             });
         }
 
-        function deleteEntry(index) {
-            if (confirm("¿Eliminar esta tabla?")) {
-                footballData.splice(index, 1);
+        function deleteEntry(liga, tipo) {
+            if (confirm(`¿Eliminar la tabla ${tipo} de ${liga}?`)) {
+                footballData = footballData.filter(item => !(item.liga === liga && item.tipo === tipo));
                 localStorage.setItem("footballData", JSON.stringify(footballData));
+                updateLeagueFilter();
                 renderData();
             }
         }
@@ -249,6 +278,7 @@
             if (confirm("¿Estás seguro de que quieres borrar TODA la base de datos?")) {
                 footballData = [];
                 localStorage.removeItem("footballData");
+                updateLeagueFilter();
                 renderData();
             }
         }
@@ -272,6 +302,7 @@
                     if (Array.isArray(imported)) {
                         footballData = imported;
                         localStorage.setItem("footballData", JSON.stringify(footballData));
+                        updateLeagueFilter();
                         renderData();
                         alert("Datos importados correctamente");
                     }
@@ -280,6 +311,8 @@
             reader.readAsText(file);
         }
 
+        // Inicialización
+        updateLeagueFilter();
         renderData();
     </script>
 </body>
