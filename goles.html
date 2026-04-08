@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora Over/Under - Poisson</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .grid-header { background-color: #f8fafc; font-weight: 600; color: #64748b; font-size: 0.75rem; text-transform: uppercase; }
+        canvas { max-height: 300px; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -52,6 +54,17 @@
         </div>
 
         <div id="resultsWrapper" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="card p-4">
+                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Goles por Segmento (Local)</h4>
+                    <canvas id="chartHomeTime"></canvas>
+                </div>
+                <div class="card p-4">
+                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Goles por Segmento (Visita)</h4>
+                    <canvas id="chartAwayTime"></canvas>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="card p-6 border-t-4 border-green-500">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Full Time (90 min)</h3>
@@ -76,6 +89,69 @@
 
     <script>
         const getData = () => JSON.parse(localStorage.getItem("footballData")) || [];
+        let charts = {};
+
+        // Función para obtener porcentajes de segmentos
+        function getSegmentPercentages(liga, teamName, type) {
+            const dataEntry = getData().find(t => t.liga === liga && t.tipo === type);
+            if (!dataEntry || !dataEntry.tabla) return null;
+
+            // 1. Calcular promedio de la liga
+            let leagueTotals = [0, 0, 0, 0, 0, 0];
+            let leagueGrandTotal = 0;
+            dataEntry.tabla.forEach(team => {
+                team.segments.forEach((s, idx) => {
+                    leagueTotals[idx] += s.s; // Sumamos goles anotados
+                    leagueGrandTotal += s.s;
+                });
+            });
+            const leaguePercentages = leagueTotals.map(v => leagueGrandTotal > 0 ? (v / leagueGrandTotal * 100).toFixed(1) : 0);
+
+            // 2. Calcular equipo específico
+            const team = dataEntry.tabla.find(t => t.equipo === teamName);
+            let teamPercentages = [0,0,0,0,0,0];
+            if (team) {
+                const teamTotal = team.segments.reduce((acc, curr) => acc + curr.s, 0);
+                teamPercentages = team.segments.map(s => teamTotal > 0 ? (s.s / teamTotal * 100).toFixed(1) : 0);
+            }
+
+            return { league: leaguePercentages, team: teamPercentages };
+        }
+
+        function renderChart(canvasId, label, dataObj) {
+            if (charts[canvasId]) charts[canvasId].destroy();
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            charts[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['0-15', '16-30', '31-45', '46-60', '61-75', '76-90'],
+                    datasets: [
+                        {
+                            label: 'Equipo (%)',
+                            data: dataObj.team,
+                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                            borderColor: 'rgb(34, 197, 94)',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Liga Avg (%)',
+                            data: dataObj.league,
+                            backgroundColor: 'rgba(148, 163, 184, 0.3)',
+                            borderColor: 'rgb(148, 163, 184)',
+                            borderWidth: 1,
+                            type: 'line',
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+        }
 
         function saveMatchSelection() {
             const selection = {
@@ -143,13 +219,22 @@
             const home = document.getElementById('homeTeam').value;
             const away = document.getElementById('awayTeam').value;
             if (!liga || !home || !away) return;
-            const ftL = getLambdas(liga, home, away, false);
-            const htL = getLambdas(liga, home, away, true);
-            if (!ftL) return;
+
             document.getElementById('emptyState').classList.add('hidden');
             document.getElementById('resultsWrapper').classList.remove('hidden');
-            renderOU('ft', ftL, [0.5, 1.5, 2.5, 3.5, 4.5]);
-            renderOU('ht', htL, [0.5, 1.5, 2.5]);
+
+            // Lógica de Gráficas de Segmentos
+            const homeSegments = getSegmentPercentages(liga, home, 'Time Segment Home');
+            const awaySegments = getSegmentPercentages(liga, away, 'Time Segment Away');
+            
+            if(homeSegments) renderChart('chartHomeTime', 'Local', homeSegments);
+            if(awaySegments) renderChart('chartAwayTime', 'Visitante', awaySegments);
+
+            // Poisson Estándar
+            const ftL = getLambdas(liga, home, away, false);
+            const htL = getLambdas(liga, home, away, true);
+            if (ftL) renderOU('ft', ftL, [0.5, 1.5, 2.5, 3.5, 4.5]);
+            if (htL) renderOU('ht', htL, [0.5, 1.5, 2.5]);
         }
 
         function renderOU(prefix, lambdas, lines) {
