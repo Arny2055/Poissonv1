@@ -61,7 +61,7 @@
 
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Datos (Pegar texto)</label>
-                            <textarea id="rawTableData" rows="8" placeholder="Inter Milan 16 12 2 2 44 15 38" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-xs"></textarea>
+                            <textarea id="rawTableData" rows="8" placeholder="1 Inter Milan 16 12 2 2 44 15 +29 38 2.38" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 font-mono text-xs"></textarea>
                         </div>
 
                         <button onclick="saveCurrentTable()" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition font-medium">
@@ -111,7 +111,7 @@
             const parsedRows = parseRawData(rawData);
             
             if (parsedRows.length === 0) {
-                alert("No se detectaron datos válidos. Verifica el formato.");
+                alert("No se detectaron datos válidos. Verifica que los datos contengan el formato: [Pos] Equipo GP W D L GF GA GD Pts");
                 return;
             }
 
@@ -131,14 +131,24 @@
             document.getElementById('rawTableData').value = '';
         }
 
+        /* Lógica mejorada para aceptar formatos con o sin índice inicial y con o sin PPG al final */
         function parseRawData(text) {
             const lines = text.split('\n');
             const result = [];
+            
             lines.forEach(line => {
-                const regex = /^(.*?)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(-?\+?\d+)$/;
-                const match = line.trim().match(regex);
+                const cleanLine = line.trim();
+                if (!cleanLine || cleanLine.includes('GP') || cleanLine.includes('table')) return;
+
+                // Regex flexible:
+                // 1. Opcionalmente un número al inicio (posición)
+                // 2. Nombre del equipo (letras y espacios)
+                // 3. 7 a 9 bloques numéricos (GP, W, D, L, GF, GA, GD, Pts, PPG opcional)
+                const regex = /^(?:\d+\s+)?(.*?)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+([\+\-]?\d+)\s+(\d+)(?:\s+[\d\.]+)?$/;
+                
+                const match = cleanLine.match(regex);
                 if (match) {
-                    const equipo = match[1];
+                    const equipo = match[1].trim();
                     const gf = parseInt(match[6]);
                     const ga = parseInt(match[7]);
                     result.push({
@@ -150,7 +160,7 @@
                         GF: gf,
                         GA: ga,
                         GD: gf - ga,
-                        Pts: parseInt(match[8])
+                        Pts: parseInt(match[9])
                     });
                 }
             });
