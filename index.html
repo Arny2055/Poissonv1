@@ -9,7 +9,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .result-badge { padding: 0.5rem; border-radius: 6px; text-align: center; font-weight: bold; }
+        .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
+        .hidden-tab { display: none; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -35,81 +36,84 @@
             </div>
         </header>
 
-        <div class="card p-6 mb-8">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="card p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Liga</label>
-                    <select id="selectLeague" onchange="updateTeams(); saveMatchSelection();" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Liga</label>
+                    <select id="selectLeague" onchange="updateTeams(); saveMatchSelection();" class="block w-full border border-gray-300 rounded-md shadow-sm p-2.5 bg-white text-sm">
                         <option value="">Seleccionar Liga</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Local (Home)</label>
-                    <select id="homeTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Local (Home)</label>
+                    <select id="homeTeam" onchange="saveMatchSelection()" class="block w-full border border-gray-300 rounded-md shadow-sm p-2.5 bg-white text-sm">
                         <option value="">--</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Visitante (Away)</label>
-                    <select id="awayTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Visitante (Away)</label>
+                    <select id="awayTeam" onchange="saveMatchSelection()" class="block w-full border border-gray-300 rounded-md shadow-sm p-2.5 bg-white text-sm">
                         <option value="">--</option>
                     </select>
                 </div>
             </div>
 
-            <div class="mt-6 flex gap-4">
-                <button onclick="mainCalculation()" class="flex-1 bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 transition font-bold text-lg">
+            <div class="mt-6">
+                <button onclick="mainCalculation()" class="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition font-bold text-lg shadow-lg">
                     CALCULAR PROBABILIDADES
                 </button>
             </div>
         </div>
 
-        <div id="resultsContainer" class="hidden space-y-8">
+        <div id="tabNavigation" class="hidden flex border-b border-gray-200 mb-4 bg-white rounded-t-lg">
+            <button onclick="switchTab('ft')" id="tab-ft" class="flex-1 py-4 text-center text-sm uppercase tracking-wider tab-active">Full Time (FT)</button>
+            <button onclick="switchTab('ht')" id="tab-ht" class="flex-1 py-4 text-center text-sm uppercase tracking-wider text-gray-500">Half Time (HT)</button>
+        </div>
+
+        <div id="resultsContainer" class="hidden">
             
-            <div class="card p-6 border-l-4 border-blue-500">
-                <h2 class="text-xl font-bold mb-4 text-slate-800 border-b pb-2">Full Time (FT)</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div>
-                        <p class="text-sm text-gray-500 mb-3 uppercase font-semibold">Mercado 1X2</p>
+            <div id="section-ft" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="card p-5 border-t-4 border-blue-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Mercado 1X2</p>
                         <div class="space-y-2" id="ft1x2"></div>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500 mb-3 uppercase font-semibold">Doble Oportunidad</p>
+                    <div class="card p-5 border-t-4 border-blue-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Doble Oportunidad</p>
                         <div class="space-y-2" id="ftDC"></div>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500 mb-3 uppercase font-semibold">Empate No Válida</p>
+                    <div class="card p-5 border-t-4 border-blue-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Empate No Válida (DNB)</p>
                         <div class="space-y-2" id="ftDNB"></div>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500 mb-3 uppercase font-semibold">Marcador Correcto (Top 5)</p>
-                        <div class="space-y-2" id="ftCS"></div>
+                    <div class="card p-5 border-t-4 border-blue-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Marcadores Probables</p>
+                        <div class="grid grid-cols-1 gap-2" id="ftCS"></div>
                     </div>
                 </div>
-                <div class="mt-4 p-3 bg-blue-50 rounded text-xs text-blue-800" id="ftXG"></div>
+                <div class="card p-4 bg-blue-50 text-blue-800 text-xs font-medium" id="ftXG"></div>
             </div>
 
-            <div class="card p-6 border-l-4 border-orange-500">
-                <h2 class="text-xl font-bold mb-4 text-slate-800 border-b pb-2">Half Time (HT)</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div>
-                        <p class="text-sm text-gray-500 mb-3 uppercase font-semibold">Mercado 1X2</p>
+            <div id="section-ht" class="hidden-tab space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="card p-5 border-t-4 border-orange-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Mercado 1X2 HT</p>
                         <div class="space-y-2" id="ht1x2"></div>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500 mb-3 uppercase font-semibold">Doble Oportunidad</p>
+                    <div class="card p-5 border-t-4 border-orange-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Doble Oportunidad HT</p>
                         <div class="space-y-2" id="htDC"></div>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500 mb-3 uppercase font-semibold">Empate No Válida</p>
+                    <div class="card p-5 border-t-4 border-orange-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">DNB HT</p>
                         <div class="space-y-2" id="htDNB"></div>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-500 mb-3 uppercase font-semibold">Marcador Correcto (Top 5)</p>
-                        <div class="space-y-2" id="htCS"></div>
+                    <div class="card p-5 border-t-4 border-orange-500">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Marcadores HT (Top 5)</p>
+                        <div class="grid grid-cols-1 gap-2" id="htCS"></div>
                     </div>
                 </div>
-                <div class="mt-4 p-3 bg-orange-50 rounded text-xs text-orange-800" id="htXG"></div>
+                <div class="card p-4 bg-orange-50 text-orange-800 text-xs font-medium" id="htXG"></div>
             </div>
 
         </div>
@@ -121,6 +125,25 @@
 
     <script>
         const getData = () => JSON.parse(localStorage.getItem("footballData")) || [];
+
+        function switchTab(type) {
+            const ftBtn = document.getElementById('tab-ft');
+            const htBtn = document.getElementById('tab-ht');
+            const ftSec = document.getElementById('section-ft');
+            const htSec = document.getElementById('section-ht');
+
+            if (type === 'ft') {
+                ftBtn.classList.add('tab-active');
+                htBtn.classList.remove('tab-active');
+                ftSec.classList.remove('hidden-tab');
+                htSec.classList.add('hidden-tab');
+            } else {
+                htBtn.classList.add('tab-active');
+                ftBtn.classList.remove('tab-active');
+                htSec.classList.remove('hidden-tab');
+                ftSec.classList.add('hidden-tab');
+            }
+        }
 
         function saveMatchSelection() {
             const selection = {
@@ -204,10 +227,8 @@
         function calculateXG(liga, teamHomeName, teamAwayName, isHT = false) {
             const homeType = isHT ? "First Half Home" : "Home";
             const awayType = isHT ? "First Half Away" : "Away";
-
             const tHome = getTable(liga, homeType);
             const tAway = getTable(liga, awayType);
-
             if (!tHome || !tAway) return null;
 
             const leagueAvgGF_H = tHome.tabla.reduce((s, t) => s + t.GF, 0) / tHome.tabla.reduce((s, t) => s + t.GP, 0);
@@ -217,7 +238,6 @@
 
             const eHome = tHome.tabla.find(t => t.equipo === teamHomeName);
             const eAway = tAway.tabla.find(t => t.equipo === teamAwayName);
-
             if (!eHome || !eAway) return null;
 
             const homeAttack = (eHome.GF / eHome.GP) / leagueAvgGF_H;
@@ -227,7 +247,6 @@
 
             const lambdaHome = homeAttack * awayDefense * leagueAvgGF_H;
             const lambdaAway = awayAttack * homeDefense * leagueAvgGF_A;
-
             return { lambdaHome, lambdaAway };
         }
 
@@ -242,92 +261,69 @@
 
             const scores = [];
             let win = 0, draw = 0, loss = 0;
-
             for (let h = 0; h <= 5; h++) {
                 for (let a = 0; a <= 5; a++) {
                     const prob = pHome[h] * pAway[a];
-                    
-                    // Almacenar para marcador correcto
-                    scores.push({ score: `${h} - ${a}`, prob: prob * 100 });
-
+                    scores.push({ score: `${h}-${a}`, prob: prob * 100 });
                     if (h > a) win += prob;
                     else if (h === a) draw += prob;
                     else loss += prob;
                 }
             }
-
-            // Ordenar marcadores por probabilidad descendente y tomar los 5 mejores
             const topScores = scores.sort((a, b) => b.prob - a.prob).slice(0, 5);
-
-            return { 
-                win: win * 100, 
-                draw: draw * 100, 
-                loss: loss * 100, 
-                topScores,
-                xh: lambdas.lambdaHome.toFixed(2), 
-                xa: lambdas.lambdaAway.toFixed(2) 
-            };
+            return { win: win * 100, draw: draw * 100, loss: loss * 100, topScores, xh: lambdas.lambdaHome.toFixed(2), xa: lambdas.lambdaAway.toFixed(2) };
         }
 
         function mainCalculation() {
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
             const away = document.getElementById('awayTeam').value;
-
             if (!liga || !home || !away) return;
 
-            const ftXg = calculateXG(liga, home, away, false);
-            const htXg = calculateXG(liga, home, away, true);
-            const ftRes = getProbabilities(ftXg);
-            const htRes = getProbabilities(htXg);
+            const ftRes = getProbabilities(calculateXG(liga, home, away, false));
+            const htRes = getProbabilities(calculateXG(liga, home, away, true));
 
             if (!ftRes) return;
             document.getElementById('noDataMessage').classList.add('hidden');
+            document.getElementById('tabNavigation').classList.remove('hidden');
             document.getElementById('resultsContainer').classList.remove('hidden');
             displayResults('ft', ftRes);
             displayResults('ht', htRes);
         }
 
         function displayResults(prefix, res) {
-            const container1x2 = document.getElementById(`${prefix}1x2`);
-            const containerDC = document.getElementById(`${prefix}DC`);
-            const containerDNB = document.getElementById(`${prefix}DNB`);
-            const containerCS = document.getElementById(`${prefix}CS`);
+            const c1x2 = document.getElementById(`${prefix}1x2`);
+            const cDC = document.getElementById(`${prefix}DC`);
+            const cDNB = document.getElementById(`${prefix}DNB`);
+            const cCS = document.getElementById(`${prefix}CS`);
             const xgEl = document.getElementById(`${prefix}XG`);
             
-            if (!res) {
-                container1x2.innerHTML = '<p class="text-red-400">Datos insuficientes</p>';
-                return;
-            }
+            if (!res) return;
 
-            // Cálculo Empate Apuesta No Válida (DNB)
-            const probTotalSinEmpate = (res.win + res.loss) / 100;
-            const dnbHome = probTotalSinEmpate > 0 ? (res.win / 100) / probTotalSinEmpate * 100 : 0;
-            const dnbAway = probTotalSinEmpate > 0 ? (res.loss / 100) / probTotalSinEmpate * 100 : 0;
+            const dnbTotal = (res.win + res.loss) / 100;
+            const dnbH = dnbTotal > 0 ? (res.win / 100) / dnbTotal * 100 : 0;
+            const dnbA = dnbTotal > 0 ? (res.loss / 100) / dnbTotal * 100 : 0;
 
-            container1x2.innerHTML = `
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>Local (1)</span> <span class="font-bold text-blue-600">${res.win.toFixed(2)}%</span></div>
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>Empate (X)</span> <span class="font-bold text-gray-600">${res.draw.toFixed(2)}%</span></div>
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>Visitante (2)</span> <span class="font-bold text-red-600">${res.loss.toFixed(2)}%</span></div>`;
+            c1x2.innerHTML = `
+                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Local</span><span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span></div>
+                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Empate</span><span class="font-bold text-gray-500">${res.draw.toFixed(1)}%</span></div>
+                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>`;
             
-            containerDC.innerHTML = `
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>1X</span> <span class="font-bold">${(res.win + res.draw).toFixed(2)}%</span></div>
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>X2</span> <span class="font-bold">${(res.loss + res.draw).toFixed(2)}%</span></div>
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>12</span> <span class="font-bold">${(res.win + res.loss).toFixed(2)}%</span></div>`;
+            cDC.innerHTML = `
+                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>1X</span><span class="font-bold">${(res.win + res.draw).toFixed(1)}%</span></div>
+                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>X2</span><span class="font-bold">${(res.loss + res.draw).toFixed(1)}%</span></div>
+                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>12</span><span class="font-bold">${(res.win + res.loss).toFixed(1)}%</span></div>`;
             
-            containerDNB.innerHTML = `
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>DNB 1</span> <span class="font-bold text-blue-600">${dnbHome.toFixed(2)}%</span></div>
-                <div class="flex justify-between items-center bg-gray-50 p-3 rounded"><span>DNB 2</span> <span class="font-bold text-red-600">${dnbAway.toFixed(2)}%</span></div>`;
+            cDNB.innerHTML = `
+                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>DNB 1</span><span class="font-bold text-blue-600">${dnbH.toFixed(1)}%</span></div>
+                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>DNB 2</span><span class="font-bold text-red-600">${dnbA.toFixed(1)}%</span></div>`;
 
-            // Mostrar Marcador Correcto
-            containerCS.innerHTML = res.topScores.map(item => `
-                <div class="flex justify-between items-center bg-indigo-50 p-3 rounded border-b border-indigo-100 last:border-0">
-                    <span class="font-bold text-indigo-900">${item.score}</span> 
-                    <span class="font-bold text-indigo-600">${item.prob.toFixed(2)}%</span>
-                </div>
-            `).join('');
+            cCS.innerHTML = res.topScores.map(s => `
+                <div class="flex justify-between text-sm p-2 bg-indigo-50 rounded border border-indigo-100">
+                    <span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span>
+                </div>`).join('');
 
-            xgEl.innerHTML = `Probabilidad proyectada (Expected Goals): <b>Local: ${res.xh}</b> | <b>Visitante: ${res.xa}</b>`;
+            xgEl.innerHTML = `xG Proyectado: Local ${res.xh} - Visitante ${res.xa}`;
         }
         init();
     </script>
