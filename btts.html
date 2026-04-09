@@ -78,7 +78,7 @@
                     <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Full Time (FT)</h3>
                     <div id="ftXg" class="text-center text-xs text-slate-400 mb-4"></div>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span class="font-bold text-slate-600">BTTS SÍ</span><span id="ftYes" class="text-2xl font-black btts-yes">0%</span></div>
+                        <div id="ftYesBox" class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span id="ftYesLabel" class="font-bold text-slate-600">BTTS SÍ</span><span id="ftYes" class="text-2xl font-black btts-yes">0%</span></div>
                         <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span class="font-bold text-slate-600">BTTS NO</span><span id="ftNo" class="text-2xl font-black btts-no">0%</span></div>
                     </div>
                 </div>
@@ -86,7 +86,7 @@
                     <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Half Time (HT)</h3>
                     <div id="htXg" class="text-center text-xs text-slate-400 mb-4"></div>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span class="font-bold text-slate-600">BTTS SÍ</span><span id="htYes" class="text-2xl font-black btts-yes">0%</span></div>
+                        <div id="htYesBox" class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span id="htYesLabel" class="font-bold text-slate-600">BTTS SÍ</span><span id="htYes" class="text-2xl font-black btts-yes">0%</span></div>
                         <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span class="font-bold text-slate-600">BTTS NO</span><span id="htNo" class="text-2xl font-black btts-no">0%</span></div>
                     </div>
                 </div>
@@ -193,13 +193,30 @@
             const yesEl = document.getElementById(`${prefix}Yes`);
             const noEl = document.getElementById(`${prefix}No`);
             const xgEl = document.getElementById(`${prefix}Xg`);
+            const boxEl = document.getElementById(`${prefix}YesBox`);
+            const labelEl = document.getElementById(`${prefix}YesLabel`);
+            
             if (!lambdas) { yesEl.innerText = "--"; noEl.innerText = "--"; return; }
+            
             const pHome0 = poisson(0, lambdas.h);
             const pAway0 = poisson(0, lambdas.a);
             const probBothScore = (1 - pHome0) * (1 - pAway0);
-            yesEl.innerText = `${(probBothScore * 100).toFixed(2)}%`;
-            noEl.innerText = `${(100 - (probBothScore * 100)).toFixed(2)}%`;
+            const percentage = probBothScore * 100;
+
+            yesEl.innerText = `${percentage.toFixed(2)}%`;
+            noEl.innerText = `${(100 - percentage).toFixed(2)}%`;
             xgEl.innerText = `xG H: ${lambdas.h.toFixed(2)} | xG A: ${lambdas.a.toFixed(2)}`;
+
+            // Lógica de color de fondo >= 55%
+            if (percentage >= 55) {
+                boxEl.className = "flex justify-between items-center p-4 bg-emerald-500 border border-emerald-600 rounded-lg";
+                labelEl.className = "font-bold text-white";
+                yesEl.className = "text-2xl font-black text-white";
+            } else {
+                boxEl.className = "flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg";
+                labelEl.className = "font-bold text-slate-600";
+                yesEl.className = "text-2xl font-black btts-yes";
+            }
         }
 
         function calculateFirstGoal(lambdas) {
@@ -218,16 +235,22 @@
             const probVisitanteAnota = (1 - poisson(0, lambdas.a)) * 100;
             const probLocalAnota = (1 - poisson(0, lambdas.h)) * 100;
 
-            const style = `p-3 bg-slate-50 rounded-lg border border-slate-100`;
+            const getStyle = (prob) => {
+                if (prob >= 55) return `p-3 bg-emerald-500 rounded-lg border border-emerald-600 text-white`;
+                return `p-3 bg-slate-50 rounded-lg border border-slate-100`;
+            };
+
+            const getLabelColor = (prob) => prob >= 55 ? 'text-white' : 'text-slate-400';
+            const getValueColor = (prob) => prob >= 55 ? 'text-white' : 'text-emerald-600';
 
             condHomeEl.innerHTML = `
-                <div class="${style} flex flex-col"><span class="text-slate-400 text-[10px] font-bold">BTTS SÍ</span><span class="text-lg font-black text-emerald-600">${probVisitanteAnota.toFixed(1)}%</span></div>
-                <div class="${style} flex flex-col"><span class="text-slate-400 text-[10px] font-bold">BTTS NO</span><span class="text-lg font-black text-red-600">${(100 - probVisitanteAnota).toFixed(1)}%</span></div>
+                <div class="${getStyle(probVisitanteAnota)} flex flex-col"><span class="${getLabelColor(probVisitanteAnota)} text-[10px] font-bold">BTTS SÍ</span><span class="text-lg font-black ${getValueColor(probVisitanteAnota)}">${probVisitanteAnota.toFixed(1)}%</span></div>
+                <div class="p-3 bg-slate-50 rounded-lg border border-slate-100 flex flex-col"><span class="text-slate-400 text-[10px] font-bold">BTTS NO</span><span class="text-lg font-black text-red-600">${(100 - probVisitanteAnota).toFixed(1)}%</span></div>
             `;
 
             condAwayEl.innerHTML = `
-                <div class="${style} flex flex-col"><span class="text-slate-400 text-[10px] font-bold">BTTS SÍ</span><span class="text-lg font-black text-emerald-600">${probLocalAnota.toFixed(1)}%</span></div>
-                <div class="${style} flex flex-col"><span class="text-slate-400 text-[10px] font-bold">BTTS NO</span><span class="text-lg font-black text-red-600">${(100 - probLocalAnota).toFixed(1)}%</span></div>
+                <div class="${getStyle(probLocalAnota)} flex flex-col"><span class="${getLabelColor(probLocalAnota)} text-[10px] font-bold">BTTS SÍ</span><span class="text-lg font-black ${getValueColor(probLocalAnota)}">${probLocalAnota.toFixed(1)}%</span></div>
+                <div class="p-3 bg-slate-50 rounded-lg border border-slate-100 flex flex-col"><span class="text-slate-400 text-[10px] font-bold">BTTS NO</span><span class="text-lg font-black text-red-600">${(100 - probLocalAnota).toFixed(1)}%</span></div>
             `;
         }
 
