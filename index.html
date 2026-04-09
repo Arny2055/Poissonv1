@@ -263,7 +263,7 @@
             if (!lambdas) return null;
             const pHome = [];
             const pAway = [];
-            const maxG = 10; // Mayor rango para handicaps
+            const maxG = 10;
             for (let i = 0; i <= maxG; i++) {
                 pHome.push(poisson(i, lambdas.lambdaHome));
                 pAway.push(poisson(i, lambdas.lambdaAway));
@@ -272,7 +272,6 @@
             const scores = [];
             let win = 0, draw = 0, loss = 0;
             
-            // Handicaps 3-way
             let hLocal = { 1: {w:0,d:0,l:0}, 2: {w:0,d:0,l:0}, 3: {w:0,d:0,l:0} };
             let hVisit = { 1: {w:0,d:0,l:0}, 2: {w:0,d:0,l:0}, 3: {w:0,d:0,l:0} };
 
@@ -281,19 +280,16 @@
                     const prob = pHome[h] * pAway[a];
                     if(h <= 5 && a <= 5) scores.push({ score: `${h}-${a}`, prob: prob * 100 });
                     
-                    // 1X2 Standard
                     if (h > a) win += prob;
                     else if (h === a) draw += prob;
                     else loss += prob;
 
-                    // Lógica Handicap Local Ventaja (+N)
                     [1,2,3].forEach(n => {
                         if ((h + n) > a) hLocal[n].w += prob;
                         else if ((h + n) === a) hLocal[n].d += prob;
                         else hLocal[n].l += prob;
                     });
 
-                    // Lógica Handicap Visita Ventaja (+N)
                     [1,2,3].forEach(n => {
                         if (h > (a + n)) hVisit[n].w += prob;
                         else if (h === (a + n)) hVisit[n].d += prob;
@@ -359,8 +355,10 @@
                     <span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span>
                 </div>`).join('');
 
-            // Renderizar Handicaps
+            // Renderizar Handicaps Ordenados: Primero Local, luego Visitante
             let hdHTML = `<div class="bg-gray-100 p-2 rounded handicap-grid font-bold text-gray-600"><span>Opción</span><span>Local (+N)</span><span>Empate</span><span>Visita</span></div>`;
+            
+            // Sección Local
             [1,2,3].forEach(n => {
                 hdHTML += `
                 <div class="handicap-grid p-2 border-b border-gray-100 items-center italic text-gray-500"><span>Local +${n}</span></div>
@@ -368,7 +366,15 @@
                     <span class="text-blue-600 font-bold">${(res.hLocal[n].w * 100).toFixed(1)}%</span>
                     <span class="text-gray-600 font-bold">${(res.hLocal[n].d * 100).toFixed(1)}%</span>
                     <span class="text-red-600 font-bold">${(res.hLocal[n].l * 100).toFixed(1)}%</span>
-                </div>
+                </div>`;
+            });
+
+            // Divisor visual opcional entre bloques
+            hdHTML += `<div class="h-2 md:col-span-2"></div>`;
+
+            // Sección Visitante
+            [1,2,3].forEach(n => {
+                hdHTML += `
                 <div class="handicap-grid p-2 border-b border-gray-100 items-center italic text-gray-500"><span>Visita +${n}</span></div>
                 <div class="handicap-grid p-2 border-b border-gray-100">
                     <span class="text-blue-600 font-bold">${(res.hVisit[n].w * 100).toFixed(1)}%</span>
