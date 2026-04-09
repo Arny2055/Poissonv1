@@ -11,7 +11,8 @@
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .btts-yes { color: #059669; }
         .btts-no { color: #dc2626; }
-        .cond-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; text-align: center; font-size: 0.8rem; }
+        /* Ajuste para 2 columnas en el impacto del gol */
+        .cond-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; text-align: center; font-size: 0.85rem; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -73,14 +74,14 @@
                 </div>
 
                 <div class="card p-6 border-b-4 border-indigo-500 md:col-span-2">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Impacto del Primer Gol (En Vivo)</h3>
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Impacto del Primer Gol en BTTS</h3>
                     <div class="space-y-6">
                         <div>
-                            <p class="text-xs font-bold text-indigo-600 uppercase mb-2">Si anota primero el LOCAL (1-0)</p>
+                            <p class="text-xs font-bold text-indigo-600 uppercase mb-2">Si el Local marca el 1-0</p>
                             <div id="condHome" class="cond-grid bg-indigo-50 p-3 rounded-lg"></div>
                         </div>
                         <div>
-                            <p class="text-xs font-bold text-red-600 uppercase mb-2">Si anota primero el VISITANTE (0-1)</p>
+                            <p class="text-xs font-bold text-red-600 uppercase mb-2">Si el Visitante marca el 0-1</p>
                             <div id="condAway" class="cond-grid bg-red-50 p-3 rounded-lg"></div>
                         </div>
                     </div>
@@ -166,7 +167,7 @@
             document.getElementById('resultsWrapper').classList.remove('hidden');
             renderBTTS('ft', ftL);
             renderBTTS('ht', htL);
-            calculateConditional(ftL);
+            calculateConditionalBTTS(ftL);
         }
 
         function renderBTTS(prefix, lambdas) {
@@ -182,36 +183,25 @@
             xgEl.innerText = `xG H: ${lambdas.h.toFixed(2)} | xG A: ${lambdas.a.toFixed(2)}`;
         }
 
-        function calculateConditional(lambdas) {
+        function calculateConditionalBTTS(lambdas) {
             const condHomeEl = document.getElementById('condHome');
             const condAwayEl = document.getElementById('condAway');
             
-            // Simular marcador 1-0 y 0-1
-            // Usamos Poisson para el tiempo restante (basado en lambdas originales)
-            function get1X2(hExtra, aExtra) {
-                let win = 0, draw = 0, loss = 0;
-                for (let h = 0; h <= 8; h++) {
-                    for (let a = 0; a <= 8; a++) {
-                        const prob = poisson(h, lambdas.h) * poisson(a, lambdas.a);
-                        if ((h + hExtra) > (a + aExtra)) win += prob;
-                        else if ((h + hExtra) === (a + aExtra)) draw += prob;
-                        else loss += prob;
-                    }
-                }
-                return { win, draw, loss };
-            }
+            // Si el Local marca (1-0), BTTS Sí ocurre si el Visitante marca al menos 1
+            const probVisitanteAnota = (1 - poisson(0, lambdas.a)) * 100;
+            
+            // Si el Visitante marca (0-1), BTTS Sí ocurre si el Local marca al menos 1
+            const probLocalAnota = (1 - poisson(0, lambdas.h)) * 100;
 
-            const ifHomeScores = get1X2(1, 0);
-            const ifAwayScores = get1X2(0, 1);
-
-            const format = (res) => `
-                <div class="flex flex-col"><span class="text-gray-500 text-[10px] font-bold">GANAR</span><span class="font-black text-indigo-700">${(res.win * 100).toFixed(1)}%</span></div>
-                <div class="flex flex-col"><span class="text-gray-500 text-[10px] font-bold">EMPATE</span><span class="font-black text-gray-700">${(res.draw * 100).toFixed(1)}%</span></div>
-                <div class="flex flex-col"><span class="text-gray-500 text-[10px] font-bold">PERDER</span><span class="font-black text-red-700">${(res.loss * 100).toFixed(1)}%</span></div>
+            condHomeEl.innerHTML = `
+                <div class="flex flex-col bg-emerald-100 p-2 rounded"><span class="text-emerald-800 text-[10px] font-bold">BTTS SÍ</span><span class="font-black text-emerald-600">${probVisitanteAnota.toFixed(1)}%</span></div>
+                <div class="flex flex-col bg-red-100 p-2 rounded"><span class="text-red-800 text-[10px] font-bold">BTTS NO</span><span class="font-black text-red-600">${(100 - probVisitanteAnota).toFixed(1)}%</span></div>
             `;
 
-            condHomeEl.innerHTML = format(ifHomeScores);
-            condAwayEl.innerHTML = format(ifAwayScores);
+            condAwayEl.innerHTML = `
+                <div class="flex flex-col bg-emerald-100 p-2 rounded"><span class="text-emerald-800 text-[10px] font-bold">BTTS SÍ</span><span class="font-black text-emerald-600">${probLocalAnota.toFixed(1)}%</span></div>
+                <div class="flex flex-col bg-red-100 p-2 rounded"><span class="text-red-800 text-[10px] font-bold">BTTS NO</span><span class="font-black text-red-600">${(100 - probLocalAnota).toFixed(1)}%</span></div>
+            `;
         }
 
         init();
