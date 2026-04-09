@@ -83,6 +83,18 @@
                     </div>
                 </div>
             </div>
+
+            <div class="card p-6 border-t-4 border-amber-500">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Mercado: Goles Totales (FT)</h3>
+                <div class="overflow-hidden rounded-lg border border-gray-200">
+                    <div class="grid grid-cols-2 grid-header p-2 text-center">
+                        <div>Rango de Goles</div>
+                        <div>Probabilidad</div>
+                    </div>
+                    <div id="totalGoalsRangeTable" class="divide-y divide-gray-100">
+                        </div>
+                </div>
+            </div>
         </div>
         <div id="emptyState" class="text-center py-12 text-gray-400">Selecciona liga y equipos para calcular.</div>
     </div>
@@ -114,7 +126,6 @@
             });
             const leagueAvg = leagueTotals.map(v => leagueGrandTotal > 0 ? (v / leagueGrandTotal * 100).toFixed(1) : 0);
 
-            // Probabilidad Over 0.5 HT Distribuida (Solo segmentos 0, 1, 2)
             const probHTDist = team.segments.map((s, idx) => {
                 if (idx > 2) return 0;
                 const weight0_45 = (parseFloat(teamScored[0]) + parseFloat(teamConceded[0]) + parseFloat(leagueAvg[0])) +
@@ -124,7 +135,6 @@
                 return weight0_45 > 0 ? (over05HTProb * (currentWeight / weight0_45)).toFixed(1) : 0;
             });
 
-            // Probabilidad Over 2.5 FT Distribuida (Segmentos 0 a 5)
             const probFTDist = team.segments.map((s, idx) => {
                 const totalWeight = team.segments.reduce((acc, _, i) => acc + (parseFloat(teamScored[i]) + parseFloat(teamConceded[i]) + parseFloat(leagueAvg[i])), 0);
                 const currentWeight = (parseFloat(teamScored[idx]) + parseFloat(teamConceded[idx]) + parseFloat(leagueAvg[idx]));
@@ -288,6 +298,39 @@
             return (1 - probUnder) * 100;
         }
 
+        function calculateTotalGoalRanges(lambdas) {
+            const probTotalGoles = new Array(16).fill(0); 
+            for (let i = 0; i <= 7; i++) {
+                for (let j = 0; j <= 7; j++) {
+                    const p = poisson(i, lambdas.h) * poisson(j, lambdas.a);
+                    if (i + j <= 15) probTotalGoles[i + j] += p;
+                }
+            }
+
+            const range_0_1 = (probTotalGoles[0] + probTotalGoles[1]) * 100;
+            const range_2_3 = (probTotalGoles[2] + probTotalGoles[3]) * 100;
+            const range_4_more = (1 - (probTotalGoles[0] + probTotalGoles[1] + probTotalGoles[2] + probTotalGoles[3])) * 100;
+
+            const container = document.getElementById('totalGoalsRangeTable');
+            container.innerHTML = "";
+
+            const ranges = [
+                { label: "0-1 Goles", value: range_0_1 },
+                { label: "2-3 Goles", value: range_2_3 },
+                { label: "4 o más Goles", value: range_4_more }
+            ];
+
+            ranges.forEach(r => {
+                const row = document.createElement('div');
+                row.className = "grid grid-cols-2 p-3 text-center text-sm items-center hover:bg-slate-50";
+                row.innerHTML = `
+                    <div class="font-bold text-slate-700">${r.label}</div>
+                    <div class="text-indigo-600 font-bold text-lg">${r.value.toFixed(1)}%</div>
+                `;
+                container.appendChild(row);
+            });
+        }
+
         function mainCalculation() {
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
@@ -309,7 +352,10 @@
             if(homeSegments) renderChart('chartHomeTime', 'Local', homeSegments);
             if(awaySegments) renderChart('chartAwayTime', 'Visitante', awaySegments);
 
-            if (ftLambdas) renderOU('ft', ftLambdas, [0.5, 1.5, 2.5, 3.5, 4.5]);
+            if (ftLambdas) {
+                renderOU('ft', ftLambdas, [0.5, 1.5, 2.5, 3.5, 4.5]);
+                calculateTotalGoalRanges(ftLambdas);
+            }
             if (htLambdas) renderOU('ht', htLambdas, [0.5, 1.5, 2.5]);
         }
 
