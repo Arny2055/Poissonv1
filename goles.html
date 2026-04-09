@@ -369,15 +369,16 @@
                     aHighlight = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
                 }
                 
+                // Se usa text-green-600 para coincidir con las tablas generales
                 hCont.innerHTML += `
                     <div class="grid grid-cols-2 p-3 text-center text-sm items-center ${hHighlight}">
                         <div class="font-semibold text-slate-600">Local Over ${line}</div>
-                        <div class="text-rose-600 font-bold">${hProb.toFixed(1)}%</div>
+                        <div class="text-green-600 font-bold">${hProb.toFixed(1)}%</div>
                     </div>`;
                 aCont.innerHTML += `
                     <div class="grid grid-cols-2 p-3 text-center text-sm items-center ${aHighlight}">
                         <div class="font-semibold text-slate-600">Visita Over ${line}</div>
-                        <div class="text-rose-600 font-bold">${aProb.toFixed(1)}%</div>
+                        <div class="text-green-600 font-bold">${aProb.toFixed(1)}%</div>
                     </div>`;
             });
         }
