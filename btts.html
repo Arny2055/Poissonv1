@@ -11,8 +11,9 @@
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .btts-yes { color: #059669; }
         .btts-no { color: #dc2626; }
-        /* Ajuste para 2 columnas en el impacto del gol */
         .cond-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; text-align: center; font-size: 0.85rem; }
+        /* Estilo para el nuevo mercado */
+        .first-goal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -55,6 +56,24 @@
         </div>
 
         <div id="resultsWrapper" class="hidden space-y-6">
+            <div class="card p-6 border-l-4 border-indigo-600">
+                <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Mercado: Primer Gol (First Goal)</h3>
+                <div id="firstGoalMarket" class="first-goal-grid">
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="block text-[10px] text-slate-400 font-bold">LOCAL</span>
+                        <span id="probFirstHome" class="text-xl font-black text-indigo-600">0%</span>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="block text-[10px] text-slate-400 font-bold">SIN GOL</span>
+                        <span id="probNoGoal" class="text-xl font-black text-slate-600">0%</span>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span class="block text-[10px] text-slate-400 font-bold">VISITANTE</span>
+                        <span id="probFirstAway" class="text-xl font-black text-red-600">0%</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="card p-6 border-b-4 border-emerald-500">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Full Time (FT)</h3>
@@ -168,6 +187,7 @@
             renderBTTS('ft', ftL);
             renderBTTS('ht', htL);
             calculateConditionalBTTS(ftL);
+            calculateFirstGoal(ftL);
         }
 
         function renderBTTS(prefix, lambdas) {
@@ -183,14 +203,23 @@
             xgEl.innerText = `xG H: ${lambdas.h.toFixed(2)} | xG A: ${lambdas.a.toFixed(2)}`;
         }
 
+        function calculateFirstGoal(lambdas) {
+            const probNoGoal = (poisson(0, lambdas.h) * poisson(0, lambdas.a)) * 100;
+            const probCualquieraAnota = 100 - probNoGoal;
+            
+            // Probabilidad relativa basada en xG
+            const probFirstHome = (lambdas.h / (lambdas.h + lambdas.a)) * probCualquieraAnota;
+            const probFirstAway = (lambdas.a / (lambdas.h + lambdas.a)) * probCualquieraAnota;
+
+            document.getElementById('probFirstHome').innerText = `${probFirstHome.toFixed(1)}%`;
+            document.getElementById('probNoGoal').innerText = `${probNoGoal.toFixed(1)}%`;
+            document.getElementById('probFirstAway').innerText = `${probFirstAway.toFixed(1)}%`;
+        }
+
         function calculateConditionalBTTS(lambdas) {
             const condHomeEl = document.getElementById('condHome');
             const condAwayEl = document.getElementById('condAway');
-            
-            // Si el Local marca (1-0), BTTS Sí ocurre si el Visitante marca al menos 1
             const probVisitanteAnota = (1 - poisson(0, lambdas.a)) * 100;
-            
-            // Si el Visitante marca (0-1), BTTS Sí ocurre si el Local marca al menos 1
             const probLocalAnota = (1 - poisson(0, lambdas.h)) * 100;
 
             condHomeEl.innerHTML = `
