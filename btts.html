@@ -12,7 +12,6 @@
         .btts-yes { color: #059669; }
         .btts-no { color: #dc2626; }
         .cond-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; text-align: center; font-size: 0.85rem; }
-        /* Estilo para el nuevo mercado */
         .first-goal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
     </style>
 </head>
@@ -79,16 +78,16 @@
                     <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Full Time (FT)</h3>
                     <div id="ftXg" class="text-center text-xs text-slate-400 mb-4"></div>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center p-4 bg-emerald-50 rounded-lg"><span class="font-bold text-emerald-800">BTTS SÍ</span><span id="ftYes" class="text-2xl font-black btts-yes">0%</span></div>
-                        <div class="flex justify-between items-center p-4 bg-red-50 rounded-lg"><span class="font-bold text-red-800">BTTS NO</span><span id="ftNo" class="text-2xl font-black btts-no">0%</span></div>
+                        <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span class="font-bold text-slate-600">BTTS SÍ</span><span id="ftYes" class="text-2xl font-black btts-yes">0%</span></div>
+                        <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span class="font-bold text-slate-600">BTTS NO</span><span id="ftNo" class="text-2xl font-black btts-no">0%</span></div>
                     </div>
                 </div>
                 <div class="card p-6 border-b-4 border-amber-500">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Half Time (HT)</h3>
                     <div id="htXg" class="text-center text-xs text-slate-400 mb-4"></div>
                     <div class="space-y-4">
-                        <div class="flex justify-between items-center p-4 bg-emerald-50 rounded-lg"><span class="font-bold text-emerald-800">BTTS SÍ</span><span id="htYes" class="text-2xl font-black btts-yes">0%</span></div>
-                        <div class="flex justify-between items-center p-4 bg-red-50 rounded-lg"><span class="font-bold text-red-800">BTTS NO</span><span id="htNo" class="text-2xl font-black btts-no">0%</span></div>
+                        <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span class="font-bold text-slate-600">BTTS SÍ</span><span id="htYes" class="text-2xl font-black btts-yes">0%</span></div>
+                        <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span class="font-bold text-slate-600">BTTS NO</span><span id="htNo" class="text-2xl font-black btts-no">0%</span></div>
                     </div>
                 </div>
 
@@ -97,11 +96,11 @@
                     <div class="space-y-6">
                         <div>
                             <p class="text-xs font-bold text-indigo-600 uppercase mb-2">Si el Local marca el 1-0</p>
-                            <div id="condHome" class="cond-grid bg-indigo-50 p-3 rounded-lg"></div>
+                            <div id="condHome" class="cond-grid"></div>
                         </div>
                         <div>
                             <p class="text-xs font-bold text-red-600 uppercase mb-2">Si el Visitante marca el 0-1</p>
-                            <div id="condAway" class="cond-grid bg-red-50 p-3 rounded-lg"></div>
+                            <div id="condAway" class="cond-grid"></div>
                         </div>
                     </div>
                 </div>
@@ -206,11 +205,8 @@
         function calculateFirstGoal(lambdas) {
             const probNoGoal = (poisson(0, lambdas.h) * poisson(0, lambdas.a)) * 100;
             const probCualquieraAnota = 100 - probNoGoal;
-            
-            // Probabilidad relativa basada en xG
             const probFirstHome = (lambdas.h / (lambdas.h + lambdas.a)) * probCualquieraAnota;
             const probFirstAway = (lambdas.a / (lambdas.h + lambdas.a)) * probCualquieraAnota;
-
             document.getElementById('probFirstHome').innerText = `${probFirstHome.toFixed(1)}%`;
             document.getElementById('probNoGoal').innerText = `${probNoGoal.toFixed(1)}%`;
             document.getElementById('probFirstAway').innerText = `${probFirstAway.toFixed(1)}%`;
@@ -222,14 +218,16 @@
             const probVisitanteAnota = (1 - poisson(0, lambdas.a)) * 100;
             const probLocalAnota = (1 - poisson(0, lambdas.h)) * 100;
 
+            const style = `p-3 bg-slate-50 rounded-lg border border-slate-100`;
+
             condHomeEl.innerHTML = `
-                <div class="flex flex-col bg-emerald-100 p-2 rounded"><span class="text-emerald-800 text-[10px] font-bold">BTTS SÍ</span><span class="font-black text-emerald-600">${probVisitanteAnota.toFixed(1)}%</span></div>
-                <div class="flex flex-col bg-red-100 p-2 rounded"><span class="text-red-800 text-[10px] font-bold">BTTS NO</span><span class="font-black text-red-600">${(100 - probVisitanteAnota).toFixed(1)}%</span></div>
+                <div class="${style} flex flex-col"><span class="text-slate-400 text-[10px] font-bold">BTTS SÍ</span><span class="text-lg font-black text-emerald-600">${probVisitanteAnota.toFixed(1)}%</span></div>
+                <div class="${style} flex flex-col"><span class="text-slate-400 text-[10px] font-bold">BTTS NO</span><span class="text-lg font-black text-red-600">${(100 - probVisitanteAnota).toFixed(1)}%</span></div>
             `;
 
             condAwayEl.innerHTML = `
-                <div class="flex flex-col bg-emerald-100 p-2 rounded"><span class="text-emerald-800 text-[10px] font-bold">BTTS SÍ</span><span class="font-black text-emerald-600">${probLocalAnota.toFixed(1)}%</span></div>
-                <div class="flex flex-col bg-red-100 p-2 rounded"><span class="text-red-800 text-[10px] font-bold">BTTS NO</span><span class="font-black text-red-600">${(100 - probLocalAnota).toFixed(1)}%</span></div>
+                <div class="${style} flex flex-col"><span class="text-slate-400 text-[10px] font-bold">BTTS SÍ</span><span class="text-lg font-black text-emerald-600">${probLocalAnota.toFixed(1)}%</span></div>
+                <div class="${style} flex flex-col"><span class="text-slate-400 text-[10px] font-bold">BTTS NO</span><span class="text-lg font-black text-red-600">${(100 - probLocalAnota).toFixed(1)}%</span></div>
             `;
         }
 
