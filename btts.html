@@ -11,6 +11,7 @@
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .btts-yes { color: #059669; }
         .btts-no { color: #dc2626; }
+        .cond-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; text-align: center; font-size: 0.8rem; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -49,7 +50,7 @@
                     </select>
                 </div>
             </div>
-            <button onclick="mainCalculation()" class="w-full mt-6 bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 transition font-bold text-lg">CALCULAR BTTS</button>
+            <button onclick="mainCalculation()" class="w-full mt-6 bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 transition font-bold text-lg">CALCULAR PROYECCIONES</button>
         </div>
 
         <div id="resultsWrapper" class="hidden space-y-6">
@@ -68,6 +69,20 @@
                     <div class="space-y-4">
                         <div class="flex justify-between items-center p-4 bg-emerald-50 rounded-lg"><span class="font-bold text-emerald-800">BTTS SÍ</span><span id="htYes" class="text-2xl font-black btts-yes">0%</span></div>
                         <div class="flex justify-between items-center p-4 bg-red-50 rounded-lg"><span class="font-bold text-red-800">BTTS NO</span><span id="htNo" class="text-2xl font-black btts-no">0%</span></div>
+                    </div>
+                </div>
+
+                <div class="card p-6 border-b-4 border-indigo-500 md:col-span-2">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Impacto del Primer Gol (En Vivo)</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <p class="text-xs font-bold text-indigo-600 uppercase mb-2">Si anota primero el LOCAL (1-0)</p>
+                            <div id="condHome" class="cond-grid bg-indigo-50 p-3 rounded-lg"></div>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-red-600 uppercase mb-2">Si anota primero el VISITANTE (0-1)</p>
+                            <div id="condAway" class="cond-grid bg-red-50 p-3 rounded-lg"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -151,6 +166,7 @@
             document.getElementById('resultsWrapper').classList.remove('hidden');
             renderBTTS('ft', ftL);
             renderBTTS('ht', htL);
+            calculateConditional(ftL);
         }
 
         function renderBTTS(prefix, lambdas) {
@@ -165,6 +181,39 @@
             noEl.innerText = `${(100 - (probBothScore * 100)).toFixed(2)}%`;
             xgEl.innerText = `xG H: ${lambdas.h.toFixed(2)} | xG A: ${lambdas.a.toFixed(2)}`;
         }
+
+        function calculateConditional(lambdas) {
+            const condHomeEl = document.getElementById('condHome');
+            const condAwayEl = document.getElementById('condAway');
+            
+            // Simular marcador 1-0 y 0-1
+            // Usamos Poisson para el tiempo restante (basado en lambdas originales)
+            function get1X2(hExtra, aExtra) {
+                let win = 0, draw = 0, loss = 0;
+                for (let h = 0; h <= 8; h++) {
+                    for (let a = 0; a <= 8; a++) {
+                        const prob = poisson(h, lambdas.h) * poisson(a, lambdas.a);
+                        if ((h + hExtra) > (a + aExtra)) win += prob;
+                        else if ((h + hExtra) === (a + aExtra)) draw += prob;
+                        else loss += prob;
+                    }
+                }
+                return { win, draw, loss };
+            }
+
+            const ifHomeScores = get1X2(1, 0);
+            const ifAwayScores = get1X2(0, 1);
+
+            const format = (res) => `
+                <div class="flex flex-col"><span class="text-gray-500 text-[10px] font-bold">GANAR</span><span class="font-black text-indigo-700">${(res.win * 100).toFixed(1)}%</span></div>
+                <div class="flex flex-col"><span class="text-gray-500 text-[10px] font-bold">EMPATE</span><span class="font-black text-gray-700">${(res.draw * 100).toFixed(1)}%</span></div>
+                <div class="flex flex-col"><span class="text-gray-500 text-[10px] font-bold">PERDER</span><span class="font-black text-red-700">${(res.loss * 100).toFixed(1)}%</span></div>
+            `;
+
+            condHomeEl.innerHTML = format(ifHomeScores);
+            condAwayEl.innerHTML = format(ifAwayScores);
+        }
+
         init();
     </script>
 </body>
