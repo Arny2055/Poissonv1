@@ -11,6 +11,7 @@
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
         .hidden-tab { display: none; }
+        .handicap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; text-align: center; font-size: 0.75rem; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -90,6 +91,10 @@
                         <p class="text-xs font-bold text-gray-400 uppercase mb-3">Marcadores Probables</p>
                         <div class="grid grid-cols-1 gap-2" id="ftCS"></div>
                     </div>
+                    <div class="card p-5 border-t-4 border-indigo-500 md:col-span-2">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Handicap Europeo (3-Way)</p>
+                        <div id="ftHandicap" class="space-y-4"></div>
+                    </div>
                 </div>
                 <div class="card p-4 bg-blue-50 text-blue-800 text-xs font-medium" id="ftXG"></div>
             </div>
@@ -111,6 +116,10 @@
                     <div class="card p-5 border-t-4 border-orange-500">
                         <p class="text-xs font-bold text-gray-400 uppercase mb-3">Marcadores HT (Top 5)</p>
                         <div class="grid grid-cols-1 gap-2" id="htCS"></div>
+                    </div>
+                    <div class="card p-5 border-t-4 border-orange-400 md:col-span-2">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Handicap Europeo HT (3-Way)</p>
+                        <div id="htHandicap" class="space-y-4"></div>
                     </div>
                 </div>
                 <div class="card p-4 bg-orange-50 text-orange-800 text-xs font-medium" id="htXG"></div>
@@ -254,24 +263,50 @@
             if (!lambdas) return null;
             const pHome = [];
             const pAway = [];
-            for (let i = 0; i <= 5; i++) {
+            const maxG = 10; // Mayor rango para handicaps
+            for (let i = 0; i <= maxG; i++) {
                 pHome.push(poisson(i, lambdas.lambdaHome));
                 pAway.push(poisson(i, lambdas.lambdaAway));
             }
 
             const scores = [];
             let win = 0, draw = 0, loss = 0;
-            for (let h = 0; h <= 5; h++) {
-                for (let a = 0; a <= 5; a++) {
+            
+            // Handicaps 3-way
+            let hLocal = { 1: {w:0,d:0,l:0}, 2: {w:0,d:0,l:0}, 3: {w:0,d:0,l:0} };
+            let hVisit = { 1: {w:0,d:0,l:0}, 2: {w:0,d:0,l:0}, 3: {w:0,d:0,l:0} };
+
+            for (let h = 0; h <= maxG; h++) {
+                for (let a = 0; a <= maxG; a++) {
                     const prob = pHome[h] * pAway[a];
-                    scores.push({ score: `${h}-${a}`, prob: prob * 100 });
+                    if(h <= 5 && a <= 5) scores.push({ score: `${h}-${a}`, prob: prob * 100 });
+                    
+                    // 1X2 Standard
                     if (h > a) win += prob;
                     else if (h === a) draw += prob;
                     else loss += prob;
+
+                    // Lógica Handicap Local Ventaja (+N)
+                    [1,2,3].forEach(n => {
+                        if ((h + n) > a) hLocal[n].w += prob;
+                        else if ((h + n) === a) hLocal[n].d += prob;
+                        else hLocal[n].l += prob;
+                    });
+
+                    // Lógica Handicap Visita Ventaja (+N)
+                    [1,2,3].forEach(n => {
+                        if (h > (a + n)) hVisit[n].w += prob;
+                        else if (h === (a + n)) hVisit[n].d += prob;
+                        else hVisit[n].l += prob;
+                    });
                 }
             }
             const topScores = scores.sort((a, b) => b.prob - a.prob).slice(0, 5);
-            return { win: win * 100, draw: draw * 100, loss: loss * 100, topScores, xh: lambdas.lambdaHome.toFixed(2), xa: lambdas.lambdaAway.toFixed(2) };
+            return { 
+                win: win * 100, draw: draw * 100, loss: loss * 100, 
+                topScores, hLocal, hVisit,
+                xh: lambdas.lambdaHome.toFixed(2), xa: lambdas.lambdaAway.toFixed(2) 
+            };
         }
 
         function mainCalculation() {
@@ -296,6 +331,7 @@
             const cDC = document.getElementById(`${prefix}DC`);
             const cDNB = document.getElementById(`${prefix}DNB`);
             const cCS = document.getElementById(`${prefix}CS`);
+            const cHD = document.getElementById(`${prefix}Handicap`);
             const xgEl = document.getElementById(`${prefix}XG`);
             
             if (!res) return;
@@ -322,6 +358,25 @@
                 <div class="flex justify-between text-sm p-2 bg-indigo-50 rounded border border-indigo-100">
                     <span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span>
                 </div>`).join('');
+
+            // Renderizar Handicaps
+            let hdHTML = `<div class="bg-gray-100 p-2 rounded handicap-grid font-bold text-gray-600"><span>Opción</span><span>Local (+N)</span><span>Empate</span><span>Visita</span></div>`;
+            [1,2,3].forEach(n => {
+                hdHTML += `
+                <div class="handicap-grid p-2 border-b border-gray-100 items-center italic text-gray-500"><span>Local +${n}</span></div>
+                <div class="handicap-grid p-2 border-b border-gray-100">
+                    <span class="text-blue-600 font-bold">${(res.hLocal[n].w * 100).toFixed(1)}%</span>
+                    <span class="text-gray-600 font-bold">${(res.hLocal[n].d * 100).toFixed(1)}%</span>
+                    <span class="text-red-600 font-bold">${(res.hLocal[n].l * 100).toFixed(1)}%</span>
+                </div>
+                <div class="handicap-grid p-2 border-b border-gray-100 items-center italic text-gray-500"><span>Visita +${n}</span></div>
+                <div class="handicap-grid p-2 border-b border-gray-100">
+                    <span class="text-blue-600 font-bold">${(res.hVisit[n].w * 100).toFixed(1)}%</span>
+                    <span class="text-gray-600 font-bold">${(res.hVisit[n].d * 100).toFixed(1)}%</span>
+                    <span class="text-red-600 font-bold">${(res.hVisit[n].l * 100).toFixed(1)}%</span>
+                </div>`;
+            });
+            cHD.innerHTML = hdHTML;
 
             xgEl.innerHTML = `xG Proyectado: Local ${res.xh} - Visitante ${res.xa}`;
         }
