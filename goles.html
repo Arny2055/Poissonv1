@@ -357,13 +357,25 @@
                 const hProb = calculateIndividualOver(lambdas.h, line);
                 const aProb = calculateIndividualOver(lambdas.a, line);
                 
+                // Lógica de resaltado Local
+                let hHighlight = "";
+                if ((line === 0.5 && hProb >= 80) || (line === 1.5 && hProb >= 60)) {
+                    hHighlight = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
+                }
+
+                // Lógica de resaltado Visitante
+                let aHighlight = "";
+                if ((line === 0.5 && aProb >= 80) || (line === 1.5 && aProb >= 60)) {
+                    aHighlight = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
+                }
+                
                 hCont.innerHTML += `
-                    <div class="grid grid-cols-2 p-3 text-center text-sm items-center">
+                    <div class="grid grid-cols-2 p-3 text-center text-sm items-center ${hHighlight}">
                         <div class="font-semibold text-slate-600">Local Over ${line}</div>
                         <div class="text-rose-600 font-bold">${hProb.toFixed(1)}%</div>
                     </div>`;
                 aCont.innerHTML += `
-                    <div class="grid grid-cols-2 p-3 text-center text-sm items-center">
+                    <div class="grid grid-cols-2 p-3 text-center text-sm items-center ${aHighlight}">
                         <div class="font-semibold text-slate-600">Visita Over ${line}</div>
                         <div class="text-rose-600 font-bold">${aProb.toFixed(1)}%</div>
                     </div>`;
