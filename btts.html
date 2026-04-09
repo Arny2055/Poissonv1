@@ -207,7 +207,6 @@
             noEl.innerText = `${(100 - percentage).toFixed(2)}%`;
             xgEl.innerText = `xG H: ${lambdas.h.toFixed(2)} | xG A: ${lambdas.a.toFixed(2)}`;
 
-            // Lógica de color de fondo >= 55%
             if (percentage >= 55) {
                 boxEl.className = "flex justify-between items-center p-4 bg-emerald-500 border border-emerald-600 rounded-lg";
                 labelEl.className = "font-bold text-white";
@@ -235,13 +234,14 @@
             const probVisitanteAnota = (1 - poisson(0, lambdas.a)) * 100;
             const probLocalAnota = (1 - poisson(0, lambdas.h)) * 100;
 
+            // Ajuste de umbral a 70% para impacto de primer gol
             const getStyle = (prob) => {
-                if (prob >= 55) return `p-3 bg-emerald-500 rounded-lg border border-emerald-600 text-white`;
+                if (prob >= 70) return `p-3 bg-emerald-500 rounded-lg border border-emerald-600 text-white`;
                 return `p-3 bg-slate-50 rounded-lg border border-slate-100`;
             };
 
-            const getLabelColor = (prob) => prob >= 55 ? 'text-white' : 'text-slate-400';
-            const getValueColor = (prob) => prob >= 55 ? 'text-white' : 'text-emerald-600';
+            const getLabelColor = (prob) => prob >= 70 ? 'text-white' : 'text-slate-400';
+            const getValueColor = (prob) => prob >= 70 ? 'text-white' : 'text-emerald-600';
 
             condHomeEl.innerHTML = `
                 <div class="${getStyle(probVisitanteAnota)} flex flex-col"><span class="${getLabelColor(probVisitanteAnota)} text-[10px] font-bold">BTTS SÍ</span><span class="text-lg font-black ${getValueColor(probVisitanteAnota)}">${probVisitanteAnota.toFixed(1)}%</span></div>
