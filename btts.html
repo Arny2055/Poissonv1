@@ -58,16 +58,16 @@
             <div class="card p-6 border-l-4 border-indigo-600">
                 <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Mercado: Primer Gol (First Goal)</h3>
                 <div id="firstGoalMarket" class="first-goal-grid">
-                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <span class="block text-[10px] text-slate-400 font-bold">LOCAL</span>
+                    <div id="boxFirstHome" class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span id="labelFirstHome" class="block text-[10px] text-slate-400 font-bold">LOCAL</span>
                         <span id="probFirstHome" class="text-xl font-black text-indigo-600">0%</span>
                     </div>
-                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <span class="block text-[10px] text-slate-400 font-bold">SIN GOL</span>
+                    <div id="boxNoGoal" class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span id="labelNoGoal" class="block text-[10px] text-slate-400 font-bold">SIN GOL</span>
                         <span id="probNoGoal" class="text-xl font-black text-slate-600">0%</span>
                     </div>
-                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
-                        <span class="block text-[10px] text-slate-400 font-bold">VISITANTE</span>
+                    <div id="boxFirstAway" class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span id="labelFirstAway" class="block text-[10px] text-slate-400 font-bold">VISITANTE</span>
                         <span id="probFirstAway" class="text-xl font-black text-red-600">0%</span>
                     </div>
                 </div>
@@ -223,9 +223,27 @@
             const probCualquieraAnota = 100 - probNoGoal;
             const probFirstHome = (lambdas.h / (lambdas.h + lambdas.a)) * probCualquieraAnota;
             const probFirstAway = (lambdas.a / (lambdas.h + lambdas.a)) * probCualquieraAnota;
-            document.getElementById('probFirstHome').innerText = `${probFirstHome.toFixed(1)}%`;
-            document.getElementById('probNoGoal').innerText = `${probNoGoal.toFixed(1)}%`;
-            document.getElementById('probFirstAway').innerText = `${probFirstAway.toFixed(1)}%`;
+            
+            const setResStyle = (boxId, labelId, valId, prob, defaultValColor) => {
+                const box = document.getElementById(boxId);
+                const label = document.getElementById(labelId);
+                const val = document.getElementById(valId);
+                val.innerText = `${prob.toFixed(1)}%`;
+                
+                if (prob >= 55) {
+                    box.className = "p-3 bg-emerald-500 rounded-lg border border-emerald-600";
+                    label.className = "block text-[10px] text-white font-bold";
+                    val.className = "text-xl font-black text-white";
+                } else {
+                    box.className = "p-3 bg-slate-50 rounded-lg border border-slate-100";
+                    label.className = "block text-[10px] text-slate-400 font-bold";
+                    val.className = `text-xl font-black ${defaultValColor}`;
+                }
+            };
+
+            setResStyle('boxFirstHome', 'labelFirstHome', 'probFirstHome', probFirstHome, 'text-indigo-600');
+            setResStyle('boxNoGoal', 'labelNoGoal', 'probNoGoal', probNoGoal, 'text-slate-600');
+            setResStyle('boxFirstAway', 'labelFirstAway', 'probFirstAway', probFirstAway, 'text-red-600');
         }
 
         function calculateConditionalBTTS(lambdas) {
@@ -234,7 +252,6 @@
             const probVisitanteAnota = (1 - poisson(0, lambdas.a)) * 100;
             const probLocalAnota = (1 - poisson(0, lambdas.h)) * 100;
 
-            // Ajuste de umbral a 70% para impacto de primer gol
             const getStyle = (prob) => {
                 if (prob >= 70) return `p-3 bg-emerald-500 rounded-lg border border-emerald-600 text-white`;
                 return `p-3 bg-slate-50 rounded-lg border border-slate-100`;
