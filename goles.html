@@ -12,6 +12,8 @@
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .grid-header { background-color: #f8fafc; font-weight: 600; color: #64748b; font-size: 0.75rem; text-transform: uppercase; }
         canvas { max-height: 300px; }
+        .impact-card { transition: all 0.3s ease; }
+        .impact-card:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -54,6 +56,39 @@
         </div>
 
         <div id="resultsWrapper" class="hidden space-y-6">
+            
+            <div class="card p-6 border-t-4 border-blue-500">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center italic">Escenarios: Impacto del Primer Gol</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 impact-card">
+                        <p class="text-xs font-bold text-slate-500 uppercase mb-3 text-center">Impacto en Over 2.5 FT</p>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-700">Si <span class="font-bold">Local</span> anota 1°:</span>
+                                <span id="impactLocalFT" class="text-blue-700 font-bold">--</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-700">Si <span class="font-bold">Visita</span> anota 1°:</span>
+                                <span id="impactAwayFT" class="text-blue-700 font-bold">--</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 impact-card">
+                        <p class="text-xs font-bold text-slate-500 uppercase mb-3 text-center">Impacto en Over 1.5 HT</p>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-700">Si <span class="font-bold">Local</span> anota 1°:</span>
+                                <span id="impactLocalHT" class="text-indigo-700 font-bold">--</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-slate-700">Si <span class="font-bold">Visita</span> anota 1°:</span>
+                                <span id="impactAwayHT" class="text-indigo-700 font-bold">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="card p-4">
                     <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución Prob. Goles (Local)</h4>
@@ -357,19 +392,16 @@
                 const hProb = calculateIndividualOver(lambdas.h, line);
                 const aProb = calculateIndividualOver(lambdas.a, line);
                 
-                // Lógica de resaltado Local
                 let hHighlight = "";
                 if ((line === 0.5 && hProb >= 80) || (line === 1.5 && hProb >= 60)) {
                     hHighlight = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
                 }
 
-                // Lógica de resaltado Visitante
                 let aHighlight = "";
                 if ((line === 0.5 && aProb >= 80) || (line === 1.5 && aProb >= 60)) {
                     aHighlight = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
                 }
                 
-                // Se usa text-green-600 para coincidir con las tablas generales
                 hCont.innerHTML += `
                     <div class="grid grid-cols-2 p-3 text-center text-sm items-center ${hHighlight}">
                         <div class="font-semibold text-slate-600">Local Over ${line}</div>
@@ -381,6 +413,28 @@
                         <div class="text-green-600 font-bold">${aProb.toFixed(1)}%</div>
                     </div>`;
             });
+        }
+
+        // --- LÓGICA DE IMPACTO ---
+        function calculateGoalImpact(lambdas, line) {
+            if (!lambdas) return { homeImpact: 0, awayImpact: 0 };
+            
+            const totalLambda = lambdas.h + lambdas.a;
+            const baseProb = calculateOverProb(lambdas, line);
+            
+            // Simulación de impacto: si un equipo anota, la probabilidad del "Resto del partido" 
+            // se recalcula con una línea menor (line - 1)
+            const probIfHomeScores = calculateOverProb(lambdas, line - 1);
+            const probIfAwayScores = calculateOverProb(lambdas, line - 1);
+
+            // Ajuste de peso basado en la fuerza ofensiva (quién es más probable que abra el marcador)
+            const homeWeight = lambdas.h / totalLambda;
+            const awayWeight = lambdas.a / totalLambda;
+
+            return {
+                home: probIfHomeScores,
+                away: probIfAwayScores
+            };
         }
 
         function mainCalculation() {
@@ -408,8 +462,20 @@
                 renderOU('ft', ftLambdas, [0.5, 1.5, 2.5, 3.5, 4.5]);
                 renderIndividualTables(ftLambdas);
                 calculateTotalGoalRanges(ftLambdas);
+                
+                // Calcular impacto FT
+                const impactFT = calculateGoalImpact(ftLambdas, 2.5);
+                document.getElementById('impactLocalFT').textContent = impactFT.home.toFixed(1) + "%";
+                document.getElementById('impactAwayFT').textContent = impactFT.away.toFixed(1) + "%";
             }
-            if (htLambdas) renderOU('ht', htLambdas, [0.5, 1.5, 2.5]);
+            if (htLambdas) {
+                renderOU('ht', htLambdas, [0.5, 1.5, 2.5]);
+                
+                // Calcular impacto HT
+                const impactHT = calculateGoalImpact(htLambdas, 1.5);
+                document.getElementById('impactLocalHT').textContent = impactHT.home.toFixed(1) + "%";
+                document.getElementById('impactAwayHT').textContent = impactHT.away.toFixed(1) + "%";
+            }
         }
 
         function renderOU(prefix, lambdas, lines) {
