@@ -91,8 +91,8 @@
                     </div>
                 </div>
 
-                <div class="card p-6 border-b-4 border-indigo-500 md:col-span-2">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Impacto del Primer Gol en BTTS</h3>
+                <div class="card p-6 border-b-4 border-indigo-500">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Impacto Primer Gol (FT)</h3>
                     <div class="space-y-6">
                         <div>
                             <p class="text-xs font-bold text-indigo-600 uppercase mb-2">Si el Local marca el 1-0</p>
@@ -101,6 +101,20 @@
                         <div>
                             <p class="text-xs font-bold text-red-600 uppercase mb-2">Si el Visitante marca el 0-1</p>
                             <div id="condAway" class="cond-grid"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card p-6 border-b-4 border-amber-600">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Impacto Primer Gol (HT)</h3>
+                    <div class="space-y-6">
+                        <div>
+                            <p class="text-xs font-bold text-indigo-600 uppercase mb-2">Si el Local marca el 1-0 HT</p>
+                            <div id="condHomeHT" class="cond-grid"></div>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-red-600 uppercase mb-2">Si el Visitante marca el 0-1 HT</p>
+                            <div id="condAwayHT" class="cond-grid"></div>
                         </div>
                     </div>
                 </div>
@@ -185,7 +199,8 @@
             document.getElementById('resultsWrapper').classList.remove('hidden');
             renderBTTS('ft', ftL);
             renderBTTS('ht', htL);
-            calculateConditionalBTTS(ftL);
+            calculateConditionalBTTS(ftL, 'condHome', 'condAway');
+            if (htL) calculateConditionalBTTS(htL, 'condHomeHT', 'condAwayHT');
             calculateFirstGoal(ftL);
         }
 
@@ -246,9 +261,9 @@
             setResStyle('boxFirstAway', 'labelFirstAway', 'probFirstAway', probFirstAway, 'text-red-600');
         }
 
-        function calculateConditionalBTTS(lambdas) {
-            const condHomeEl = document.getElementById('condHome');
-            const condAwayEl = document.getElementById('condAway');
+        function calculateConditionalBTTS(lambdas, homeDivId, awayDivId) {
+            const condHomeEl = document.getElementById(homeDivId);
+            const condAwayEl = document.getElementById(awayDivId);
             const probVisitanteAnota = (1 - poisson(0, lambdas.a)) * 100;
             const probLocalAnota = (1 - poisson(0, lambdas.h)) * 100;
 
