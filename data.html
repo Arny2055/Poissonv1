@@ -11,9 +11,9 @@
         .table-container { overflow-x: auto; }
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         textarea { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.75rem; }
-        .bg-win { background-color: #dcfce7; } /* Scored > Conceded */
-        .bg-draw { background-color: #fef9c3; } /* Scored = Conceded */
-        .bg-loss { background-color: #fee2e2; } /* Scored < Conceded */
+        .bg-win { background-color: #dcfce7; } 
+        .bg-draw { background-color: #fef9c3; } 
+        .bg-loss { background-color: #fee2e2; } 
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -88,7 +88,17 @@
                 </div>
 
                 <div class="card p-6">
-                    <h2 class="text-xl font-semibold mb-4 text-slate-700">Herramientas JSON</h2>
+                    <h2 class="text-xl font-semibold mb-4 text-slate-700 font-bold">Sincronización Nube</h2>
+                    <div class="grid grid-cols-1 gap-3 mb-6">
+                        <button onclick="saveToCloud()" class="bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition font-bold shadow-sm">
+                            ☁️ Guardar en Nube (Correo)
+                        </button>
+                        <button onclick="loadFromCloud()" class="bg-orange-500 text-white py-3 px-4 rounded-md hover:bg-orange-600 transition font-bold shadow-sm">
+                            📥 Recuperar de la Nube
+                        </button>
+                    </div>
+
+                    <h2 class="text-sm font-semibold mb-2 text-slate-500 uppercase tracking-wider">Copias locales (JSON)</h2>
                     <div class="grid grid-cols-2 gap-4">
                         <button onclick="exportData()" class="bg-slate-100 text-slate-700 py-2 px-4 rounded-md hover:bg-slate-200 transition text-sm font-medium">Exportar</button>
                         <button onclick="document.getElementById('importFile').click()" class="bg-slate-100 text-slate-700 py-2 px-4 rounded-md hover:bg-slate-200 transition text-sm font-medium">Importar</button>
@@ -116,8 +126,60 @@
     </div>
 
     <script>
+        // CONFIGURACIÓN DE LA NUBE
+        const WEB_APP_URL = "TU_URL_DE_GOOGLE_APPS_SCRIPT_AQUI";
+
         let footballData = JSON.parse(localStorage.getItem("footballData")) || [];
 
+        // --- FUNCIONES DE NUBE ---
+        async function saveToCloud() {
+            if (footballData.length === 0) {
+                alert("No hay datos para subir.");
+                return;
+            }
+            const btn = event.target;
+            const originalText = btn.innerText;
+            btn.innerText = "Subiendo...";
+            btn.disabled = true;
+
+            try {
+                await fetch(WEB_APP_URL, {
+                    method: "POST",
+                    mode: "no-cors", // Crucial para Google Apps Script
+                    body: JSON.stringify(footballData)
+                });
+                alert("Datos enviados a la nube correctamente.");
+            } catch (error) {
+                console.error(error);
+                alert("Error al conectar con la nube.");
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function loadFromCloud() {
+            const btn = event.target;
+            btn.innerText = "Descargando...";
+            try {
+                const response = await fetch(WEB_APP_URL);
+                const cloudData = await response.json();
+                if (confirm("Se han encontrado datos en la nube. ¿Deseas sobreescribir tus datos locales con la copia de la nube?")) {
+                    footballData = cloudData;
+                    localStorage.setItem("footballData", JSON.stringify(footballData));
+                    updateLeagueFilter();
+                    renderData();
+                    alert("Sincronización completa.");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("No se pudieron obtener datos de la nube.");
+            } finally {
+                btn.innerText = "Recuperar de la Nube";
+            }
+        }
+
+        // --- FUNCIONES ORIGINALES DE GESTIÓN ---
         function saveAllTables() {
             const league = document.getElementById('leagueName').value.trim();
             if (!league) {
@@ -150,7 +212,6 @@
                             tabla: parsedRows,
                             isTimeSegment: isTime
                         };
-                        // Eliminar versión previa de la misma tabla antes de guardar la nueva
                         footballData = footballData.filter(item => !(item.liga === league && item.tipo === input.type));
                         footballData.push(newEntry);
                         count++;
