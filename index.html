@@ -155,13 +155,21 @@
 
         let footballData = []; 
 
-        // 1. Funciones de Gestión de Ligas y Usuarios (NUEVA LÓGICA UNIFICADA)
-        async function guardarLigaNueva(nombreDeLaLiga) {
-            const { data: { user } } = await _supabase.auth.getUser();
-            if (!user) {
-                alert("Debes iniciar sesión para guardar datos");
-                return;
+        // 1. Verificación de Autenticación (CORRECCIÓN)
+        async function checkAuth() {
+            const { data: { session }, error } = await _supabase.auth.getSession();
+            if (error || !session) {
+                // Si no hay sesión, redirigir al login
+                window.location.href = 'login.html'; 
+                return null;
             }
+            return session.user;
+        }
+
+        async function guardarLigaNueva(nombreDeLaLiga) {
+            const user = await checkAuth();
+            if (!user) return;
+
             const { data, error } = await _supabase
                 .from('ligas')
                 .insert([{ nombre: nombreDeLaLiga, user_id: user.id }]);
@@ -174,8 +182,9 @@
         }
 
         async function cargarMisLigas() {
-            const { data: { user } } = await _supabase.auth.getUser();
+            const user = await checkAuth();
             if (!user) return;
+
             const { data: ligas, error } = await _supabase
                 .from('ligas')
                 .select('*')
@@ -184,7 +193,6 @@
             if (error) console.error("Error al obtener datos:", error.message);
             else {
                 console.log("Tus ligas son:", ligas);
-                // Aquí podrías llamar a una función para actualizar una lista UI si existiera
             }
         }
 
@@ -230,6 +238,10 @@
         }
 
         async function loadFromSupabase() {
+            // Primero verificamos si está logeado antes de cargar datos
+            const user = await checkAuth();
+            if (!user) return;
+
             const { data, error } = await _supabase
                 .from('football_data')
                 .select('*');
@@ -502,6 +514,7 @@
             xgEl.innerHTML = `xG Proyectado: Local ${res.xh} - Visitante ${res.xa}`;
         }
 
+        // Ejecución inicial
         loadFromSupabase();
     </script>
 </body>
