@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora 1X2 - Poisson</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
@@ -42,7 +43,7 @@
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Liga</label>
                     <select id="selectLeague" onchange="updateTeams(); saveMatchSelection();" class="block w-full border border-gray-300 rounded-md shadow-sm p-2.5 bg-white text-sm">
-                        <option value="">Seleccionar Liga</option>
+                        <option value="">Cargando ligas...</option>
                     </select>
                 </div>
                 <div>
@@ -133,7 +134,12 @@
     </div>
 
     <script>
-        const getData = () => JSON.parse(localStorage.getItem("footballData")) || [];
+        // --- CONFIGURACIÓN SUPABASE ---
+        const SUPABASE_URL = 'https://tu-proyecto.supabase.co'; 
+        const SUPABASE_KEY = 'tu-clave-anon-public';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let footballData = []; // Se llenará desde Supabase
 
         function switchTab(type) {
             const ftBtn = document.getElementById('tab-ft');
@@ -174,10 +180,33 @@
             }
         }
 
+        // NUEVA FUNCIÓN: Cargar datos desde Supabase
+        async function loadFromSupabase() {
+            const { data, error } = await _supabase
+                .from('football_data')
+                .select('*');
+
+            if (error) {
+                console.error("Error cargando datos:", error);
+                return;
+            }
+
+            footballData = data.map(item => ({
+                liga: item.liga,
+                tipo: item.tipo,
+                fecha: item.fecha,
+                tabla: item.tabla_json,
+                isTimeSegment: item.is_time
+            }));
+
+            init(); // Una vez cargados, inicializamos los selectores
+        }
+
         function init() {
-            const data = getData();
             const leagueSelect = document.getElementById('selectLeague');
-            const ligas = [...new Set(data.map(item => item.liga))];
+            leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
+            
+            const ligas = [...new Set(footballData.map(item => item.liga))];
             
             ligas.forEach(liga => {
                 const opt = document.createElement('option');
@@ -220,7 +249,7 @@
             }
         }
 
-        const getTable = (liga, tipo) => getData().find(t => t.liga === liga && t.tipo === tipo);
+        const getTable = (liga, tipo) => footballData.find(t => t.liga === liga && t.tipo === tipo);
 
         function poisson(k, lambda) {
             return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k);
@@ -355,10 +384,8 @@
                     <span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span>
                 </div>`).join('');
 
-            // Renderizar Handicaps Ordenados: Primero Local, luego Visitante
             let hdHTML = `<div class="bg-gray-100 p-2 rounded handicap-grid font-bold text-gray-600"><span>Opción</span><span>Local (+N)</span><span>Empate</span><span>Visita</span></div>`;
             
-            // Sección Local
             [1,2,3].forEach(n => {
                 hdHTML += `
                 <div class="handicap-grid p-2 border-b border-gray-100 items-center italic text-gray-500"><span>Local +${n}</span></div>
@@ -369,10 +396,8 @@
                 </div>`;
             });
 
-            // Divisor visual opcional entre bloques
             hdHTML += `<div class="h-2 md:col-span-2"></div>`;
 
-            // Sección Visitante
             [1,2,3].forEach(n => {
                 hdHTML += `
                 <div class="handicap-grid p-2 border-b border-gray-100 items-center italic text-gray-500"><span>Visita +${n}</span></div>
@@ -386,7 +411,9 @@
 
             xgEl.innerHTML = `xG Proyectado: Local ${res.xh} - Visitante ${res.xa}`;
         }
-        init();
+
+        // Iniciamos la carga desde la nube
+        loadFromSupabase();
     </script>
 </body>
 </html>
