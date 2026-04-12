@@ -20,8 +20,8 @@
             display: none; 
             position: fixed; 
             inset: 0; 
-            background: rgba(15, 23, 42, 0.8); /* Slate 900 con transparencia */
-            backdrop-filter: blur(8px); 
+            background: rgba(15, 23, 42, 0.9); /* Slate 900 más opaco para bloqueo total */
+            backdrop-filter: blur(12px); 
             align-items: center; 
             justify-content: center; 
             z-index: 100; 
@@ -44,12 +44,15 @@
             outline: none;
             box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
         }
+
+        /* Bloqueo de contenido si no está logeado */
+        .blur-content { filter: blur(20px); pointer-events: none; user-select: none; }
+        #mainAppContent { transition: filter 0.5s ease; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <div id="loginModal">
-        <div class="login-card p-8 rounded-2xl w-full max-w-[340px] border border-slate-700">
+    <div id="loginModal" class="active"> <div class="login-card p-8 rounded-2xl w-full max-w-[340px] border border-slate-700">
             <div class="text-center mb-6">
                 <div class="inline-block p-3 bg-blue-600 rounded-xl mb-4 shadow-lg shadow-blue-900/20">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -75,14 +78,14 @@
                 <button onclick="handleLogin()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-500 transition-all shadow-lg shadow-blue-600/20 active:scale-95">
                     AUTENTICAR
                 </button>
-                <button onclick="closeLogin()" class="text-slate-500 text-xs font-semibold py-2 hover:text-slate-300 transition-colors">
-                    VOLVER AL MODO CONSULTA
-                </button>
+                <div class="text-center mt-2">
+                    <p class="text-[10px] text-slate-500 italic">BetAGS Pro v2.0 - Aguascalientes, MX</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="max-w-4xl mx-auto">
+    <div id="mainAppContent" class="max-w-4xl mx-auto blur-content">
         <header class="mb-8 text-center relative">
             <div class="absolute top-0 right-0">
                 <button id="authBtn" onclick="toggleAuth()" class="bg-slate-800 text-white text-[10px] px-3 py-1 rounded-full uppercase font-bold tracking-tighter">
@@ -255,13 +258,21 @@
             const { data: { user } } = await _supabase.auth.getUser();
             const btn = document.getElementById('authBtn');
             const info = document.getElementById('userInfo');
+            const modal = document.getElementById('loginModal');
+            const appContent = document.getElementById('mainAppContent');
             
             if (user) {
+                // LOGEADO: Quitar modal y blur
+                modal.classList.remove('active');
+                appContent.classList.remove('blur-content');
                 btn.innerText = "Logout";
                 btn.classList.replace('bg-slate-800', 'bg-red-600');
                 info.innerText = user.email;
                 info.classList.remove('hidden');
             } else {
+                // NO LOGEADO: Activar modal y blur
+                modal.classList.add('active');
+                appContent.classList.add('blur-content');
                 btn.innerText = "Login";
                 btn.classList.replace('bg-red-600', 'bg-slate-800');
                 info.classList.add('hidden');
