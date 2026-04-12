@@ -494,13 +494,13 @@
                 document.getElementById('probIfHomeScores').textContent = probHomeFirst.toFixed(1) + '%';
                 document.getElementById('probIfAwayScores').textContent = probAwayFirst.toFixed(1) + '%';
 
-                if (probHomeFirst >= 70) {
+                if (probHomeFirst >= 60) {
                     contHome.className = "p-4 bg-emerald-100 border-y border-emerald-200 shadow-sm text-center transition-all rounded-lg";
                 } else {
                     contHome.className = "p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all";
                 }
 
-                if (probAwayFirst >= 70) {
+                if (probAwayFirst >= 60) {
                     contAway.className = "p-4 bg-emerald-100 border-y border-emerald-200 shadow-sm text-center transition-all rounded-lg";
                 } else {
                     contAway.className = "p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all";
