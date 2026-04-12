@@ -130,40 +130,52 @@
         let footballData = JSON.parse(localStorage.getItem("footballData")) || [];
 
         // FUNCIÓN DE SINCRONIZACIÓN CORREGIDA
-        async function syncToCloud(action) {
-            const status = document.getElementById('syncStatus');
-            status.className = "mt-2 text-[10px] text-center font-medium block text-blue-600 loading-pulse";
-            status.innerText = "Conectando...";
+         async function syncToCloud(action) {
+    const status = document.getElementById('syncStatus');
+    status.className = "mt-2 text-[10px] text-center font-medium block text-blue-600 loading-pulse";
+    status.innerText = "Conectando...";
 
-            try {
-                if (action === 'save') {
-                    // El método no-cors funciona para enviar, pero no para leer la respuesta
-                    await fetch(SCRIPT_URL, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        body: JSON.stringify({ action: 'save', payload: footballData })
-                    });
-                    status.innerText = "✓ Guardado en Sheets";
-                } else {
-                    // Para bajar datos usamos la respuesta del script
-                    const response = await fetch(SCRIPT_URL);
-                    const cloudData = await response.json();
-                    if (cloudData) {
-                        footballData = cloudData;
-                        localStorage.setItem("footballData", JSON.stringify(footballData));
-                        updateLeagueFilter();
-                        renderData();
-                        status.innerText = "✓ Sincronizado desde nube";
-                    }
-                }
-                status.className = "mt-2 text-[10px] text-center font-medium block text-green-600";
-            } catch (e) {
-                status.className = "mt-2 text-[10px] text-center font-medium block text-red-600";
-                status.innerText = "Error de sincronización";
-                console.error(e);
+    try {
+        if (action === 'save') {
+            // Verificamos si hay datos para enviar
+            if (footballData.length === 0) {
+                alert("No hay datos para subir. Agrega una liga primero.");
+                status.classList.add('hidden');
+                return;
             }
-            setTimeout(() => status.classList.add('hidden'), 3000);
+
+            // Enviamos los datos
+            await fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', // Necesario para evitar bloqueos de Google
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'save', payload: footballData })
+            });
+            
+            status.innerText = "✓ Enviado (Verifica Celda A1)";
+        } else {
+            // BAJAR DATOS
+            const response = await fetch(SCRIPT_URL);
+            const rawResponse = await response.text();
+            
+            if (rawResponse && rawResponse !== "[]") {
+                footballData = JSON.parse(rawResponse);
+                localStorage.setItem("footballData", JSON.stringify(footballData));
+                updateLeagueFilter();
+                renderData();
+                status.innerText = "✓ Datos bajados de la nube";
+            } else {
+                status.innerText = "La celda A1 está vacía";
+            }
         }
+        status.className = "mt-2 text-[10px] text-center font-medium block text-green-600";
+    } catch (e) {
+        status.className = "mt-2 text-[10px] text-center font-medium block text-red-600";
+        status.innerText = "Error de conexión";
+        console.error(e);
+    }
+    setTimeout(() => status.classList.add('hidden'), 4000);
+}
 
         // LÓGICA DE NEGOCIO (No se modifica)
         function saveAllTables() {
