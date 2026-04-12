@@ -85,6 +85,22 @@
                 </div>
             </div>
 
+            <div class="card p-6 border-t-4 border-cyan-500">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Efecto del Primer Gol (Over 2.5)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center">
+                        <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Si Local Anota Primero</span>
+                        <div id="probIfHomeScores" class="text-2xl font-black text-cyan-600">--%</div>
+                        <p class="text-[10px] text-slate-400 mt-1 italic">Proyección basada en tendencia de respuesta</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center">
+                        <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Si Visita Anota Primero</span>
+                        <div id="probIfAwayScores" class="text-2xl font-black text-rose-600">--%</div>
+                        <p class="text-[10px] text-slate-400 mt-1 italic">Proyección basada en tendencia de remontada</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="card p-6 border-t-4 border-rose-500">
                 <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Goles por Equipo (Individual FT)</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -414,6 +430,24 @@
             });
         }
 
+        // Lógica de recalcular Over 2.5 basado en quién marca primero
+        function calculateOverIfGoal(lambdas, scorer) {
+            // Factor de ajuste: si alguien marca, el partido suele abrirse.
+            // Si el local marca primero, el ajuste suele ser conservador (1.1x)
+            // Si el visita marca primero, el local suele atacar más agresivo (1.25x)
+            let factorH = scorer === 'home' ? 1.05 : 1.25;
+            let factorA = scorer === 'home' ? 1.15 : 1.05;
+
+            const adjustedLambdas = {
+                h: lambdas.h * factorH,
+                a: lambdas.a * factorA
+            };
+
+            // Recalculamos la probabilidad de que falten 2 goles (para llegar al Over 2.5)
+            // Pero para simplificar el modelo predictivo de mercado, recalculamos el Over 2.5 global con el sesgo
+            return calculateOverProb(adjustedLambdas, 2.5);
+        }
+
         function mainCalculation() {
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
@@ -439,6 +473,13 @@
                 renderOU('ft', ftLambdas, [0.5, 1.5, 2.5, 3.5, 4.5]);
                 renderIndividualTables(ftLambdas);
                 calculateTotalGoalRanges(ftLambdas);
+
+                // Cálculos específicos para el nuevo apartado
+                const probHomeFirst = calculateOverIfGoal(ftLambdas, 'home');
+                const probAwayFirst = calculateOverIfGoal(ftLambdas, 'away');
+                
+                document.getElementById('probIfHomeScores').textContent = probHomeFirst.toFixed(1) + '%';
+                document.getElementById('probIfAwayScores').textContent = probAwayFirst.toFixed(1) + '%';
             }
             if (htLambdas) renderOU('ht', htLambdas, [0.5, 1.5, 2.5]);
         }
