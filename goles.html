@@ -108,8 +108,7 @@
                         <div>Rango de Goles</div>
                         <div>Probabilidad</div>
                     </div>
-                    <div id="totalGoalsRangeTable" class="divide-y divide-gray-100">
-                    </div>
+                    <div id="totalGoalsRangeTable" class="divide-y divide-gray-100"></div>
                 </div>
             </div>
         </div>
@@ -117,10 +116,15 @@
     </div>
 
     <script>
-        // CONFIGURACIÓN SUPABASE - Reemplaza con tus credenciales
+        // CONFIGURACIÓN SUPABASE
         const SB_URL = "https://idugbbdlyirhzgczpbhu.supabase.co";
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk";
-        const supabase = (SB_URL !== "TU_URL_DE_SUPABASE") ? supabase.createClient(SB_URL, SB_KEY) : null;
+        
+        // Corrección de inicialización
+        let supabase = null;
+        if (SB_URL !== "TU_URL_DE_SUPABASE" && typeof supabasejs !== 'undefined') {
+            supabase = supabasejs.createClient(SB_URL, SB_KEY);
+        }
 
         let globalFootballData = [];
         let charts = {};
@@ -210,13 +214,14 @@
                     datasets: [
                         { label: 'Anotados (%)', data: dataObj.teamScored, backgroundColor: 'rgba(34, 197, 94, 0.3)', borderColor: 'rgb(34, 197, 94)', borderWidth: 1, hidden: true },
                         { label: 'Concedidos (%)', data: dataObj.teamConceded, backgroundColor: 'rgba(239, 68, 68, 0.3)', borderColor: 'rgb(239, 68, 68)', borderWidth: 1, hidden: true },
-                        { label: 'Prob. Over 0.5 HT (%)', data: dataObj.probHTDist, backgroundColor: 'rgba(59, 130, 246, 0.8)', borderColor: 'rgb(59, 130, 246)', borderWidth: 2, hidden: false },
-                        { label: 'Prob. Over 2.5 FT (%)', data: dataObj.probFTDist, backgroundColor: 'rgba(139, 92, 246, 0.8)', borderColor: 'rgb(139, 92, 246)', borderWidth: 2, hidden: false },
+                        { label: 'Prob. Over 0.5 HT (%)', data: dataObj.probHTDist, backgroundColor: 'rgba(59, 130, 246, 0.8)', borderColor: 'rgb(59, 130, 246)', borderWidth: 2 },
+                        { label: 'Prob. Over 2.5 FT (%)', data: dataObj.probFTDist, backgroundColor: 'rgba(139, 92, 246, 0.8)', borderColor: 'rgb(139, 92, 246)', borderWidth: 2 },
                         { label: 'Prom. Liga (%)', data: dataObj.leagueAvg, borderColor: 'rgb(148, 163, 184)', borderWidth: 2, type: 'line', pointRadius: 0, fill: false, tension: 0.4, hidden: true }
                     ]
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
                     plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }
                 }
@@ -257,12 +262,6 @@
             if(currentVal) leagueSelect.value = currentVal;
         }
 
-        async function init() {
-            await fetchSupabaseData(); // Carga Supabase o falla a local
-            initLeagueSelect();
-            loadMatchSelection();
-        }
-
         function updateTeams() {
             const liga = document.getElementById('selectLeague').value;
             const hSel = document.getElementById('homeTeam');
@@ -275,7 +274,13 @@
             if(tAway) tAway.tabla.forEach(t => aSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
         }
 
-        function factorial(n) { return n <= 1 ? 1 : n * factorial(n - 1); }
+        // Factorial no recursivo para mayor estabilidad
+        function factorial(n) {
+            let res = 1;
+            for (let i = 2; i <= n; i++) res *= i;
+            return res;
+        }
+        
         function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k); }
 
         function getLambdas(liga, homeName, awayName, isHT) {
@@ -284,12 +289,18 @@
             const dataH = getData().find(t => t.liga === liga && t.tipo === hType);
             const dataA = getData().find(t => t.liga === liga && t.tipo === aType);
             if (!dataH || !dataA) return null;
+            
             const lAvgH = dataH.tabla.reduce((s, t) => s + t.GF, 0) / dataH.tabla.reduce((s, t) => s + t.GP, 0);
             const lAvgA = dataA.tabla.reduce((s, t) => s + t.GF, 0) / dataA.tabla.reduce((s, t) => s + t.GP, 0);
+            
             const eH = dataH.tabla.find(t => t.equipo === homeName);
             const eA = dataA.tabla.find(t => t.equipo === awayName);
             if (!eH || !eA) return null;
-            return { h: (eH.GF/eH.GP)/(lAvgH) * (eA.GA/eA.GP)/(lAvgH) * lAvgH, a: (eA.GF/eA.GP)/(lAvgA) * (eH.GA/eH.GP)/(lAvgA) * lAvgA };
+
+            return { 
+                h: (eH.GF/eH.GP)/lAvgH * (eA.GA/eA.GP)/lAvgH * lAvgH, 
+                a: (eA.GF/eA.GP)/lAvgA * (eH.GA/eH.GP)/lAvgA * lAvgA 
+            };
         }
 
         function calculateOverProb(lambdas, line) {
@@ -401,6 +412,13 @@
                 container.appendChild(row);
             });
         }
+
+        async function init() {
+            await fetchSupabaseData();
+            initLeagueSelect();
+            loadMatchSelection();
+        }
+
         init();
     </script>
 </body>
