@@ -126,7 +126,6 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let footballData = [];
-        const MASTER_PASSWORD = "2055";
 
         // --- FUNCIÓN PARA CARGAR DESDE LA NUBE ---
         async function loadFromSupabase() {
@@ -138,7 +137,6 @@
                 console.error("Error cargando Supabase:", error);
                 alert("Error al conectar con la nube.");
             } else {
-                // Convertimos el formato de la DB al formato de tu app
                 footballData = data.map(item => ({
                     liga: item.liga,
                     tipo: item.tipo,
@@ -151,14 +149,8 @@
             }
         }
 
-        // --- FUNCIÓN PARA GUARDAR (MEJORADA CON CONTRASEÑA) ---
+        // --- FUNCIÓN PARA GUARDAR (SIN CONTRASEÑA) ---
         async function saveAllTables() {
-            const pw = prompt("Introduce la contraseña para GUARDAR:");
-            if (pw !== MASTER_PASSWORD) {
-                alert("Contraseña incorrecta. Acción cancelada.");
-                return;
-            }
-
             const league = document.getElementById('leagueName').value.trim();
             if (!league) {
                 alert("Por favor, ingresa el nombre de la liga.");
@@ -211,7 +203,7 @@
             }
         }
 
-        // --- TU LÓGICA MATEMÁTICA (INTACTA) ---
+        // --- LÓGICA DE PARSEO ---
         function parseRawData(text) {
             const lines = text.split('\n');
             const result = [];
@@ -389,14 +381,8 @@
             });
         }
 
-        // --- FUNCIÓN PARA ELIMINAR TABLA INDIVIDUAL (CON CONTRASEÑA) ---
+        // --- ELIMINAR TABLA (SIN CONTRASEÑA) ---
         async function deleteFromSupabase(liga, tipo) {
-            const pw = prompt(`Introduce la contraseña para eliminar la tabla ${tipo} de ${liga}:`);
-            if (pw !== MASTER_PASSWORD) {
-                alert("Contraseña incorrecta. Acción cancelada.");
-                return;
-            }
-
             if (confirm(`¿Estás seguro de que quieres eliminar la tabla ${tipo} de ${liga} de la nube?`)) {
                 const { error } = await _supabase
                     .from('football_data')
@@ -411,19 +397,13 @@
             }
         }
 
-        // --- FUNCIÓN PARA ELIMINAR TODO (CON CONTRASEÑA) ---
+        // --- ELIMINAR TODO (SIN CONTRASEÑA) ---
         async function clearAllData() {
-            const pw = prompt("Introduce la contraseña para ELIMINAR TODO:");
-            if (pw !== MASTER_PASSWORD) {
-                alert("Contraseña incorrecta. Acción cancelada.");
-                return;
-            }
-
             if (confirm("¿Confirmas que deseas borrar TODA la base de datos en la nube?")) {
                 const { error } = await _supabase
                     .from('football_data')
                     .delete()
-                    .neq('liga', 'un_valor_imposible'); // Borra todo
+                    .neq('liga', 'un_valor_imposible');
 
                 if (!error) {
                     alert("Base de datos limpiada con éxito.");
@@ -468,7 +448,6 @@
             reader.readAsText(file);
         }
 
-        // Carga inicial al abrir la página
         loadFromSupabase();
     </script>
 </body>
