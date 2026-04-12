@@ -86,7 +86,7 @@
             </div>
 
             <div class="card p-6 border-t-4 border-cyan-500">
-                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Efecto del Primer Gol (Over 2.5)</h3>
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Efecto del Primer Gol (Over 2.5 FT)</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div id="containerHomeFirst" class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all">
                         <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Si Local Anota Primero</span>
@@ -97,6 +97,22 @@
                         <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Si Visita Anota Primero</span>
                         <div id="probIfAwayScores" class="text-2xl font-black text-rose-600">--%</div>
                         <p class="text-[10px] text-slate-400 mt-1 italic">Proyección basada en tendencia de remontada</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card p-6 border-t-4 border-blue-500">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Efecto del Primer Gol (Over 1.5 HT)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div id="containerHomeFirstHT" class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all">
+                        <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Si Local Anota Primero</span>
+                        <div id="probIfHomeScoresHT" class="text-2xl font-black text-blue-600">--%</div>
+                        <p class="text-[10px] text-slate-400 mt-1 italic">Proyección Over 1.5 en el 1er Tiempo</p>
+                    </div>
+                    <div id="containerAwayFirstHT" class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all">
+                        <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Si Visita Anota Primero</span>
+                        <div id="probIfAwayScoresHT" class="text-2xl font-black text-indigo-600">--%</div>
+                        <p class="text-[10px] text-slate-400 mt-1 italic">Proyección Over 1.5 en el 1er Tiempo</p>
                     </div>
                 </div>
             </div>
@@ -430,11 +446,8 @@
             });
         }
 
-        // Lógica de recalcular Over 2.5 basado en quién marca primero
-        function calculateOverIfGoal(lambdas, scorer) {
-            // Factor de ajuste: si alguien marca, el partido suele abrirse.
-            // Si el local marca primero, el ajuste suele ser conservador (1.1x)
-            // Si el visita marca primero, el local suele atacar más agresivo (1.25x)
+        // Lógica de recalcular Over basado en quién marca primero
+        function calculateOverIfGoal(lambdas, scorer, line = 2.5) {
             let factorH = scorer === 'home' ? 1.05 : 1.25;
             let factorA = scorer === 'home' ? 1.15 : 1.05;
 
@@ -443,9 +456,7 @@
                 a: lambdas.a * factorA
             };
 
-            // Recalculamos la probabilidad de que falten 2 goles (para llegar al Over 2.5)
-            // Pero para simplificar el modelo predictivo de mercado, recalculamos el Over 2.5 global con el sesgo
-            return calculateOverProb(adjustedLambdas, 2.5);
+            return calculateOverProb(adjustedLambdas, line);
         }
 
         function mainCalculation() {
@@ -474,18 +485,15 @@
                 renderIndividualTables(ftLambdas);
                 calculateTotalGoalRanges(ftLambdas);
 
-                // Cálculos específicos para el nuevo apartado
-                const probHomeFirst = calculateOverIfGoal(ftLambdas, 'home');
-                const probAwayFirst = calculateOverIfGoal(ftLambdas, 'away');
+                const probHomeFirst = calculateOverIfGoal(ftLambdas, 'home', 2.5);
+                const probAwayFirst = calculateOverIfGoal(ftLambdas, 'away', 2.5);
                 
                 const contHome = document.getElementById('containerHomeFirst');
                 const contAway = document.getElementById('containerAwayFirst');
                 
-                // Actualizar texto
                 document.getElementById('probIfHomeScores').textContent = probHomeFirst.toFixed(1) + '%';
                 document.getElementById('probIfAwayScores').textContent = probAwayFirst.toFixed(1) + '%';
 
-                // Aplicar resaltado si >= 70%
                 if (probHomeFirst >= 70) {
                     contHome.className = "p-4 bg-emerald-100 border-y border-emerald-200 shadow-sm text-center transition-all rounded-lg";
                 } else {
@@ -498,7 +506,32 @@
                     contAway.className = "p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all";
                 }
             }
-            if (htLambdas) renderOU('ht', htLambdas, [0.5, 1.5, 2.5]);
+
+            if (htLambdas) {
+                renderOU('ht', htLambdas, [0.5, 1.5, 2.5]);
+
+                // Recalcular Efecto primer gol para Over 1.5 HT
+                const probHomeFirstHT = calculateOverIfGoal(htLambdas, 'home', 1.5);
+                const probAwayFirstHT = calculateOverIfGoal(htLambdas, 'away', 1.5);
+                
+                const contHomeHT = document.getElementById('containerHomeFirstHT');
+                const contAwayHT = document.getElementById('containerAwayFirstHT');
+                
+                document.getElementById('probIfHomeScoresHT').textContent = probHomeFirstHT.toFixed(1) + '%';
+                document.getElementById('probIfAwayScoresHT').textContent = probAwayFirstHT.toFixed(1) + '%';
+
+                if (probHomeFirstHT >= 70) {
+                    contHomeHT.className = "p-4 bg-emerald-100 border-y border-emerald-200 shadow-sm text-center transition-all rounded-lg";
+                } else {
+                    contHomeHT.className = "p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all";
+                }
+
+                if (probAwayFirstHT >= 70) {
+                    contAwayHT.className = "p-4 bg-emerald-100 border-y border-emerald-200 shadow-sm text-center transition-all rounded-lg";
+                } else {
+                    contAwayHT.className = "p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all";
+                }
+            }
         }
 
         function renderOU(prefix, lambdas, lines) {
