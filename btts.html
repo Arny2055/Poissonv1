@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora BTTS - Poisson</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
@@ -34,24 +35,24 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Liga</label>
-                    <select id="selectLeague" onchange="updateTeams(); saveMatchSelection();" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
-                        <option value="">Seleccionar Liga</option>
+                    <select id="selectLeague" onchange="updateTeams(); saveMatchSelection();" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white text-sm">
+                        <option value="">Cargando ligas...</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Local</label>
-                    <select id="homeTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <select id="homeTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white text-sm">
                         <option value="">--</option>
                     </select>
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-700">Visitante</label>
-                    <select id="awayTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                    <select id="awayTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white text-sm">
                         <option value="">--</option>
                     </select>
                 </div>
             </div>
-            <button onclick="mainCalculation()" class="w-full mt-6 bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 transition font-bold text-lg">CALCULAR PROYECCIONES</button>
+            <button onclick="mainCalculation()" class="w-full mt-6 bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 transition font-bold text-lg shadow-lg">CALCULAR PROYECCIONES</button>
         </div>
 
         <div id="resultsWrapper" class="hidden space-y-6">
@@ -120,11 +121,33 @@
                 </div>
             </div>
         </div>
-        <div id="emptyState" class="text-center py-12 text-gray-400">Selecciona equipos para calcular.</div>
+        <div id="emptyState" class="text-center py-12 text-gray-400 italic">Selecciona liga y equipos para calcular las proyecciones BTTS.</div>
     </div>
 
     <script>
-        const getData = () => JSON.parse(localStorage.getItem("footballData")) || [];
+        // --- CONFIGURACIÓN SUPABASE ---
+        const SUPABASE_URL = 'https://idugbbdlyirhzgczpbhu.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let footballData = []; 
+
+        const getData = () => footballData;
+
+        async function loadFromSupabase() {
+            const { data, error } = await _supabase.from('football_data').select('*');
+            if (error) {
+                console.error("Error cargando datos:", error);
+                return;
+            }
+            footballData = data.map(item => ({
+                liga: item.liga,
+                tipo: item.tipo,
+                fecha: item.fecha,
+                tabla: item.tabla_json
+            }));
+            init(); 
+        }
 
         function saveMatchSelection() {
             const selection = {
@@ -147,9 +170,9 @@
         }
 
         function init() {
-            const data = getData();
             const leagueSelect = document.getElementById('selectLeague');
-            const ligas = [...new Set(data.map(item => item.liga))];
+            leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
+            const ligas = [...new Set(footballData.map(item => item.liga))];
             ligas.forEach(l => {
                 const opt = document.createElement('option');
                 opt.value = opt.textContent = l;
@@ -286,7 +309,7 @@
             `;
         }
 
-        init();
+        loadFromSupabase();
     </script>
 </body>
 </html>
