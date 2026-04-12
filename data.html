@@ -126,6 +126,7 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let footballData = [];
+        const MASTER_PASSWORD = "2055";
 
         // --- FUNCIÓN PARA CARGAR DESDE LA NUBE ---
         async function loadFromSupabase() {
@@ -150,8 +151,14 @@
             }
         }
 
-        // --- FUNCIÓN PARA GUARDAR (MEJORADA) ---
+        // --- FUNCIÓN PARA GUARDAR (MEJORADA CON CONTRASEÑA) ---
         async function saveAllTables() {
+            const pw = prompt("Introduce la contraseña para GUARDAR:");
+            if (pw !== MASTER_PASSWORD) {
+                alert("Contraseña incorrecta. Acción cancelada.");
+                return;
+            }
+
             const league = document.getElementById('leagueName').value.trim();
             if (!league) {
                 alert("Por favor, ingresa el nombre de la liga.");
@@ -397,14 +404,26 @@
             }
         }
 
+        // --- FUNCIÓN PARA ELIMINAR TODO (CON CONTRASEÑA) ---
         async function clearAllData() {
-            if (confirm("¿Borrar TODA la base de datos en la nube?")) {
+            const pw = prompt("Introduce la contraseña para ELIMINAR TODO:");
+            if (pw !== MASTER_PASSWORD) {
+                alert("Contraseña incorrecta. Acción cancelada.");
+                return;
+            }
+
+            if (confirm("¿Confirmas que deseas borrar TODA la base de datos en la nube?")) {
                 const { error } = await _supabase
                     .from('football_data')
                     .delete()
                     .neq('liga', 'un_valor_imposible'); // Borra todo
 
-                if (!error) await loadFromSupabase();
+                if (!error) {
+                    alert("Base de datos limpiada con éxito.");
+                    await loadFromSupabase();
+                } else {
+                    alert("Error al intentar limpiar los datos.");
+                }
             }
         }
 
