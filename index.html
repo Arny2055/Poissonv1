@@ -94,6 +94,12 @@
                         <p class="text-xs font-bold text-gray-400 uppercase mb-3">Marcadores Probables</p>
                         <div class="grid grid-cols-1 gap-2" id="ftCS"></div>
                     </div>
+                    
+                    <div class="card p-5 border-t-4 border-emerald-500 md:col-span-2">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3 text-center">Efecto del Primer Gol (Análisis de Apertura)</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="ftFirstGoalEffect"></div>
+                    </div>
+
                     <div class="card p-5 border-t-4 border-indigo-500 md:col-span-2">
                         <p class="text-xs font-bold text-gray-400 uppercase mb-3 text-center">Handicap Europeo (3-Way)</p>
                         <div id="ftHandicap" class="space-y-1"></div>
@@ -120,6 +126,12 @@
                         <p class="text-xs font-bold text-gray-400 uppercase mb-3">Marcadores HT (Top 5)</p>
                         <div class="grid grid-cols-1 gap-2" id="htCS"></div>
                     </div>
+                    
+                    <div class="card p-5 border-t-4 border-emerald-400 md:col-span-2">
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3 text-center">Efecto del Primer Gol HT</p>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="htFirstGoalEffect"></div>
+                    </div>
+
                     <div class="card p-5 border-t-4 border-orange-400 md:col-span-2">
                         <p class="text-xs font-bold text-gray-400 uppercase mb-3 text-center">Handicap Europeo HT (3-Way)</p>
                         <div id="htHandicap" class="space-y-1"></div>
@@ -308,7 +320,7 @@
             for (let h = 0; h <= maxG; h++) {
                 for (let a = 0; a <= maxG; a++) {
                     const prob = pHome[h] * pAway[a];
-                    if(h <= 5 && a <= 5) scores.push({ score: `${h}-${a}`, prob: prob * 100 });
+                    if(h <= 5 && a <= 5) scores.push({ h, a, score: `${h}-${a}`, prob: prob * 100 });
                     
                     if (h > a) win += prob;
                     else if (h === a) draw += prob;
@@ -327,10 +339,29 @@
                     });
                 }
             }
-            const topScores = scores.sort((a, b) => b.prob - a.prob).slice(0, 5);
+            
+            // EFECTO PRIMER GOL (Probabilidad de anotar al menos 1)
+            const probAnotarLocal = (1 - pHome[0]) * 100;
+            const probAnotarAway = (1 - pAway[0]) * 100;
+
+            // Marcadores si Local anota primero (H >= 1)
+            const condLocalScores = scores
+                .filter(s => s.h >= 1)
+                .sort((a,b) => b.prob - a.prob)
+                .slice(0, 3);
+            
+            // Marcadores si Visita anota primero (A >= 1)
+            const condAwayScores = scores
+                .filter(s => s.a >= 1)
+                .sort((a,b) => b.prob - a.prob)
+                .slice(0, 3);
+
+            const topScores = [...scores].sort((a, b) => b.prob - a.prob).slice(0, 5);
+
             return { 
                 win: win * 100, draw: draw * 100, loss: loss * 100, 
                 topScores, hLocal, hVisit,
+                probAnotarLocal, probAnotarAway, condLocalScores, condAwayScores,
                 xh: lambdas.lambdaHome.toFixed(2), xa: lambdas.lambdaAway.toFixed(2) 
             };
         }
@@ -357,6 +388,7 @@
             const cDC = document.getElementById(`${prefix}DC`);
             const cDNB = document.getElementById(`${prefix}DNB`);
             const cCS = document.getElementById(`${prefix}CS`);
+            const cFGE = document.getElementById(`${prefix}FirstGoalEffect`);
             const cHD = document.getElementById(`${prefix}Handicap`);
             const xgEl = document.getElementById(`${prefix}XG`);
             
@@ -366,10 +398,14 @@
             const dnbH = dnbTotal > 0 ? (res.win / 100) / dnbTotal * 100 : 0;
             const dnbA = dnbTotal > 0 ? (res.loss / 100) / dnbTotal * 100 : 0;
 
+            // Lógica de color según Efecto del Primer Gol (Umbral 60%)
+            const homeClass = res.probAnotarLocal >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
+            const awayClass = res.probAnotarAway >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
+
             c1x2.innerHTML = `
-                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Local</span><span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span></div>
+                <div class="flex justify-between text-sm p-2 ${homeClass} border rounded transition-colors"><span>Local</span><span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span></div>
                 <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Empate</span><span class="font-bold text-gray-500">${res.draw.toFixed(1)}%</span></div>
-                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>`;
+                <div class="flex justify-between text-sm p-2 ${awayClass} border rounded transition-colors"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>`;
             
             cDC.innerHTML = `
                 <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>1X</span><span class="font-bold">${(res.win + res.draw).toFixed(1)}%</span></div>
@@ -384,6 +420,26 @@
                 <div class="flex justify-between text-sm p-2 bg-indigo-50 rounded border border-indigo-100">
                     <span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span>
                 </div>`).join('');
+
+            // RENDER EFECTO PRIMER GOL Y MARCADORES CONDICIONALES
+            cFGE.innerHTML = `
+                <div class="space-y-2">
+                    <p class="text-[10px] font-bold text-blue-600 uppercase">Si Local anota primero (${res.probAnotarLocal.toFixed(1)}%)</p>
+                    ${res.condLocalScores.map(s => `
+                        <div class="flex justify-between text-[11px] p-2 bg-white border border-emerald-100 rounded">
+                            <span class="font-semibold">${s.score}</span><span class="text-emerald-600 font-bold">${s.prob.toFixed(1)}%</span>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="space-y-2">
+                    <p class="text-[10px] font-bold text-red-600 uppercase">Si Visita anota primero (${res.probAnotarAway.toFixed(1)}%)</p>
+                    ${res.condAwayScores.map(s => `
+                        <div class="flex justify-between text-[11px] p-2 bg-white border border-red-100 rounded">
+                            <span class="font-semibold">${s.score}</span><span class="text-red-600 font-bold">${s.prob.toFixed(1)}%</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
 
             // HANDICAP MEJORADO
             let hdHTML = `
@@ -401,7 +457,7 @@
                 </div>`;
             });
 
-            hdHTML += `<div class="h-4"></div>`; // Separador visual entre bloques
+            hdHTML += `<div class="h-4"></div>`; 
 
             [1,2,3].forEach(n => {
                 hdHTML += `
