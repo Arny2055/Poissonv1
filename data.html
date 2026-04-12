@@ -139,9 +139,9 @@
 
         let footballData = JSON.parse(localStorage.getItem("footballData")) || [];
 
-        // FUNCIÓN DE COMUNICACIÓN CON SHEETS
+        // FUNCIÓN DE COMUNICACIÓN CON SHEETS MEJORADA
         async function syncToCloud(action) {
-            if (SCRIPT_URL.includes("TU_URL_DE")) {
+            if (!SCRIPT_URL || SCRIPT_URL.includes("TU_URL_DE")) {
                 alert("Primero debes configurar la SCRIPT_URL en el código.");
                 return;
             }
@@ -151,32 +151,42 @@
             status.innerText = action === 'save' ? "Subiendo datos..." : "Sincronizando con nube...";
 
             try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: 'POST',
-                    mode: 'no-cors', // Necesario para Google Scripts en ciertos entornos
-                    body: JSON.stringify({
-                        action: action,
-                        payload: footballData
-                    })
-                });
+                if (action === 'save') {
+                    // Subida de datos (POST)
+                    await fetch(SCRIPT_URL, {
+                        method: 'POST',
+                        mode: 'no-cors', 
+                        body: JSON.stringify({
+                            action: action,
+                            payload: footballData
+                        })
+                    });
+                    
+                    status.className = "mt-2 text-[10px] text-center font-medium block text-green-600";
+                    status.innerText = "Respaldo exitoso en la nube";
 
-                // Como usamos no-cors no podemos leer la respuesta directamente, 
-                // pero si no falla el fetch, asumimos éxito o manejamos el flujo de sincronización.
-                
-                if (action === 'sync') {
-                   // Para 'sync' (bajar datos) se requiere una petición GET o manejar la respuesta. 
-                   // Nota: Google Script POST con no-cors no devuelve datos. 
-                   // Para simplificar, si necesitas bajar datos, se recomienda usar un fetch normal.
-                   alert("Nota: La sincronización de bajada requiere que el Script de Google esté configurado para permitir CORS.");
-                } else {
-                   status.className = "mt-2 text-[10px] text-center font-medium block text-green-600";
-                   status.innerText = "Operación completada en la nube";
-                   setTimeout(() => status.classList.add('hidden'), 3000);
+                } else if (action === 'sync') {
+                    // Bajada de datos (GET) - Requiere que el Script de Google responda a doGet
+                    const response = await fetch(`${SCRIPT_URL}?action=sync`);
+                    const data = await response.json();
+                    
+                    if (data && Array.isArray(data)) {
+                        footballData = data;
+                        localStorage.setItem("footballData", JSON.stringify(footballData));
+                        updateLeagueFilter();
+                        renderData();
+                        status.className = "mt-2 text-[10px] text-center font-medium block text-green-600";
+                        status.innerText = "Datos sincronizados desde la nube";
+                    } else {
+                        throw new Error("Formato de datos inválido");
+                    }
                 }
+                
+                setTimeout(() => status.classList.add('hidden'), 3000);
 
             } catch (e) {
                 status.className = "mt-2 text-[10px] text-center font-medium block text-red-600";
-                status.innerText = "Error de conexión";
+                status.innerText = "Error: " + (action === 'sync' ? "Verifica CORS en el Script" : "Error de conexión");
                 console.error(e);
             }
         }
