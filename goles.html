@@ -1,333 +1,458 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Over/Under - Poisson Pro</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .grid-header { background-color: #f8fafc; font-weight: 600; color: #64748b; font-size: 0.75rem; text-transform: uppercase; }
-        canvas { max-height: 300px; }
-        #syncStatus { font-size: 0.7rem; margin-top: 4px; display: inline-block; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora Over/Under - Poisson</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .grid-header { background-color: #f8fafc; font-weight: 600; color: #64748b; font-size: 0.75rem; text-transform: uppercase; }
+        canvas { max-height: 300px; }
+    </style>
 </head>
 <body class="p-4 md:p-8">
 
-    <div class="max-w-4xl mx-auto">
-        <header class="mb-8 text-center">
-            <h1 class="text-4xl font-bold text-slate-800 tracking-tight">Over / Under</h1>
-            <p class="text-slate-500 uppercase text-xs tracking-widest mt-2">Distribución de Goles Totales</p>
-            <div id="syncStatus" class="text-amber-500 font-medium">Cargando datos...</div>
-            
-            <div class="mt-6 flex flex-wrap justify-center gap-2">
-                <a href="data.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">📁 Gestión de Datos</a>
-                <a href="index.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">🎯 1X2 FT/HT</a>
-                <a href="goles.html" class="bg-green-50 text-green-700 border border-green-200 py-2 px-4 rounded-md text-sm font-bold shadow-sm">⚽ Goles O/U</a>
-                <a href="btts.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">🔄 BTTS</a>
-            </div>
-        </header>
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-slate-800 tracking-tight">Over / Under</h1>
+            <p class="text-slate-500 uppercase text-xs tracking-widest mt-2">Distribución de Goles Totales</p>
+            
+            <div class="mt-6 flex flex-wrap justify-center gap-2">
+                <a href="data.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">📁 Gestión de Datos</a>
+                <a href="index.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">🎯 1X2 FT/HT</a>
+                <a href="goles.html" class="bg-green-50 text-green-700 border border-green-200 py-2 px-4 rounded-md text-sm font-bold shadow-sm">⚽ Goles O/U</a>
+                <a href="btts.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">🔄 BTTS</a>
+            </div>
+        </header>
 
-        <div class="card p-6 mb-8">
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Liga</label>
-                    <select id="selectLeague" onchange="updateTeams(); saveMatchSelection();" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
-                        <option value="">Seleccionar Liga</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Local</label>
-                    <select id="homeTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
-                        <option value="">--</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Visitante</label>
-                    <select id="awayTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
-                        <option value="">--</option>
-                    </select>
-                </div>
-            </div>
-            <button onclick="mainCalculation()" class="w-full mt-6 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition font-bold text-lg">ANALIZAR GOLES</button>
-        </div>
+        <div class="card p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Liga</label>
+                    <select id="selectLeague" onchange="updateTeams(); saveMatchSelection();" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                        <option value="">Seleccionar Liga</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Local</label>
+                    <select id="homeTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                        <option value="">--</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Visitante</label>
+                    <select id="awayTeam" onchange="saveMatchSelection()" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 bg-white">
+                        <option value="">--</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="mainCalculation()" class="w-full mt-6 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition font-bold text-lg">ANALIZAR GOLES</button>
+        </div>
 
-        <div id="resultsWrapper" class="hidden space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div class="card p-4">
-                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución Prob. Goles (Local)</h4>
-                    <canvas id="chartHomeTime"></canvas>
-                </div>
-                <div class="card p-4">
-                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución Prob. Goles (Visita)</h4>
-                    <canvas id="chartAwayTime"></canvas>
-                </div>
-            </div>
+        <div id="resultsWrapper" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div class="card p-4">
+                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución Prob. Goles (Local)</h4>
+                    <canvas id="chartHomeTime"></canvas>
+                </div>
+                <div class="card p-4">
+                    <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución Prob. Goles (Visita)</h4>
+                    <canvas id="chartAwayTime"></canvas>
+                </div>
+            </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="card p-6 border-t-4 border-green-500">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Full Time (90 min)</h3>
-                    <div id="ftXgDisplay" class="mb-4 text-sm font-medium text-slate-600"></div>
-                    <div class="overflow-hidden rounded-lg border border-gray-200">
-                        <div class="grid grid-cols-3 grid-header p-2 text-center"><div>Mercado</div><div>Over</div><div>Under</div></div>
-                        <div id="ftOuTable" class="divide-y divide-gray-100"></div>
-                    </div>
-                </div>
-                <div class="card p-6 border-t-4 border-indigo-500">
-                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Half Time (45 min)</h3>
-                    <div id="htXgDisplay" class="mb-4 text-sm font-medium text-slate-600"></div>
-                    <div class="overflow-hidden rounded-lg border border-gray-200">
-                        <div class="grid grid-cols-3 grid-header p-2 text-center"><div>Mercado</div><div>Over</div><div>Under</div></div>
-                        <div id="htOuTable" class="divide-y divide-gray-100"></div>
-                    </div>
-                </div>
-            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="card p-6 border-t-4 border-green-500">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Full Time (90 min)</h3>
+                    <div id="ftXgDisplay" class="mb-4 text-sm font-medium text-slate-600"></div>
+                    <div class="overflow-hidden rounded-lg border border-gray-200">
+                        <div class="grid grid-cols-3 grid-header p-2 text-center"><div>Mercado</div><div>Over</div><div>Under</div></div>
+                        <div id="ftOuTable" class="divide-y divide-gray-100"></div>
+                    </div>
+                </div>
+                <div class="card p-6 border-t-4 border-indigo-500">
+                    <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Half Time (45 min)</h3>
+                    <div id="htXgDisplay" class="mb-4 text-sm font-medium text-slate-600"></div>
+                    <div class="overflow-hidden rounded-lg border border-gray-200">
+                        <div class="grid grid-cols-3 grid-header p-2 text-center"><div>Mercado</div><div>Over</div><div>Under</div></div>
+                        <div id="htOuTable" class="divide-y divide-gray-100"></div>
+                    </div>
+                </div>
+            </div>
 
-            <div class="card p-6 border-t-4 border-rose-500">
-                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Goles por Equipo (Individual FT)</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="overflow-hidden rounded-lg border border-gray-200">
-                        <div class="grid grid-cols-2 grid-header p-2 text-center bg-slate-50"><div>Mercado Local</div><div>Prob. Over</div></div>
-                        <div id="homeIndividualTable" class="divide-y divide-gray-100"></div>
-                    </div>
-                    <div class="overflow-hidden rounded-lg border border-gray-200">
-                        <div class="grid grid-cols-2 grid-header p-2 text-center bg-slate-50"><div>Mercado Visita</div><div>Prob. Over</div></div>
-                        <div id="awayIndividualTable" class="divide-y divide-gray-100"></div>
-                    </div>
-                </div>
-            </div>
+            <div class="card p-6 border-t-4 border-rose-500">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Goles por Equipo (Individual FT)</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="overflow-hidden rounded-lg border border-gray-200">
+                        <div class="grid grid-cols-2 grid-header p-2 text-center bg-slate-50"><div>Mercado Local</div><div>Prob. Over</div></div>
+                        <div id="homeIndividualTable" class="divide-y divide-gray-100"></div>
+                    </div>
+                    <div class="overflow-hidden rounded-lg border border-gray-200">
+                        <div class="grid grid-cols-2 grid-header p-2 text-center bg-slate-50"><div>Mercado Visita</div><div>Prob. Over</div></div>
+                        <div id="awayIndividualTable" class="divide-y divide-gray-100"></div>
+                    </div>
+                </div>
+            </div>
 
-            <div class="card p-6 border-t-4 border-amber-500">
-                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Mercado: Goles Totales (FT)</h3>
-                <div class="overflow-hidden rounded-lg border border-gray-200">
-                    <div class="grid grid-cols-2 grid-header p-2 text-center">
-                        <div>Rango de Goles</div>
-                        <div>Probabilidad</div>
-                    </div>
-                    <div id="totalGoalsRangeTable" class="divide-y divide-gray-100"></div>
-                </div>
-            </div>
-        </div>
-        <div id="emptyState" class="text-center py-12 text-gray-400">Selecciona liga y equipos para calcular.</div>
-    </div>
+            <div class="card p-6 border-t-4 border-amber-500">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Mercado: Goles Totales (FT)</h3>
+                <div class="overflow-hidden rounded-lg border border-gray-200">
+                    <div class="grid grid-cols-2 grid-header p-2 text-center">
+                        <div>Rango de Goles</div>
+                        <div>Probabilidad</div>
+                    </div>
+                    <div id="totalGoalsRangeTable" class="divide-y divide-gray-100">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="emptyState" class="text-center py-12 text-gray-400">Selecciona liga y equipos para calcular.</div>
+    </div>
 
-    <script>
-        const SB_URL = "https://idugbbdlyirhzgczpbhu.supabase.co";
-        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk";
-        
-        let supabase = null;
-        if (typeof supabasejs !== 'undefined') {
-            supabase = supabasejs.createClient(SB_URL, SB_KEY);
-        }
+    <script>
+        const getData = () => JSON.parse(localStorage.getItem("footballData")) || [];
+        let charts = {};
 
-        let globalFootballData = [];
-        let charts = {};
+        function getSegmentPercentages(liga, teamName, type, over05HTProb = 0, over25FTProb = 0) {
+            const dataEntry = getData().find(t => t.liga === liga && t.tipo === type);
+            if (!dataEntry || !dataEntry.tabla) return null;
 
-        const getData = () => globalFootballData.length > 0 ? globalFootballData : (JSON.parse(localStorage.getItem("footballData")) || []);
+            const team = dataEntry.tabla.find(t => t.equipo === teamName);
+            if (!team) return null;
 
-        async function fetchSupabaseData() {
-            const statusEl = document.getElementById('syncStatus');
-            if (!supabase) {
-                statusEl.textContent = "Respaldo: LocalStorage";
-                statusEl.className = "text-slate-400";
-                return;
-            }
-            try {
-                const { data, error } = await supabase.from('fb_data').select('*');
-                if (error) throw error;
-                if (data) {
-                    globalFootballData = data.map(item => ({
-                        liga: item.liga,
-                        tipo: item.tipo,
-                        tabla: typeof item.tabla === 'string' ? JSON.parse(item.tabla) : item.tabla
-                    }));
-                    statusEl.textContent = "Sincronizado con Supabase";
-                    statusEl.className = "text-green-500";
-                    initLeagueSelect(); 
-                }
-            } catch (err) {
-                statusEl.textContent = "Error Supabase - Usando Local";
-                statusEl.className = "text-red-400";
-            }
-        }
+            const totalScored = team.segments.reduce((acc, curr) => acc + curr.s, 0);
+            const totalConceded = team.segments.reduce((acc, curr) => acc + curr.c, 0);
 
-        function factorial(n) {
-            let res = 1;
-            for (let i = 2; i <= n; i++) res *= i;
-            return res;
-        }
-        
-        function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k); }
+            const teamScored = team.segments.map(s => totalScored > 0 ? (s.s / totalScored * 100).toFixed(1) : 0);
+            const teamConceded = team.segments.map(s => totalConceded > 0 ? (s.c / totalConceded * 100).toFixed(1) : 0);
 
-        function getLambdas(liga, homeName, awayName, isHT) {
-            const hType = isHT ? "First Half Home" : "Home";
-            const aType = isHT ? "First Half Away" : "Away";
-            const dataH = getData().find(t => t.liga === liga && t.tipo === hType);
-            const dataA = getData().find(t => t.liga === liga && t.tipo === aType);
-            if (!dataH || !dataA) return null;
-            
-            const lAvgH = dataH.tabla.reduce((s, t) => s + t.GF, 0) / dataH.tabla.reduce((s, t) => s + t.GP, 0);
-            const lAvgA = dataA.tabla.reduce((s, t) => s + t.GF, 0) / dataA.tabla.reduce((s, t) => s + t.GP, 0);
-            
-            const eH = dataH.tabla.find(t => t.equipo === homeName);
-            const eA = dataA.tabla.find(t => t.equipo === awayName);
-            if (!eH || !eA) return null;
+            let leagueTotals = [0, 0, 0, 0, 0, 0];
+            let leagueGrandTotal = 0;
+            dataEntry.tabla.forEach(t => {
+                t.segments.forEach((s, idx) => {
+                    leagueTotals[idx] += s.s;
+                    leagueGrandTotal += s.s;
+                });
+            });
+            const leagueAvg = leagueTotals.map(v => leagueGrandTotal > 0 ? (v / leagueGrandTotal * 100).toFixed(1) : 0);
 
-            return { 
-                h: (eH.GF/eH.GP)/lAvgH * (eA.GA/eA.GP)/lAvgH * lAvgH, 
-                a: (eA.GF/eA.GP)/lAvgA * (eH.GA/eH.GP)/lAvgA * lAvgA 
-            };
-        }
+            const probHTDist = team.segments.map((s, idx) => {
+                if (idx > 2) return 0;
+                const weight0_45 = (parseFloat(teamScored[0]) + parseFloat(teamConceded[0]) + parseFloat(leagueAvg[0])) +
+                                   (parseFloat(teamScored[1]) + parseFloat(teamConceded[1]) + parseFloat(leagueAvg[1])) +
+                                   (parseFloat(teamScored[2]) + parseFloat(teamConceded[2]) + parseFloat(leagueAvg[2]));
+                const currentWeight = (parseFloat(teamScored[idx]) + parseFloat(teamConceded[idx]) + parseFloat(leagueAvg[idx]));
+                return weight0_45 > 0 ? (over05HTProb * (currentWeight / weight0_45)).toFixed(1) : 0;
+            });
 
-        function mainCalculation() {
-            const liga = document.getElementById('selectLeague').value;
-            const home = document.getElementById('homeTeam').value;
-            const away = document.getElementById('awayTeam').value;
-            if (!liga || !home || !away) return;
+            const probFTDist = team.segments.map((s, idx) => {
+                const totalWeight = team.segments.reduce((acc, _, i) => acc + (parseFloat(teamScored[i]) + parseFloat(teamConceded[i]) + parseFloat(leagueAvg[i])), 0);
+                const currentWeight = (parseFloat(teamScored[idx]) + parseFloat(teamConceded[idx]) + parseFloat(leagueAvg[idx]));
+                return totalWeight > 0 ? (over25FTProb * (currentWeight / totalWeight)).toFixed(1) : 0;
+            });
 
-            document.getElementById('emptyState').classList.add('hidden');
-            document.getElementById('resultsWrapper').classList.remove('hidden');
+            return { teamScored, teamConceded, leagueAvg, probHTDist, probFTDist };
+        }
 
-            const htLambdas = getLambdas(liga, home, away, true);
-            const ftLambdas = getLambdas(liga, home, away, false);
-            
-            if (ftLambdas) {
-                renderOU('ft', ftLambdas, [0.5, 1.5, 2.5, 3.5, 4.5]);
-                renderIndividualTables(ftLambdas);
-                calculateTotalGoalRanges(ftLambdas);
-            }
-            if (htLambdas) renderOU('ht', htLambdas, [0.5, 1.5]);
+        function renderChart(canvasId, label, dataObj) {
+            if (charts[canvasId]) charts[canvasId].destroy();
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            
+            charts[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['0-15', '16-30', '31-45', '46-60', '61-75', '76-90'],
+                    datasets: [
+                        {
+                            label: 'Anotados (%)',
+                            data: dataObj.teamScored,
+                            backgroundColor: 'rgba(34, 197, 94, 0.3)',
+                            borderColor: 'rgb(34, 197, 94)',
+                            borderWidth: 1,
+                            hidden: true
+                        },
+                        {
+                            label: 'Concedidos (%)',
+                            data: dataObj.teamConceded,
+                            backgroundColor: 'rgba(239, 68, 68, 0.3)',
+                            borderColor: 'rgb(239, 68, 68)',
+                            borderWidth: 1,
+                            hidden: true
+                        },
+                        {
+                            label: 'Prob. Over 0.5 HT (%)',
+                            data: dataObj.probHTDist,
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)', 
+                            borderColor: 'rgb(59, 130, 246)',
+                            borderWidth: 2,
+                            hidden: false
+                        },
+                        {
+                            label: 'Prob. Over 2.5 FT (%)',
+                            data: dataObj.probFTDist,
+                            backgroundColor: 'rgba(139, 92, 246, 0.8)', 
+                            borderColor: 'rgb(139, 92, 246)',
+                            borderWidth: 2,
+                            hidden: false
+                        },
+                        {
+                            label: 'Prom. Liga (%)',
+                            data: dataObj.leagueAvg,
+                            borderColor: 'rgb(148, 163, 184)',
+                            borderWidth: 2,
+                            type: 'line',
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.4,
+                            hidden: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: { 
+                        y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } 
+                    },
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', 
+                            labels: { boxWidth: 10, font: { size: 9 } },
+                            onClick: function(e, legendItem, legend) {
+                                const index = legendItem.datasetIndex;
+                                const ci = legend.chart;
+                                if (ci.isDatasetVisible(index)) {
+                                    ci.hide(index);
+                                    legendItem.hidden = true;
+                                } else {
+                                    ci.show(index);
+                                    legendItem.hidden = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
 
-            // Lógica de segmentos de tiempo (Si los datos existen)
-            const pO05HT = htLambdas ? calculateOverProb(htLambdas, 0.5) : 0;
-            const pO25FT = ftLambdas ? calculateOverProb(ftLambdas, 2.5) : 0;
-            const hSeg = getSegmentPercentages(liga, home, 'Time Segment Home', pO05HT, pO25FT);
-            const aSeg = getSegmentPercentages(liga, away, 'Time Segment Away', pO05HT, pO25FT);
-            if(hSeg) renderChart('chartHomeTime', 'Local', hSeg);
-            if(aSeg) renderChart('chartAwayTime', 'Visitante', aSeg);
-        }
+        function saveMatchSelection() {
+            const selection = {
+                liga: document.getElementById('selectLeague').value,
+                home: document.getElementById('homeTeam').value,
+                away: document.getElementById('awayTeam').value
+            };
+            sessionStorage.setItem("selectedMatch", JSON.stringify(selection));
+        }
 
-        function calculateOverProb(lambdas, line) {
-            let probUnder = 0;
-            for (let i = 0; i <= 7; i++) {
-                for (let j = 0; j <= 7; j++) {
-                    if (i + j < line) probUnder += poisson(i, lambdas.h) * poisson(j, lambdas.a);
-                }
-            }
-            return (1 - probUnder) * 100;
-        }
+        function loadMatchSelection() {
+            const saved = JSON.parse(sessionStorage.getItem("selectedMatch"));
+            if (saved && saved.liga) {
+                document.getElementById('selectLeague').value = saved.liga;
+                updateTeams();
+                document.getElementById('homeTeam').value = saved.home;
+                document.getElementById('awayTeam').value = saved.away;
+                if(saved.home && saved.away) mainCalculation();
+            }
+        }
 
-        function renderOU(prefix, lambdas, lines) {
-            const container = document.getElementById(`${prefix}OuTable`);
-            const xgEl = document.getElementById(`${prefix}XgDisplay`);
-            container.innerHTML = "";
-            xgEl.innerHTML = `xG esperado: ${(lambdas.h + lambdas.a).toFixed(2)} goles`;
-            
-            lines.forEach(line => {
-                const pOver = calculateOverProb(lambdas, line);
-                const pUnder = 100 - pOver;
-                const hl = ((prefix === 'ht' && line === 0.5 && pOver >= 70) || (prefix === 'ft' && line === 2.5 && pOver >= 55)) ? "bg-emerald-100 font-bold" : "";
-                container.innerHTML += `
-                    <div class="grid grid-cols-3 p-3 text-center text-sm items-center ${hl}">
-                        <div class="font-bold text-slate-700">${line}</div>
-                        <div class="text-green-600 font-bold">${pOver.toFixed(1)}%</div>
-                        <div class="text-red-600 font-semibold">${pUnder.toFixed(1)}%</div>
-                    </div>`;
-            });
-        }
+        function init() {
+            const data = getData();
+            const leagueSelect = document.getElementById('selectLeague');
+            const ligas = [...new Set(data.map(item => item.liga))];
+            ligas.forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = opt.textContent = l;
+                leagueSelect.appendChild(opt);
+            });
+            loadMatchSelection();
+        }
 
-        function renderIndividualTables(lambdas) {
-            const hCont = document.getElementById('homeIndividualTable');
-            const aCont = document.getElementById('awayIndividualTable');
-            hCont.innerHTML = aCont.innerHTML = "";
-            [0.5, 1.5].forEach(line => {
-                const hP = (1 - Array.from({length: Math.ceil(line)}, (_, k) => poisson(k, lambdas.h)).reduce((a, b) => a + b, 0)) * 100;
-                const aP = (1 - Array.from({length: Math.ceil(line)}, (_, k) => poisson(k, lambdas.a)).reduce((a, b) => a + b, 0)) * 100;
-                hCont.innerHTML += `<div class="grid grid-cols-2 p-3 text-center text-sm"><div>Over ${line}</div><div class="text-green-600 font-bold">${hP.toFixed(1)}%</div></div>`;
-                aCont.innerHTML += `<div class="grid grid-cols-2 p-3 text-center text-sm"><div>Over ${line}</div><div class="text-green-600 font-bold">${aP.toFixed(1)}%</div></div>`;
-            });
-        }
+        function updateTeams() {
+            const liga = document.getElementById('selectLeague').value;
+            const hSel = document.getElementById('homeTeam');
+            const aSel = document.getElementById('awayTeam');
+            hSel.innerHTML = aSel.innerHTML = '<option value="">--</option>';
+            if (!liga) return;
+            const tHome = getData().find(t => t.liga === liga && t.tipo === 'Home');
+            const tAway = getData().find(t => t.liga === liga && t.tipo === 'Away');
+            if(tHome) tHome.tabla.forEach(t => hSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
+            if(tAway) tAway.tabla.forEach(t => aSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
+        }
 
-        function calculateTotalGoalRanges(lambdas) {
-            const p = Array.from({length: 11}, (_, k) => 0);
-            for(let i=0; i<=7; i++) for(let j=0; j<=7; j++) if(i+j <= 10) p[i+j] += poisson(i, lambdas.h) * poisson(j, lambdas.a);
-            const r01 = (p[0] + p[1]) * 100;
-            const r23 = (p[2] + p[3]) * 100;
-            const r4m = (1 - (p[0]+p[1]+p[2]+p[3])) * 100;
-            const cont = document.getElementById('totalGoalsRangeTable');
-            cont.innerHTML = `
-                <div class="grid grid-cols-2 p-3 text-center text-sm"><div>0-1 Goles</div><div class="font-bold">${r01.toFixed(1)}%</div></div>
-                <div class="grid grid-cols-2 p-3 text-center text-sm"><div>2-3 Goles</div><div class="font-bold">${r23.toFixed(1)}%</div></div>
-                <div class="grid grid-cols-2 p-3 text-center text-sm"><div>4+ Goles</div><div class="font-bold">${r4m.toFixed(1)}%</div></div>`;
-        }
+        function factorial(n) { return n <= 1 ? 1 : n * factorial(n - 1); }
+        function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k); }
 
-        function getSegmentPercentages(liga, teamName, type, over05HTProb, over25FTProb) {
-            const dataEntry = getData().find(t => t.liga === liga && t.tipo === type);
-            if (!dataEntry || !dataEntry.tabla) return null;
-            const team = dataEntry.tabla.find(t => t.equipo === teamName);
-            if (!team) return null;
-            const sScored = team.segments.map(s => s.s);
-            const sTotal = sScored.reduce((a,b)=>a+b, 0);
-            return {
-                teamScored: sScored.map(s => (s/sTotal*100).toFixed(1)),
-                teamConceded: team.segments.map(s => s.c),
-                probHTDist: sScored.slice(0,3).map(s => (over05HTProb * (s/sTotal)).toFixed(1)),
-                probFTDist: sScored.map(s => (over25FTProb * (s/sTotal)).toFixed(1)),
-                leagueAvg: [15,15,15,15,15,15]
-            };
-        }
+        function getLambdas(liga, homeName, awayName, isHT) {
+            const hType = isHT ? "First Half Home" : "Home";
+            const aType = isHT ? "First Half Away" : "Away";
+            const dataH = getData().find(t => t.liga === liga && t.tipo === hType);
+            const dataA = getData().find(t => t.liga === liga && t.tipo === aType);
+            if (!dataH || !dataA) return null;
+            const lAvgH = dataH.tabla.reduce((s, t) => s + t.GF, 0) / dataH.tabla.reduce((s, t) => s + t.GP, 0);
+            const lAvgA = dataA.tabla.reduce((s, t) => s + t.GF, 0) / dataA.tabla.reduce((s, t) => s + t.GP, 0);
+            const eH = dataH.tabla.find(t => t.equipo === homeName);
+            const eA = dataA.tabla.find(t => t.equipo === awayName);
+            if (!eH || !eA) return null;
+            return { h: (eH.GF/eH.GP)/(lAvgH) * (eA.GA/eA.GP)/(lAvgH) * lAvgH, a: (eA.GF/eA.GP)/(lAvgA) * (eH.GA/eH.GP)/(lAvgA) * lAvgA };
+        }
 
-        function renderChart(canvasId, label, dataObj) {
-            if (charts[canvasId]) charts[canvasId].destroy();
-            const ctx = document.getElementById(canvasId).getContext('2d');
-            charts[canvasId] = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['0-15', '16-30', '31-45', '46-60', '61-75', '76-90'],
-                    datasets: [{ label: 'Prob. Goles %', data: dataObj.probFTDist, backgroundColor: 'rgba(59, 130, 246, 0.6)' }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
+        function calculateOverProb(lambdas, line) {
+            const probTotalGoles = new Array(11).fill(0); 
+            for (let i = 0; i <= 7; i++) {
+                for (let j = 0; j <= 7; j++) {
+                    const p = poisson(i, lambdas.h) * poisson(j, lambdas.a);
+                    if (i + j <= 10) probTotalGoles[i + j] += p;
+                }
+            }
+            let probUnder = 0;
+            for (let g = 0; g < line; g++) probUnder += probTotalGoles[g];
+            return (1 - probUnder) * 100;
+        }
 
-        function initLeagueSelect() {
-            const leagueSelect = document.getElementById('selectLeague');
-            const ligas = [...new Set(getData().map(item => item.liga))];
-            ligas.forEach(l => {
-                const opt = document.createElement('option');
-                opt.value = opt.textContent = l;
-                leagueSelect.appendChild(opt);
-            });
-        }
+        function calculateIndividualOver(lambda, line) {
+            let probUnder = 0;
+            for (let k = 0; k < line; k++) {
+                probUnder += poisson(k, lambda);
+            }
+            return (1 - probUnder) * 100;
+        }
 
-        function updateTeams() {
-            const liga = document.getElementById('selectLeague').value;
-            const hSel = document.getElementById('homeTeam');
-            const aSel = document.getElementById('awayTeam');
-            hSel.innerHTML = aSel.innerHTML = '<option value="">--</option>';
-            const tHome = getData().find(t => t.liga === liga && t.tipo === 'Home');
-            const tAway = getData().find(t => t.liga === liga && t.tipo === 'Away');
-            if(tHome) tHome.tabla.forEach(t => hSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
-            if(tAway) tAway.tabla.forEach(t => aSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
-        }
+        function calculateTotalGoalRanges(lambdas) {
+            const probTotalGoles = new Array(16).fill(0); 
+            for (let i = 0; i <= 7; i++) {
+                for (let j = 0; j <= 7; j++) {
+                    const p = poisson(i, lambdas.h) * poisson(j, lambdas.a);
+                    if (i + j <= 15) probTotalGoles[i + j] += p;
+                }
+            }
+            const range_0_1 = (probTotalGoles[0] + probTotalGoles[1]) * 100;
+            const range_2_3 = (probTotalGoles[2] + probTotalGoles[3]) * 100;
+            const range_4_more = (1 - (probTotalGoles[0] + probTotalGoles[1] + probTotalGoles[2] + probTotalGoles[3])) * 100;
 
-        function saveMatchSelection() {
-            sessionStorage.setItem("selectedMatch", JSON.stringify({
-                liga: document.getElementById('selectLeague').value,
-                home: document.getElementById('homeTeam').value,
-                away: document.getElementById('awayTeam').value
-            }));
-        }
+            const container = document.getElementById('totalGoalsRangeTable');
+            container.innerHTML = "";
+            const ranges = [
+                { label: "0-1 Goles", value: range_0_1 },
+                { label: "2-3 Goles", value: range_2_3 },
+                { label: "4 o más Goles", value: range_4_more }
+            ];
+            ranges.forEach(r => {
+                const row = document.createElement('div');
+                row.className = "grid grid-cols-2 p-3 text-center text-sm items-center hover:bg-slate-50";
+                row.innerHTML = `<div class="font-bold text-slate-700">${r.label}</div><div class="text-indigo-600 font-bold text-lg">${r.value.toFixed(1)}%</div>`;
+                container.appendChild(row);
+            });
+        }
 
-        async function init() {
-            await fetchSupabaseData();
-            initLeagueSelect();
-        }
-        init();
-    </script>
+        function renderIndividualTables(lambdas) {
+            const hCont = document.getElementById('homeIndividualTable');
+            const aCont = document.getElementById('awayIndividualTable');
+            hCont.innerHTML = aCont.innerHTML = "";
+
+            const lines = [0.5, 1.5];
+            lines.forEach(line => {
+                const hProb = calculateIndividualOver(lambdas.h, line);
+                const aProb = calculateIndividualOver(lambdas.a, line);
+                
+                // Lógica de resaltado Local
+                let hHighlight = "";
+                if ((line === 0.5 && hProb >= 80) || (line === 1.5 && hProb >= 60)) {
+                    hHighlight = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
+                }
+
+                // Lógica de resaltado Visitante
+                let aHighlight = "";
+                if ((line === 0.5 && aProb >= 80) || (line === 1.5 && aProb >= 60)) {
+                    aHighlight = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
+                }
+                
+                // Se usa text-green-600 para coincidir con las tablas generales
+                hCont.innerHTML += `
+                    <div class="grid grid-cols-2 p-3 text-center text-sm items-center ${hHighlight}">
+                        <div class="font-semibold text-slate-600">Local Over ${line}</div>
+                        <div class="text-green-600 font-bold">${hProb.toFixed(1)}%</div>
+                    </div>`;
+                aCont.innerHTML += `
+                    <div class="grid grid-cols-2 p-3 text-center text-sm items-center ${aHighlight}">
+                        <div class="font-semibold text-slate-600">Visita Over ${line}</div>
+                        <div class="text-green-600 font-bold">${aProb.toFixed(1)}%</div>
+                    </div>`;
+            });
+        }
+
+        function mainCalculation() {
+            const liga = document.getElementById('selectLeague').value;
+            const home = document.getElementById('homeTeam').value;
+            const away = document.getElementById('awayTeam').value;
+            if (!liga || !home || !away) return;
+
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('resultsWrapper').classList.remove('hidden');
+
+            const htLambdas = getLambdas(liga, home, away, true);
+            const ftLambdas = getLambdas(liga, home, away, false);
+            
+            const probOver05HT = htLambdas ? calculateOverProb(htLambdas, 0.5) : 0;
+            const probOver25FT = ftLambdas ? calculateOverProb(ftLambdas, 2.5) : 0;
+
+            const homeSegments = getSegmentPercentages(liga, home, 'Time Segment Home', probOver05HT, probOver25FT);
+            const awaySegments = getSegmentPercentages(liga, away, 'Time Segment Away', probOver05HT, probOver25FT);
+            
+            if(homeSegments) renderChart('chartHomeTime', 'Local', homeSegments);
+            if(awaySegments) renderChart('chartAwayTime', 'Visitante', awaySegments);
+
+            if (ftLambdas) {
+                renderOU('ft', ftLambdas, [0.5, 1.5, 2.5, 3.5, 4.5]);
+                renderIndividualTables(ftLambdas);
+                calculateTotalGoalRanges(ftLambdas);
+            }
+            if (htLambdas) renderOU('ht', htLambdas, [0.5, 1.5, 2.5]);
+        }
+
+        function renderOU(prefix, lambdas, lines) {
+            const container = document.getElementById(`${prefix}OuTable`);
+            const xgEl = document.getElementById(`${prefix}XgDisplay`);
+            container.innerHTML = "";
+            if (!lambdas) { container.innerHTML = '<div class="p-4 text-xs text-red-500">Datos no disponibles</div>'; return; }
+            xgEl.innerHTML = `xG esperado: ${(lambdas.h + lambdas.a).toFixed(2)} goles`;
+            
+            const probTotalGoles = new Array(11).fill(0); 
+            for (let i = 0; i <= 7; i++) {
+                for (let j = 0; j <= 7; j++) {
+                    const p = poisson(i, lambdas.h) * poisson(j, lambdas.a);
+                    if (i + j <= 10) probTotalGoles[i + j] += p;
+                }
+            }
+            lines.forEach(line => {
+                let probUnder = 0;
+                for (let g = 0; g < line; g++) probUnder += probTotalGoles[g];
+                const probOver = 1 - probUnder;
+                const probOverPercent = (probOver * 100).toFixed(1);
+                
+                const row = document.createElement('div');
+                let highlightClass = "";
+                const valPercent = parseFloat(probOverPercent);
+                
+                if (prefix === 'ht' && line === 0.5 && valPercent >= 70) {
+                    highlightClass = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
+                }
+                else if (prefix === 'ft' && line === 2.5 && valPercent >= 55) {
+                    highlightClass = "bg-emerald-100 border-y border-emerald-200 shadow-sm transition-all";
+                }
+
+                row.className = `grid grid-cols-3 p-3 text-center text-sm items-center ${highlightClass}`;
+                row.innerHTML = `
+                    <div class="font-bold text-slate-700">${line}</div>
+                    <div class="text-green-600 font-bold">${probOverPercent}%</div>
+                    <div class="text-red-600 font-semibold">${(probUnder * 100).toFixed(1)}%</div>
+                `;
+                container.appendChild(row);
+            });
+        }
+        init();
+    </script>
 </body>
 </html>
