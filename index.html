@@ -328,15 +328,9 @@
                 }
             }
             const topScores = scores.sort((a, b) => b.prob - a.prob).slice(0, 5);
-            
-            // LOGICA EFECTO PRIMER GOL (Prob de anotar al menos 1)
-            const probAnotarLocal = (1 - pHome[0]) * 100;
-            const probAnotarAway = (1 - pAway[0]) * 100;
-
             return { 
                 win: win * 100, draw: draw * 100, loss: loss * 100, 
                 topScores, hLocal, hVisit,
-                probAnotarLocal, probAnotarAway,
                 xh: lambdas.lambdaHome.toFixed(2), xa: lambdas.lambdaAway.toFixed(2) 
             };
         }
@@ -372,14 +366,10 @@
             const dnbH = dnbTotal > 0 ? (res.win / 100) / dnbTotal * 100 : 0;
             const dnbA = dnbTotal > 0 ? (res.loss / 100) / dnbTotal * 100 : 0;
 
-            // Clases para efecto primer gol (60% umbral)
-            const classHome = res.probAnotarLocal >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
-            const classAway = res.probAnotarAway >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
-
             c1x2.innerHTML = `
-                <div class="flex justify-between text-sm p-2 ${classHome} border rounded transition-colors"><span>Local</span><span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span></div>
+                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Local</span><span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span></div>
                 <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Empate</span><span class="font-bold text-gray-500">${res.draw.toFixed(1)}%</span></div>
-                <div class="flex justify-between text-sm p-2 ${classAway} border rounded transition-colors"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>`;
+                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>`;
             
             cDC.innerHTML = `
                 <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>1X</span><span class="font-bold">${(res.win + res.draw).toFixed(1)}%</span></div>
