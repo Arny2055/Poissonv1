@@ -12,15 +12,37 @@
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
         .hidden-tab { display: none; }
-        /* Estilo mejorado para la tabla de handicap */
         .handicap-row { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 2px; align-items: center; }
         .grid-header-hd { background-color: #f1f5f9; font-weight: 700; color: #475569; font-size: 0.65rem; text-transform: uppercase; padding: 8px 4px; border-radius: 4px; }
+        
+        /* Modal Styles */
+        #loginModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 50; }
+        #loginModal.active { display: flex; }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
+    <div id="loginModal">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-80">
+            <h2 class="text-xl font-bold mb-4 text-center">Acceso</h2>
+            <input type="email" id="loginEmail" placeholder="Email" class="w-full mb-3 p-2 border rounded text-sm">
+            <input type="password" id="loginPass" placeholder="Contraseña" class="w-full mb-4 p-2 border rounded text-sm">
+            <div class="flex flex-col gap-2">
+                <button onclick="handleLogin()" class="bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">Entrar</button>
+                <button onclick="closeLogin()" class="text-gray-500 text-sm py-1">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <div class="max-w-4xl mx-auto">
-        <header class="mb-8 text-center">
+        <header class="mb-8 text-center relative">
+            <div class="absolute top-0 right-0">
+                <button id="authBtn" onclick="toggleAuth()" class="bg-slate-800 text-white text-[10px] px-3 py-1 rounded-full uppercase font-bold tracking-tighter">
+                    Login
+                </button>
+                <div id="userInfo" class="hidden text-[10px] text-slate-500 mt-1"></div>
+            </div>
+
             <h1 class="text-4xl font-bold text-slate-800 tracking-tight">1X2</h1>
             <p class="text-slate-500 uppercase text-xs tracking-widest mt-2">Calculadora de Probabilidades Poisson</p>
             
@@ -155,22 +177,63 @@
 
         let footballData = []; 
 
-        // 1. Funciones de Gestión de Ligas y Usuarios (NUEVA LÓGICA UNIFICADA)
+        // 1. LÓGICA DE AUTENTICACIÓN
+        function openLogin() { document.getElementById('loginModal').classList.add('active'); }
+        function closeLogin() { document.getElementById('loginModal').classList.remove('active'); }
+
+        async function handleLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPass').value;
+            const { error } = await _supabase.auth.signInWithPassword({ email, password });
+            
+            if (error) alert("Error: " + error.message);
+            else {
+                closeLogin();
+                checkUser();
+            }
+        }
+
+        async function toggleAuth() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (user) {
+                await _supabase.auth.signOut();
+                checkUser();
+            } else {
+                openLogin();
+            }
+        }
+
+        async function checkUser() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            const btn = document.getElementById('authBtn');
+            const info = document.getElementById('userInfo');
+            
+            if (user) {
+                btn.innerText = "Logout";
+                btn.classList.replace('bg-slate-800', 'bg-red-600');
+                info.innerText = user.email;
+                info.classList.remove('hidden');
+            } else {
+                btn.innerText = "Login";
+                btn.classList.replace('bg-red-600', 'bg-slate-800');
+                info.classList.add('hidden');
+            }
+        }
+
+        // 2. LÓGICA DE DATOS
         async function guardarLigaNueva(nombreDeLaLiga) {
             const { data: { user } } = await _supabase.auth.getUser();
             if (!user) {
                 alert("Debes iniciar sesión para guardar datos");
+                openLogin();
                 return;
             }
-            const { data, error } = await _supabase
+            const { error } = await _supabase
                 .from('ligas')
                 .insert([{ nombre: nombreDeLaLiga, user_id: user.id }]);
 
-            if (error) console.error("Error al guardar:", error.message);
-            else {
-                console.log("Liga guardada con éxito");
-                cargarMisLigas();
-            }
+            if (error) console.error("Error:", error.message);
+            else cargarMisLigas();
         }
 
         async function cargarMisLigas() {
@@ -180,15 +243,10 @@
                 .from('ligas')
                 .select('*')
                 .eq('user_id', user.id);
-
-            if (error) console.error("Error al obtener datos:", error.message);
-            else {
-                console.log("Tus ligas son:", ligas);
-                // Aquí podrías llamar a una función para actualizar una lista UI si existiera
-            }
+            if (!error) console.log("Ligas del usuario:", ligas);
         }
 
-        // --- LÓGICA DE HERRAMIENTA EXISTENTE ---
+        // --- LÓGICA DE HERRAMIENTA EXISTENTE (MATEMÁTICAS) ---
 
         function switchTab(type) {
             const ftBtn = document.getElementById('tab-ft');
@@ -230,14 +288,8 @@
         }
 
         async function loadFromSupabase() {
-            const { data, error } = await _supabase
-                .from('football_data')
-                .select('*');
-
-            if (error) {
-                console.error("Error cargando datos:", error);
-                return;
-            }
+            const { data, error } = await _supabase.from('football_data').select('*');
+            if (error) { console.error("Error cargando datos:", error); return; }
 
             footballData = data.map(item => ({
                 liga: item.liga,
@@ -246,33 +298,28 @@
                 tabla: item.tabla_json,
                 isTimeSegment: item.is_time
             }));
-
             init(); 
         }
 
         function init() {
             const leagueSelect = document.getElementById('selectLeague');
             leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
-            
             const ligas = [...new Set(footballData.map(item => item.liga))];
-            
             ligas.forEach(liga => {
                 const opt = document.createElement('option');
-                opt.value = liga;
-                opt.textContent = liga;
+                opt.value = liga; opt.textContent = liga;
                 leagueSelect.appendChild(opt);
             });
             loadMatchSelection();
+            checkUser(); // Verificamos sesión al cargar
         }
 
         function updateTeams() {
             const liga = document.getElementById('selectLeague').value;
             const homeSelect = document.getElementById('homeTeam');
             const awaySelect = document.getElementById('awayTeam');
-            
             homeSelect.innerHTML = '<option value="">--</option>';
             awaySelect.innerHTML = '<option value="">--</option>';
-
             if (!liga) return;
 
             const homeTable = getTable(liga, 'Home');
@@ -281,17 +328,14 @@
             if (homeTable) {
                 homeTable.tabla.forEach(team => {
                     const opt = document.createElement('option');
-                    opt.value = team.equipo;
-                    opt.textContent = team.equipo;
+                    opt.value = team.equipo; opt.textContent = team.equipo;
                     homeSelect.appendChild(opt);
                 });
             }
-
             if (awayTable) {
                 awayTable.tabla.forEach(team => {
                     const opt = document.createElement('option');
-                    opt.value = team.equipo;
-                    opt.textContent = team.equipo;
+                    opt.value = team.equipo; opt.textContent = team.equipo;
                     awaySelect.appendChild(opt);
                 });
             }
@@ -305,9 +349,7 @@
 
         function factorial(n) {
             if (n === 0) return 1;
-            let res = 1;
-            for (let i = 2; i <= n; i++) res *= i;
-            return res;
+            let res = 1; for (let i = 2; i <= n; i++) res *= i; return res;
         }
 
         function calculateXG(liga, teamHomeName, teamAwayName, isHT = false) {
@@ -338,9 +380,7 @@
 
         function getProbabilities(lambdas) {
             if (!lambdas) return null;
-            const pHome = [];
-            const pAway = [];
-            const maxG = 10;
+            const pHome = []; const pAway = []; const maxG = 10;
             for (let i = 0; i <= maxG; i++) {
                 pHome.push(poisson(i, lambdas.lambdaHome));
                 pAway.push(poisson(i, lambdas.lambdaAway));
@@ -348,7 +388,6 @@
 
             const scores = [];
             let win = 0, draw = 0, loss = 0;
-            
             let hLocal = { 1: {w:0,d:0,l:0}, 2: {w:0,d:0,l:0}, 3: {w:0,d:0,l:0} };
             let hVisit = { 1: {w:0,d:0,l:0}, 2: {w:0,d:0,l:0}, 3: {w:0,d:0,l:0} };
 
@@ -356,43 +395,24 @@
                 for (let a = 0; a <= maxG; a++) {
                     const prob = pHome[h] * pAway[a];
                     if(h <= 5 && a <= 5) scores.push({ h, a, score: `${h}-${a}`, prob: prob * 100 });
-                    
-                    if (h > a) win += prob;
-                    else if (h === a) draw += prob;
-                    else loss += prob;
-
+                    if (h > a) win += prob; else if (h === a) draw += prob; else loss += prob;
                     [1,2,3].forEach(n => {
-                        if ((h + n) > a) hLocal[n].w += prob;
-                        else if ((h + n) === a) hLocal[n].d += prob;
-                        else hLocal[n].l += prob;
+                        if ((h + n) > a) hLocal[n].w += prob; else if ((h + n) === a) hLocal[n].d += prob; else hLocal[n].l += prob;
                     });
-
                     [1,2,3].forEach(n => {
-                        if (h > (a + n)) hVisit[n].w += prob;
-                        else if (h === (a + n)) hVisit[n].d += prob;
-                        else hVisit[n].l += prob;
+                        if (h > (a + n)) hVisit[n].w += prob; else if (h === (a + n)) hVisit[n].d += prob; else hVisit[n].l += prob;
                     });
                 }
             }
             
             const probAnotarLocal = (1 - pHome[0]) * 100;
             const probAnotarAway = (1 - pAway[0]) * 100;
-
-            const condLocalScores = scores
-                .filter(s => s.h >= 1)
-                .sort((a,b) => b.prob - a.prob)
-                .slice(0, 3);
-            
-            const condAwayScores = scores
-                .filter(s => s.a >= 1)
-                .sort((a,b) => b.prob - a.prob)
-                .slice(0, 3);
-
+            const condLocalScores = scores.filter(s => s.h >= 1).sort((a,b) => b.prob - a.prob).slice(0, 3);
+            const condAwayScores = scores.filter(s => s.a >= 1).sort((a,b) => b.prob - a.prob).slice(0, 3);
             const topScores = [...scores].sort((a, b) => b.prob - a.prob).slice(0, 5);
 
             return { 
-                win: win * 100, draw: draw * 100, loss: loss * 100, 
-                topScores, hLocal, hVisit,
+                win: win * 100, draw: draw * 100, loss: loss * 100, topScores, hLocal, hVisit,
                 probAnotarLocal, probAnotarAway, condLocalScores, condAwayScores,
                 xh: lambdas.lambdaHome.toFixed(2), xa: lambdas.lambdaAway.toFixed(2) 
             };
@@ -424,8 +444,6 @@
             const cHD = document.getElementById(`${prefix}Handicap`);
             const xgEl = document.getElementById(`${prefix}XG`);
             
-            if (!res) return;
-
             const dnbTotal = (res.win + res.loss) / 100;
             const dnbH = dnbTotal > 0 ? (res.win / 100) / dnbTotal * 100 : 0;
             const dnbA = dnbTotal > 0 ? (res.loss / 100) / dnbTotal * 100 : 0;
@@ -447,56 +465,14 @@
                 <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>DNB 1</span><span class="font-bold text-blue-600">${dnbH.toFixed(1)}%</span></div>
                 <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>DNB 2</span><span class="font-bold text-red-600">${dnbA.toFixed(1)}%</span></div>`;
 
-            cCS.innerHTML = res.topScores.map(s => `
-                <div class="flex justify-between text-sm p-2 bg-indigo-50 rounded border border-indigo-100">
-                    <span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span>
-                </div>`).join('');
+            cCS.innerHTML = res.topScores.map(s => `<div class="flex justify-between text-sm p-2 bg-indigo-50 rounded border border-indigo-100"><span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span></div>`).join('');
 
-            cFGE.innerHTML = `
-                <div class="space-y-2">
-                    <p class="text-[10px] font-bold text-blue-600 uppercase">Si Local anota primero (${res.probAnotarLocal.toFixed(1)}%)</p>
-                    ${res.condLocalScores.map(s => `
-                        <div class="flex justify-between text-[11px] p-2 bg-white border border-emerald-100 rounded">
-                            <span class="font-semibold">${s.score}</span><span class="text-emerald-600 font-bold">${s.prob.toFixed(1)}%</span>
-                        </div>
-                    `).join('')}
-                </div>
-                <div class="space-y-2">
-                    <p class="text-[10px] font-bold text-red-600 uppercase">Si Visita anota primero (${res.probAnotarAway.toFixed(1)}%)</p>
-                    ${res.condAwayScores.map(s => `
-                        <div class="flex justify-between text-[11px] p-2 bg-white border border-red-100 rounded">
-                            <span class="font-semibold">${s.score}</span><span class="text-red-600 font-bold">${s.prob.toFixed(1)}%</span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+            cFGE.innerHTML = `<div class="space-y-2"><p class="text-[10px] font-bold text-blue-600 uppercase">Si Local anota primero (${res.probAnotarLocal.toFixed(1)}%)</p>${res.condLocalScores.map(s => `<div class="flex justify-between text-[11px] p-2 bg-white border border-emerald-100 rounded"><span class="font-semibold">${s.score}</span><span class="text-emerald-600 font-bold">${s.prob.toFixed(1)}%</span></div>`).join('')}</div><div class="space-y-2"><p class="text-[10px] font-bold text-red-600 uppercase">Si Visita anota primero (${res.probAnotarAway.toFixed(1)}%)</p>${res.condAwayScores.map(s => `<div class="flex justify-between text-[11px] p-2 bg-white border border-red-100 rounded"><span class="font-semibold">${s.score}</span><span class="text-red-600 font-bold">${s.prob.toFixed(1)}%</span></div>`).join('')}</div>`;
 
-            let hdHTML = `
-                <div class="handicap-row grid-header-hd text-center mb-1">
-                    <span>Línea</span><span>Local</span><span>Empate</span><span>Visita</span>
-                </div>`;
-            
-            [1,2,3].forEach(n => {
-                hdHTML += `
-                <div class="handicap-row p-2 border-b border-gray-50 text-xs hover:bg-slate-50">
-                    <span class="font-bold text-gray-500 italic">Local +${n}</span>
-                    <span class="text-blue-600 font-bold text-center">${(res.hLocal[n].w * 100).toFixed(1)}%</span>
-                    <span class="text-gray-600 font-bold text-center">${(res.hLocal[n].d * 100).toFixed(1)}%</span>
-                    <span class="text-red-600 font-bold text-center">${(res.hLocal[n].l * 100).toFixed(1)}%</span>
-                </div>`;
-            });
-
+            let hdHTML = `<div class="handicap-row grid-header-hd text-center mb-1"><span>Línea</span><span>Local</span><span>Empate</span><span>Visita</span></div>`;
+            [1,2,3].forEach(n => { hdHTML += `<div class="handicap-row p-2 border-b border-gray-50 text-xs hover:bg-slate-50"><span class="font-bold text-gray-500 italic">Local +${n}</span><span class="text-blue-600 font-bold text-center">${(res.hLocal[n].w * 100).toFixed(1)}%</span><span class="text-gray-600 font-bold text-center">${(res.hLocal[n].d * 100).toFixed(1)}%</span><span class="text-red-600 font-bold text-center">${(res.hLocal[n].l * 100).toFixed(1)}%</span></div>`; });
             hdHTML += `<div class="h-4"></div>`; 
-
-            [1,2,3].forEach(n => {
-                hdHTML += `
-                <div class="handicap-row p-2 border-b border-gray-50 text-xs hover:bg-slate-50">
-                    <span class="font-bold text-gray-500 italic">Visita +${n}</span>
-                    <span class="text-blue-600 font-bold text-center">${(res.hVisit[n].w * 100).toFixed(1)}%</span>
-                    <span class="text-gray-600 font-bold text-center">${(res.hVisit[n].d * 100).toFixed(1)}%</span>
-                    <span class="text-red-600 font-bold text-center">${(res.hVisit[n].l * 100).toFixed(1)}%</span>
-                </div>`;
-            });
+            [1,2,3].forEach(n => { hdHTML += `<div class="handicap-row p-2 border-b border-gray-50 text-xs hover:bg-slate-50"><span class="font-bold text-gray-500 italic">Visita +${n}</span><span class="text-blue-600 font-bold text-center">${(res.hVisit[n].w * 100).toFixed(1)}%</span><span class="text-gray-600 font-bold text-center">${(res.hVisit[n].d * 100).toFixed(1)}%</span><span class="text-red-600 font-bold text-center">${(res.hVisit[n].l * 100).toFixed(1)}%</span></div>`; });
             cHD.innerHTML = hdHTML;
 
             xgEl.innerHTML = `xG Proyectado: Local ${res.xh} - Visitante ${res.xa}`;
