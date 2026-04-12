@@ -389,8 +389,15 @@
             });
         }
 
+        // --- FUNCIÓN PARA ELIMINAR TABLA INDIVIDUAL (CON CONTRASEÑA) ---
         async function deleteFromSupabase(liga, tipo) {
-            if (confirm(`¿Eliminar la tabla ${tipo} de ${liga} de la nube?`)) {
+            const pw = prompt(`Introduce la contraseña para eliminar la tabla ${tipo} de ${liga}:`);
+            if (pw !== MASTER_PASSWORD) {
+                alert("Contraseña incorrecta. Acción cancelada.");
+                return;
+            }
+
+            if (confirm(`¿Estás seguro de que quieres eliminar la tabla ${tipo} de ${liga} de la nube?`)) {
                 const { error } = await _supabase
                     .from('football_data')
                     .delete()
