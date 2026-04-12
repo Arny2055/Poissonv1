@@ -12,7 +12,9 @@
         .card { background: white; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
         .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
         .hidden-tab { display: none; }
-        .handicap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; text-align: center; font-size: 0.75rem; }
+        /* Estilo mejorado para la tabla de handicap */
+        .handicap-row { display: grid; grid-template-columns: 1.5fr repeat(3, 1fr); gap: 2px; align-items: center; }
+        .grid-header-hd { background-color: #f1f5f9; font-weight: 700; color: #475569; font-size: 0.65rem; text-transform: uppercase; padding: 8px 4px; border-radius: 4px; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -93,8 +95,8 @@
                         <div class="grid grid-cols-1 gap-2" id="ftCS"></div>
                     </div>
                     <div class="card p-5 border-t-4 border-indigo-500 md:col-span-2">
-                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Handicap Europeo (3-Way)</p>
-                        <div id="ftHandicap" class="space-y-4"></div>
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3 text-center">Handicap Europeo (3-Way)</p>
+                        <div id="ftHandicap" class="space-y-1"></div>
                     </div>
                 </div>
                 <div class="card p-4 bg-blue-50 text-blue-800 text-xs font-medium" id="ftXG"></div>
@@ -119,8 +121,8 @@
                         <div class="grid grid-cols-1 gap-2" id="htCS"></div>
                     </div>
                     <div class="card p-5 border-t-4 border-orange-400 md:col-span-2">
-                        <p class="text-xs font-bold text-gray-400 uppercase mb-3">Handicap Europeo HT (3-Way)</p>
-                        <div id="htHandicap" class="space-y-4"></div>
+                        <p class="text-xs font-bold text-gray-400 uppercase mb-3 text-center">Handicap Europeo HT (3-Way)</p>
+                        <div id="htHandicap" class="space-y-1"></div>
                     </div>
                 </div>
                 <div class="card p-4 bg-orange-50 text-orange-800 text-xs font-medium" id="htXG"></div>
@@ -139,7 +141,7 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let footballData = []; // Se llenará desde Supabase
+        let footballData = []; 
 
         function switchTab(type) {
             const ftBtn = document.getElementById('tab-ft');
@@ -180,7 +182,6 @@
             }
         }
 
-        // NUEVA FUNCIÓN: Cargar datos desde Supabase
         async function loadFromSupabase() {
             const { data, error } = await _supabase
                 .from('football_data')
@@ -199,7 +200,7 @@
                 isTimeSegment: item.is_time
             }));
 
-            init(); // Una vez cargados, inicializamos los selectores
+            init(); 
         }
 
         function init() {
@@ -384,27 +385,31 @@
                     <span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span>
                 </div>`).join('');
 
-            let hdHTML = `<div class="bg-gray-100 p-2 rounded handicap-grid font-bold text-gray-600"><span>Opción</span><span>Local (+N)</span><span>Empate</span><span>Visita</span></div>`;
+            // HANDICAP MEJORADO
+            let hdHTML = `
+                <div class="handicap-row grid-header-hd text-center mb-1">
+                    <span>Línea</span><span>Local</span><span>Empate</span><span>Visita</span>
+                </div>`;
             
             [1,2,3].forEach(n => {
                 hdHTML += `
-                <div class="handicap-grid p-2 border-b border-gray-100 items-center italic text-gray-500"><span>Local +${n}</span></div>
-                <div class="handicap-grid p-2 border-b border-gray-100">
-                    <span class="text-blue-600 font-bold">${(res.hLocal[n].w * 100).toFixed(1)}%</span>
-                    <span class="text-gray-600 font-bold">${(res.hLocal[n].d * 100).toFixed(1)}%</span>
-                    <span class="text-red-600 font-bold">${(res.hLocal[n].l * 100).toFixed(1)}%</span>
+                <div class="handicap-row p-2 border-b border-gray-50 text-xs hover:bg-slate-50">
+                    <span class="font-bold text-gray-500 italic">Local +${n}</span>
+                    <span class="text-blue-600 font-bold text-center">${(res.hLocal[n].w * 100).toFixed(1)}%</span>
+                    <span class="text-gray-600 font-bold text-center">${(res.hLocal[n].d * 100).toFixed(1)}%</span>
+                    <span class="text-red-600 font-bold text-center">${(res.hLocal[n].l * 100).toFixed(1)}%</span>
                 </div>`;
             });
 
-            hdHTML += `<div class="h-2 md:col-span-2"></div>`;
+            hdHTML += `<div class="h-4"></div>`; // Separador visual entre bloques
 
             [1,2,3].forEach(n => {
                 hdHTML += `
-                <div class="handicap-grid p-2 border-b border-gray-100 items-center italic text-gray-500"><span>Visita +${n}</span></div>
-                <div class="handicap-grid p-2 border-b border-gray-100">
-                    <span class="text-blue-600 font-bold">${(res.hVisit[n].w * 100).toFixed(1)}%</span>
-                    <span class="text-gray-600 font-bold">${(res.hVisit[n].d * 100).toFixed(1)}%</span>
-                    <span class="text-red-600 font-bold">${(res.hVisit[n].l * 100).toFixed(1)}%</span>
+                <div class="handicap-row p-2 border-b border-gray-50 text-xs hover:bg-slate-50">
+                    <span class="font-bold text-gray-500 italic">Visita +${n}</span>
+                    <span class="text-blue-600 font-bold text-center">${(res.hVisit[n].w * 100).toFixed(1)}%</span>
+                    <span class="text-gray-600 font-bold text-center">${(res.hVisit[n].d * 100).toFixed(1)}%</span>
+                    <span class="text-red-600 font-bold text-center">${(res.hVisit[n].l * 100).toFixed(1)}%</span>
                 </div>`;
             });
             cHD.innerHTML = hdHTML;
@@ -412,7 +417,6 @@
             xgEl.innerHTML = `xG Proyectado: Local ${res.xh} - Visitante ${res.xa}`;
         }
 
-        // Iniciamos la carga desde la nube
         loadFromSupabase();
     </script>
 </body>
