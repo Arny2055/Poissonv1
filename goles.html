@@ -88,12 +88,12 @@
             <div class="card p-6 border-t-4 border-cyan-500">
                 <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 text-center">Efecto del Primer Gol (Over 2.5)</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center">
+                    <div id="containerHomeFirst" class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all">
                         <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Si Local Anota Primero</span>
                         <div id="probIfHomeScores" class="text-2xl font-black text-cyan-600">--%</div>
                         <p class="text-[10px] text-slate-400 mt-1 italic">Proyección basada en tendencia de respuesta</p>
                     </div>
-                    <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center">
+                    <div id="containerAwayFirst" class="p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all">
                         <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Si Visita Anota Primero</span>
                         <div id="probIfAwayScores" class="text-2xl font-black text-rose-600">--%</div>
                         <p class="text-[10px] text-slate-400 mt-1 italic">Proyección basada en tendencia de remontada</p>
@@ -478,8 +478,25 @@
                 const probHomeFirst = calculateOverIfGoal(ftLambdas, 'home');
                 const probAwayFirst = calculateOverIfGoal(ftLambdas, 'away');
                 
+                const contHome = document.getElementById('containerHomeFirst');
+                const contAway = document.getElementById('containerAwayFirst');
+                
+                // Actualizar texto
                 document.getElementById('probIfHomeScores').textContent = probHomeFirst.toFixed(1) + '%';
                 document.getElementById('probIfAwayScores').textContent = probAwayFirst.toFixed(1) + '%';
+
+                // Aplicar resaltado si >= 70%
+                if (probHomeFirst >= 70) {
+                    contHome.className = "p-4 bg-emerald-100 border-y border-emerald-200 shadow-sm text-center transition-all rounded-lg";
+                } else {
+                    contHome.className = "p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all";
+                }
+
+                if (probAwayFirst >= 70) {
+                    contAway.className = "p-4 bg-emerald-100 border-y border-emerald-200 shadow-sm text-center transition-all rounded-lg";
+                } else {
+                    contAway.className = "p-4 bg-slate-50 rounded-lg border border-slate-200 text-center transition-all";
+                }
             }
             if (htLambdas) renderOU('ht', htLambdas, [0.5, 1.5, 2.5]);
         }
