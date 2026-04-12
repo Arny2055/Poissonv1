@@ -155,6 +155,41 @@
 
         let footballData = []; 
 
+        // 1. Funciones de Gestión de Ligas y Usuarios (NUEVA LÓGICA UNIFICADA)
+        async function guardarLigaNueva(nombreDeLaLiga) {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) {
+                alert("Debes iniciar sesión para guardar datos");
+                return;
+            }
+            const { data, error } = await _supabase
+                .from('ligas')
+                .insert([{ nombre: nombreDeLaLiga, user_id: user.id }]);
+
+            if (error) console.error("Error al guardar:", error.message);
+            else {
+                console.log("Liga guardada con éxito");
+                cargarMisLigas();
+            }
+        }
+
+        async function cargarMisLigas() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) return;
+            const { data: ligas, error } = await _supabase
+                .from('ligas')
+                .select('*')
+                .eq('user_id', user.id);
+
+            if (error) console.error("Error al obtener datos:", error.message);
+            else {
+                console.log("Tus ligas son:", ligas);
+                // Aquí podrías llamar a una función para actualizar una lista UI si existiera
+            }
+        }
+
+        // --- LÓGICA DE HERRAMIENTA EXISTENTE ---
+
         function switchTab(type) {
             const ftBtn = document.getElementById('tab-ft');
             const htBtn = document.getElementById('tab-ht');
@@ -340,17 +375,14 @@
                 }
             }
             
-            // EFECTO PRIMER GOL (Probabilidad de anotar al menos 1)
             const probAnotarLocal = (1 - pHome[0]) * 100;
             const probAnotarAway = (1 - pAway[0]) * 100;
 
-            // Marcadores si Local anota primero (H >= 1)
             const condLocalScores = scores
                 .filter(s => s.h >= 1)
                 .sort((a,b) => b.prob - a.prob)
                 .slice(0, 3);
             
-            // Marcadores si Visita anota primero (A >= 1)
             const condAwayScores = scores
                 .filter(s => s.a >= 1)
                 .sort((a,b) => b.prob - a.prob)
@@ -398,7 +430,6 @@
             const dnbH = dnbTotal > 0 ? (res.win / 100) / dnbTotal * 100 : 0;
             const dnbA = dnbTotal > 0 ? (res.loss / 100) / dnbTotal * 100 : 0;
 
-            // Lógica de color según Efecto del Primer Gol (Umbral 60%)
             const homeClass = res.probAnotarLocal >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
             const awayClass = res.probAnotarAway >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
 
@@ -421,7 +452,6 @@
                     <span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span>
                 </div>`).join('');
 
-            // RENDER EFECTO PRIMER GOL Y MARCADORES CONDICIONALES
             cFGE.innerHTML = `
                 <div class="space-y-2">
                     <p class="text-[10px] font-bold text-blue-600 uppercase">Si Local anota primero (${res.probAnotarLocal.toFixed(1)}%)</p>
@@ -441,7 +471,6 @@
                 </div>
             `;
 
-            // HANDICAP MEJORADO
             let hdHTML = `
                 <div class="handicap-row grid-header-hd text-center mb-1">
                     <span>Línea</span><span>Local</span><span>Empate</span><span>Visita</span>
