@@ -74,22 +74,15 @@
                     <span class="text-2xl">⏳</span>
                     <h3 class="text-xl font-black text-slate-800 uppercase tracking-tight">Un Gol Más (Minuto 70+)</h3>
                 </div>
-                <p class="text-center text-xs text-slate-500 mb-6 italic">Probabilidad de ver al menos un gol adicional considerando los escenarios más probables al minuto 70.</p>
+                <p class="text-center text-xs text-slate-500 mb-6 italic">Probabilidad estadística de ver al menos un gol adicional en los últimos 20 minutos del encuentro.</p>
                 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                        <h4 class="text-center text-xs font-bold text-slate-400 uppercase mb-3">Marcadores Probables @70'</h4>
-                        <div id="min70Scorelines" class="space-y-2">
-                            </div>
+                <div class="flex flex-col justify-center items-center p-8 bg-amber-50 rounded-xl border border-amber-100 max-w-md mx-auto">
+                    <span class="text-xs font-bold text-amber-600 uppercase mb-2">Probabilidad de Gol 70' - 90'</span>
+                    <div id="globalOneMoreProb" class="text-6xl font-black text-amber-700">--%</div>
+                    <div class="mt-6 w-full bg-amber-200 rounded-full h-3">
+                        <div id="oneMoreProgressBar" class="bg-amber-500 h-3 rounded-full transition-all duration-1000" style="width: 0%"></div>
                     </div>
-                    <div class="flex flex-col justify-center items-center p-6 bg-amber-50 rounded-xl border border-amber-100">
-                        <span class="text-xs font-bold text-amber-600 uppercase mb-1">Prob. Global "Un Gol Más"</span>
-                        <div id="globalOneMoreProb" class="text-5xl font-black text-amber-700">--%</div>
-                        <div class="mt-4 w-full bg-amber-200 rounded-full h-2">
-                            <div id="oneMoreProgressBar" class="bg-amber-500 h-2 rounded-full" style="width: 0%"></div>
-                        </div>
-                        <p id="oneMoreAdvice" class="mt-4 text-[10px] text-amber-800 text-center font-medium"></p>
-                    </div>
+                    <p id="oneMoreAdvice" class="mt-6 text-xs text-amber-900 text-center font-bold leading-relaxed px-4"></p>
                 </div>
             </div>
 
@@ -278,51 +271,43 @@
             return { teamScored, teamConceded, leagueAvg, probHTDist, probFTDist };
         }
 
+        // --- LÓGICA DE UN GOL MÁS ---
         function calculateOneMoreGoal(ftLambdas, homeSegments, awaySegments) {
-            // Un partido tiene 90 min. Al min 70, quedan 20 min (22.2% del tiempo total).
-            // Lambdas para los 20 mins finales (ajustadas por peso histórico de segmentos 61-75 y 76-90)
-            const getLateWeight = (seg) => (parseFloat(seg.teamScored[4]) + parseFloat(seg.teamScored[5])) / 2 / 100;
+            // El partido tiene 90 min. Al min 70, quedan 20 min (aprox 22.2% del tiempo).
+            // Se ajusta la lambda según el peso histórico de los segmentos 76-90'
+            const getLateWeight = (seg) => {
+                if(!seg) return 0.22;
+                // Promedio de peso de los últimos dos segmentos (61-75 y 76-90)
+                return (parseFloat(seg.teamScored[4]) + parseFloat(seg.teamScored[5])) / 2 / 100;
+            };
             
-            const lateWeightH = homeSegments ? getLateWeight(homeSegments) : 0.22;
-            const lateWeightA = awaySegments ? getLateWeight(awaySegments) : 0.22;
+            const weightH = getLateWeight(homeSegments);
+            const weightA = getLateWeight(awaySegments);
             
-            const lambda70_90 = {
-                h: ftLambdas.h * lateWeightH * 1.5, // Factor de urgencia final
-                a: ftLambdas.a * lateWeightA * 1.5
+            // Lambda para los 20 min finales (Min 70 a 90)
+            const lambdaLate = {
+                h: ftLambdas.h * weightH * 1.3, // Factor de urgencia 1.3x en cierre
+                a: ftLambdas.a * weightA * 1.3
             };
 
-            const probZeroGoles = poisson(0, lambda70_90.h) * poisson(0, lambda70_90.a);
+            const probZeroGoles = poisson(0, lambdaLate.h) * poisson(0, lambdaLate.a);
             const probAlMenosUno = (1 - probZeroGoles) * 100;
-
-            // Marcadores más probables al minuto 70 (Poisson hasta t=70/90)
-            const lambda0_70 = { h: ftLambdas.h * 0.77, a: ftLambdas.a * 0.77 };
-            let scorelines = [];
-            for(let i=0; i<=2; i++) {
-                for(let j=0; j<=2; j++) {
-                    let p = poisson(i, lambda0_70.h) * poisson(j, lambda0_70.a) * 100;
-                    scorelines.push({ score: `${i}-${j}`, prob: p });
-                }
-            }
-            scorelines.sort((a,b) => b.prob - a.prob);
-
-            // Renderizar
-            const list = document.getElementById('min70Scorelines');
-            list.innerHTML = "";
-            scorelines.slice(0, 4).forEach(s => {
-                const item = document.createElement('div');
-                item.className = "flex justify-between items-center bg-white p-2 rounded border border-slate-100 text-sm";
-                item.innerHTML = `<span class="font-bold text-slate-700">${s.score}</span><span class="text-slate-400 font-medium">${s.prob.toFixed(1)}%</span>`;
-                list.appendChild(item);
-            });
 
             const globalEl = document.getElementById('globalOneMoreProb');
             globalEl.textContent = probAlMenosUno.toFixed(1) + '%';
             document.getElementById('oneMoreProgressBar').style.width = probAlMenosUno + '%';
 
             const advice = document.getElementById('oneMoreAdvice');
-            if(probAlMenosUno > 65) advice.textContent = "ALTA PROBABILIDAD: Escenario ideal para buscar el Over 0.5 o 1.5 en vivo.";
-            else if(probAlMenosUno > 45) advice.textContent = "MODERADO: Los equipos mantienen ritmo, posible gol en los últimos 10'.";
-            else advice.textContent = "BAJA: Tendencia a marcador cerrado o fatiga en el cierre.";
+            if(probAlMenosUno > 68) {
+                advice.className = "mt-6 text-xs text-green-700 text-center font-bold px-4";
+                advice.textContent = "ALTA PROBABILIDAD (LIVE): Escenario ideal para buscar el Over 0.5 goles en los últimos 20 minutos.";
+            } else if(probAlMenosUno > 45) {
+                advice.className = "mt-6 text-xs text-amber-700 text-center font-bold px-4";
+                advice.textContent = "MODERADA: Existe tendencia de cierre movido, pero con riesgo. Evaluar según el flujo del partido.";
+            } else {
+                advice.className = "mt-6 text-xs text-slate-500 text-center font-bold px-4";
+                advice.textContent = "BAJA: Los datos sugieren un cierre de partido lento o con pocas llegadas claras.";
+            }
         }
 
         function renderChart(canvasId, label, dataObj) {
