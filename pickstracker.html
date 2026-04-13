@@ -101,9 +101,13 @@
                                 <label class="text-[10px] text-slate-400 uppercase">Mercado</label>
                                 <select id="market" class="w-full text-sm p-2 rounded-lg">
                                     <option value="1X2">1X2</option>
+                                    <option value="DC">Doble Oportunidad</option>
                                     <option value="O/U">Over/Under</option>
                                     <option value="BTTS">BTTS</option>
                                     <option value="AH">Handicap</option>
+                                    <option value="DNB">DNB</option>
+                                    <option value="CS">Correct Score</option>
+                                    <option value="FGE">First Goal Effect</option>
                                     <option value="Player Prop">Player Prop</option>
                                     <option value="Otro">Otro</option>
                                 </select>
@@ -121,7 +125,7 @@
                             </div>
                             <div>
                                 <label class="text-[10px] text-slate-400 uppercase">Stake</label>
-                                <input type="number" id="stake" step="0.1" placeholder="1" required class="w-full text-sm p-2 rounded-lg">
+                                <input type="number" id="stake" step="0.1" placeholder="1" required class="w-full text-sm p-2 rounded-lg" value="1">
                             </div>
                             <div>
                                 <label class="text-[10px] text-slate-400 uppercase">Prob. %</label>
@@ -238,6 +242,24 @@
             document.getElementById('initialBank').value = config.initialBank;
             document.getElementById('projectName').value = config.projectName;
             
+            // Lógica para recibir pick desde index.html
+            const pendingPick = JSON.parse(localStorage.getItem('pendingPick'));
+            if (pendingPick) {
+                document.getElementById('date').value = pendingPick.date;
+                document.getElementById('league').value = pendingPick.league;
+                document.getElementById('match').value = pendingPick.match;
+                document.getElementById('market').value = pendingPick.market;
+                document.getElementById('selection').value = pendingPick.selection;
+                document.getElementById('odds').value = pendingPick.odds;
+                document.getElementById('prob').value = pendingPick.prob;
+                
+                // Limpiar después de usarlo
+                localStorage.removeItem('pendingPick');
+                
+                // Poner el foco en el stake para que el usuario solo confirme
+                document.getElementById('stake').focus();
+            }
+
             lucide.createIcons();
             initCharts();
             renderAll();
@@ -272,7 +294,7 @@
             const pick = {
                 id: Date.now(),
                 date: document.getElementById('date').value,
-                time: document.getElementById('time').value,
+                time: document.getElementById('time').value || "00:00",
                 league: document.getElementById('league').value,
                 match: document.getElementById('match').value,
                 market: document.getElementById('market').value,
@@ -292,6 +314,8 @@
             picks.push(pick);
             localStorage.setItem('picks', JSON.stringify(picks));
             document.getElementById('pickForm').reset();
+            // Resetear stake por defecto tras limpiar form
+            document.getElementById('stake').value = 1;
             renderAll();
         }
 
@@ -453,7 +477,6 @@
         }
 
         function updateCharts(data) {
-            // Curva de bankroll
             const sorted = [...data].sort((a,b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time));
             let runningProfit = 0;
             const history = sorted.map(p => {
@@ -465,7 +488,6 @@
             yieldChart.data.datasets[0].data = history;
             yieldChart.update();
 
-            // Mercados
             const marketData = {};
             data.forEach(p => {
                 marketData[p.market] = (marketData[p.market] || 0) + p.profit;
@@ -477,10 +499,7 @@
         }
 
         // --- UTILIDADES ---
-        function saveConfig() {
-            localStorage.setItem('betConfig', JSON.stringify(config));
-        }
-
+        function saveConfig() { localStorage.setItem('betConfig', JSON.stringify(config)); }
         function resetApp() {
             if(confirm('¿BORRAR TODO? Esta acción no se puede deshacer.')) {
                 localStorage.removeItem('picks');
@@ -498,12 +517,9 @@
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.setAttribute('hidden', '');
-            a.setAttribute('href', url);
+            a.setAttribute('hidden', ''); a.setAttribute('href', url);
             a.setAttribute('download', `picks_export_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
         }
     </script>
 </body>
