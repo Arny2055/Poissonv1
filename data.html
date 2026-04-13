@@ -149,7 +149,7 @@
             }
         }
 
-        // --- FUNCIÓN PARA GUARDAR (SIN CONTRASEÑA) ---
+        // --- FUNCIÓN PARA GUARDAR (MEJORADA CON ALERTAS ESPECÍFICAS) ---
         async function saveAllTables() {
             const league = document.getElementById('leagueName').value.trim();
             if (!league) {
@@ -158,19 +158,22 @@
             }
 
             const inputs = [
-                { id: 'dataHomeFT', type: 'Home' },
-                { id: 'dataAwayFT', type: 'Away' },
-                { id: 'dataHomeHT', type: 'First Half Home' },
-                { id: 'dataAwayHT', type: 'First Half Away' },
-                { id: 'dataTimeHome', type: 'Time Segment Home' },
-                { id: 'dataTimeAway', type: 'Time Segment Away' }
+                { id: 'dataHomeFT', name: '1. Home FT', type: 'Home' },
+                { id: 'dataAwayFT', name: '2. Away FT', type: 'Away' },
+                { id: 'dataHomeHT', name: '3. Home 1T (HT)', type: 'First Half Home' },
+                { id: 'dataAwayHT', name: '4. Away 1T (HT)', type: 'First Half Away' },
+                { id: 'dataTimeHome', name: '5. Goals Home (Time)', type: 'Time Segment Home' },
+                { id: 'dataTimeAway', name: '6. Goals Away (Time)', type: 'Time Segment Away' }
             ];
 
             let count = 0;
+            let errors = [];
+            let totalFilled = 0;
 
             for (const input of inputs) {
                 const rawData = document.getElementById(input.id).value.trim();
                 if (rawData) {
+                    totalFilled++;
                     const isTime = input.id.includes('Time');
                     const parsedRows = isTime ? parseTimeSegmentData(rawData) : parseRawData(rawData);
                     
@@ -187,19 +190,31 @@
 
                         if (error) {
                             console.error("Error en upsert:", error);
+                            errors.push(`Error al subir tabla ${input.name}`);
                         } else {
                             count++;
                             document.getElementById(input.id).value = '';
                         }
+                    } else {
+                        errors.push(`Formato inválido en: ${input.name}`);
                     }
                 }
             }
 
+            if (totalFilled === 0) {
+                alert("No has ingresado datos en ninguna tabla.");
+                return;
+            }
+
             if (count > 0) {
-                alert(`Sincronizado con éxito: ${count} tablas en la nube.`);
+                let msg = `Sincronizado con éxito: ${count} tabla(s).`;
+                if (errors.length > 0) {
+                    msg += `\n\nAtención:\n- ${errors.join('\n- ')}`;
+                }
+                alert(msg);
                 await loadFromSupabase();
-            } else {
-                alert("No se detectaron datos válidos.");
+            } else if (errors.length > 0) {
+                alert(`No se pudo guardar ninguna tabla:\n- ${errors.join('\n- ')}`);
             }
         }
 
