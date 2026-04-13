@@ -238,7 +238,6 @@
 
         // 1. LÓGICA DE AUTENTICACIÓN
         function openLogin() { 
-            // MEJORA: Al abrir el modal, recuperamos el último UUID del localStorage
             const savedUUID = localStorage.getItem('betags_user_uuid');
             if (savedUUID) {
                 document.getElementById('loginUUID').value = savedUUID;
@@ -262,10 +261,9 @@
             
             if (error) alert("Error: " + error.message);
             else {
-                // MEJORA: Guardamos el UUID en localStorage (persiste tras recargar)
                 localStorage.setItem('betags_user_uuid', uuid);
                 closeLogin();
-                checkUser();
+                await checkUser();
                 loadFromSupabase();
             }
         }
@@ -274,23 +272,24 @@
             const { data: { user } } = await _supabase.auth.getUser();
             if (user) {
                 await _supabase.auth.signOut();
-                // Opcional: Podrías elegir NO borrar el UUID para que se mantenga sugerido
-                // localStorage.removeItem('betags_user_uuid'); 
-                checkUser();
+                localStorage.removeItem('betags_user_uuid'); 
+                await checkUser();
             } else {
                 openLogin();
             }
         }
 
         async function checkUser() {
-            const { data: { user } } = await _supabase.auth.getUser();
+            // Obtenemos sesión actual de forma forzada para evitar el delay del refresco
+            const { data: { session } } = await _supabase.auth.getSession();
+            const user = session ? session.user : null;
+            
             const btn = document.getElementById('authBtn');
             const info = document.getElementById('userInfo');
             const modal = document.getElementById('loginModal');
             const appContent = document.getElementById('mainAppContent');
             const storedUUID = localStorage.getItem('betags_user_uuid');
             
-            // Verificamos tanto el login de Supabase como la existencia del UUID
             if (user && storedUUID) {
                 modal.classList.remove('active');
                 appContent.classList.remove('blur-content');
@@ -400,14 +399,16 @@
             await checkUser();
             
             const leagueSelect = document.getElementById('selectLeague');
-            leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
-            const ligas = [...new Set(footballData.map(item => item.liga))];
-            ligas.forEach(liga => {
-                const opt = document.createElement('option');
-                opt.value = liga; opt.textContent = liga;
-                leagueSelect.appendChild(opt);
-            });
-            loadMatchSelection();
+            if (leagueSelect) {
+                leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
+                const ligas = [...new Set(footballData.map(item => item.liga))];
+                ligas.forEach(liga => {
+                    const opt = document.createElement('option');
+                    opt.value = liga; opt.textContent = liga;
+                    leagueSelect.appendChild(opt);
+                });
+                loadMatchSelection();
+            }
         }
 
         function updateTeams() {
@@ -574,7 +575,11 @@
             xgEl.innerHTML = `xG Proyectado: Local ${res.xh} - Visitante ${res.xa}`;
         }
 
-        loadFromSupabase();
+        // Ejecutar carga inicial
+        window.onload = async () => {
+            await checkUser();
+            loadFromSupabase();
+        };
     </script>
 </body>
 </html>
