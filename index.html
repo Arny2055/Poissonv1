@@ -401,7 +401,9 @@
             const leagueSelect = document.getElementById('selectLeague');
             if (leagueSelect) {
                 leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
-                const ligas = [...new Set(footballData.map(item => item.liga))];
+                // MEJORA: Orden alfabético de ligas
+                const ligas = [...new Set(footballData.map(item => item.liga))].sort((a, b) => a.localeCompare(b));
+                
                 ligas.forEach(liga => {
                     const opt = document.createElement('option');
                     opt.value = liga; opt.textContent = liga;
@@ -423,14 +425,18 @@
             const awayTable = getTable(liga, 'Away');
 
             if (homeTable) {
-                homeTable.tabla.forEach(team => {
+                // MEJORA: Orden alfabético de equipos locales
+                const sortedHome = [...homeTable.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
+                sortedHome.forEach(team => {
                     const opt = document.createElement('option');
                     opt.value = team.equipo; opt.textContent = team.equipo;
                     homeSelect.appendChild(opt);
                 });
             }
             if (awayTable) {
-                awayTable.tabla.forEach(team => {
+                // MEJORA: Orden alfabético de equipos visitantes
+                const sortedAway = [...awayTable.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
+                sortedAway.forEach(team => {
                     const opt = document.createElement('option');
                     opt.value = team.equipo; opt.textContent = team.equipo;
                     awaySelect.appendChild(opt);
