@@ -37,6 +37,34 @@
 
         .header h1 { font-size: 1.2rem; letter-spacing: 2px; color: var(--accent-blue); }
 
+        /* Estilos de Navegación */
+        .nav-container {
+            display: flex;
+            gap: 10px;
+            padding: 10px 15px;
+            justify-content: center;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 0.8rem;
+            text-decoration: none;
+            text-align: center;
+            background: #1d232d;
+            color: var(--text-main);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: 0.3s;
+        }
+
+        .nav-btn:active {
+            background: var(--accent-blue);
+            transform: scale(0.95);
+        }
+
         .container { padding: 15px; max-width: 1200px; margin: auto; }
 
         .grid-dashboard {
@@ -143,6 +171,12 @@
 <div class="header">
     <h1>APUESTA SYSTEM <span style="color: #fff;">PRO</span></h1>
     <p style="font-size: 0.7rem; color: var(--text-dim);">QUANTITATIVE ENGINE v2.0</p>
+</div>
+
+<div class="nav-container">
+    <a href="index.html" class="nav-btn"><i class="fa fa-home"></i> Inicio</a>
+    <a href="goles.html" class="nav-btn"><i class="fa fa-futbol"></i> Goles</a>
+    <a href="btts.html" class="nav-btn"><i class="fa fa-exchange-alt"></i> BTTS</a>
 </div>
 
 <div class="container">
