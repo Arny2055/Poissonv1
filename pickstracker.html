@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BetTracker Pro - Gestión de Picks</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        input, select, textarea {
+            background-color: #1e293b !important;
+            border: 1px solid #334155 !important;
+            color: white !important;
+        }
+        .status-win { border-left: 4px solid #22c55e; }
+        .status-loss { border-left: 4px solid #ef4444; }
+        .status-void { border-left: 4px solid #94a3b8; }
+        .status-pending { border-left: 4px solid #eab308; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    </style>
+</head>
+<body class="p-2 md:p-6">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <header class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="md:col-span-1 space-y-2">
+                <input type="text" id="projectName" value="BetTracker Pro" class="text-2xl font-bold bg-transparent border-none p-0 w-full focus:ring-0 uppercase tracking-wider text-blue-400">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-400 uppercase">Banca Inicial: $</span>
+                    <input type="number" id="initialBank" value="1000" step="0.1" class="w-24 text-sm font-semibold rounded px-1">
+                </div>
+            </div>
+            
+            <div class="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-card p-4 rounded-xl text-center">
+                    <p class="text-xs text-slate-400 uppercase">Banca Actual</p>
+                    <p id="currentBank" class="text-xl font-bold text-white">$0.00</p>
+                </div>
+                <div class="glass-card p-4 rounded-xl text-center">
+                    <p class="text-xs text-slate-400 uppercase">Profit Total</p>
+                    <p id="totalProfit" class="text-xl font-bold">$0.00</p>
+                </div>
+                <div class="glass-card p-4 rounded-xl text-center">
+                    <p class="text-xs text-slate-400 uppercase">ROI Global</p>
+                    <p id="globalROI" class="text-xl font-bold text-blue-400">0%</p>
+                </div>
+                <div class="flex flex-col gap-2">
+                    <button onclick="exportCSV()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition-all">EXPORTAR CSV</button>
+                    <button onclick="resetApp()" class="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white text-xs font-bold py-2 px-4 rounded-lg transition-all border border-red-600/50">RESET</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <section class="lg:col-span-1 space-y-4">
+                <div class="glass-card p-5 rounded-2xl shadow-xl">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i data-lucide="plus-circle" class="w-5 h-5 text-blue-400"></i> Nuevo Pick
+                    </h2>
+                    <form id="pickForm" class="space-y-3">
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Fecha</label>
+                                <input type="date" id="date" required class="w-full text-sm p-2 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Hora</label>
+                                <input type="time" id="time" required class="w-full text-sm p-2 rounded-lg">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="text-[10px] text-slate-400 uppercase">Liga / Torneo</label>
+                            <input type="text" id="league" placeholder="Ej: La Liga" required class="w-full text-sm p-2 rounded-lg">
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] text-slate-400 uppercase">Partido</label>
+                            <input type="text" id="match" placeholder="Equipo A vs Equipo B" required class="w-full text-sm p-2 rounded-lg">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Mercado</label>
+                                <select id="market" class="w-full text-sm p-2 rounded-lg">
+                                    <option value="1X2">1X2</option>
+                                    <option value="O/U">Over/Under</option>
+                                    <option value="BTTS">BTTS</option>
+                                    <option value="AH">Handicap</option>
+                                    <option value="Player Prop">Player Prop</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Selección</label>
+                                <input type="text" id="selection" placeholder="Ej: Real Madrid" required class="w-full text-sm p-2 rounded-lg">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Cuota</label>
+                                <input type="number" id="odds" step="0.001" placeholder="1.90" required class="w-full text-sm p-2 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Stake</label>
+                                <input type="number" id="stake" step="0.1" placeholder="1" required class="w-full text-sm p-2 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Prob. %</label>
+                                <input type="number" id="prob" step="1" placeholder="55" class="w-full text-sm p-2 rounded-lg">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Casa</label>
+                                <input type="text" id="bookie" placeholder="Bet365" class="w-full text-sm p-2 rounded-lg">
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Tipo</label>
+                                <select id="type" class="w-full text-sm p-2 rounded-lg">
+                                    <option value="Pre-match">Pre-match</option>
+                                    <option value="Live">Live</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Estado</label>
+                                <select id="result" class="w-full text-sm p-2 rounded-lg">
+                                    <option value="pendiente">Pendiente</option>
+                                    <option value="win">Win</option>
+                                    <option value="loss">Loss</option>
+                                    <option value="void">Void</option>
+                                    <option value="half-win">Half Win</option>
+                                    <option value="half-loss">Half Loss</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] text-slate-400 uppercase">Emoción</label>
+                                <select id="emotion" class="w-full text-sm p-2 rounded-lg">
+                                    <option value="Tranquilo">Tranquilo</option>
+                                    <option value="Dudoso">Dudoso</option>
+                                    <option value="Impulsivo">Impulsivo</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[10px] text-slate-400 uppercase">Cierre (CLV)</label>
+                            <input type="number" id="clv" step="0.01" placeholder="Cuota cierre" class="w-full text-sm p-2 rounded-lg">
+                        </div>
+
+                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-green-900/20 mt-2">
+                            GUARDAR PICK
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <section class="lg:col-span-2 space-y-6">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="miniDashboard">
+                    </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="glass-card p-4 rounded-2xl h-64">
+                        <canvas id="yieldChart"></canvas>
+                    </div>
+                    <div class="glass-card p-4 rounded-2xl h-64">
+                        <canvas id="marketChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-card p-4 rounded-2xl flex flex-wrap gap-4 items-center">
+                    <span class="text-xs font-bold text-slate-400 uppercase">Filtros:</span>
+                    <select id="filterResult" onchange="renderAll()" class="text-xs p-1 rounded bg-slate-800">
+                        <option value="all">Todos los resultados</option>
+                        <option value="win">Solo Win</option>
+                        <option value="loss">Solo Loss</option>
+                        <option value="pendiente">Pendientes</option>
+                    </select>
+                    <select id="filterType" onchange="renderAll()" class="text-xs p-1 rounded bg-slate-800">
+                        <option value="all">Todos los tipos</option>
+                        <option value="Pre-match">Pre-match</option>
+                        <option value="Live">Live</option>
+                    </select>
+                </div>
+
+                <div class="glass-card rounded-2xl overflow-hidden shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-800 text-slate-300 uppercase">
+                                <tr>
+                                    <th class="p-3">Fecha/Partido</th>
+                                    <th class="p-3">Mercado/Pick</th>
+                                    <th class="p-3">Cuota</th>
+                                    <th class="p-3">Stake</th>
+                                    <th class="p-3 text-center">EV%</th>
+                                    <th class="p-3">Profit</th>
+                                    <th class="p-3 text-center">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="picksTableBody">
+                                </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        let picks = JSON.parse(localStorage.getItem('picks')) || [];
+        let config = JSON.parse(localStorage.getItem('betConfig')) || { initialBank: 1000, projectName: 'BetTracker Pro' };
+        let yieldChart, marketChart;
+
+        // --- INICIALIZACIÓN ---
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('initialBank').value = config.initialBank;
+            document.getElementById('projectName').value = config.projectName;
+            
+            lucide.createIcons();
+            initCharts();
+            renderAll();
+        });
+
+        // --- EVENTOS ---
+        document.getElementById('initialBank').addEventListener('change', (e) => {
+            config.initialBank = parseFloat(e.target.value) || 0;
+            saveConfig();
+            renderAll();
+        });
+
+        document.getElementById('projectName').addEventListener('change', (e) => {
+            config.projectName = e.target.value;
+            saveConfig();
+        });
+
+        document.getElementById('pickForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            savePick();
+        });
+
+        // --- FUNCIONES CORE ---
+        function savePick() {
+            const odds = parseFloat(document.getElementById('odds').value);
+            const prob = parseFloat(document.getElementById('prob').value) || 0;
+            const stake = parseFloat(document.getElementById('stake').value);
+            
+            // Cálculo automático de EV
+            const calculatedEV = prob > 0 ? ((prob/100) * odds) - 1 : 0;
+
+            const pick = {
+                id: Date.now(),
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value,
+                league: document.getElementById('league').value,
+                match: document.getElementById('match').value,
+                market: document.getElementById('market').value,
+                selection: document.getElementById('selection').value,
+                odds: odds,
+                stake: stake,
+                prob: prob,
+                ev: (calculatedEV * 100).toFixed(2),
+                bookie: document.getElementById('bookie').value,
+                type: document.getElementById('type').value,
+                result: document.getElementById('result').value,
+                emotion: document.getElementById('emotion').value,
+                clv: document.getElementById('clv').value || null,
+                profit: calculateProfit(document.getElementById('result').value, stake, odds)
+            };
+
+            picks.push(pick);
+            localStorage.setItem('picks', JSON.stringify(picks));
+            document.getElementById('pickForm').reset();
+            renderAll();
+        }
+
+        function calculateProfit(result, stake, odds) {
+            switch(result) {
+                case 'win': return stake * (odds - 1);
+                case 'loss': return -stake;
+                case 'void': return 0;
+                case 'half-win': return (stake * (odds - 1)) / 2;
+                case 'half-loss': return -stake / 2;
+                default: return 0;
+            }
+        }
+
+        function deletePick(id) {
+            if(confirm('¿Eliminar este pick?')) {
+                picks = picks.filter(p => p.id !== id);
+                localStorage.setItem('picks', JSON.stringify(picks));
+                renderAll();
+            }
+        }
+
+        function renderAll() {
+            const filteredPicks = applyFilters();
+            renderTable(filteredPicks);
+            calculateMetrics(filteredPicks);
+            updateCharts(filteredPicks);
+        }
+
+        function applyFilters() {
+            const resF = document.getElementById('filterResult').value;
+            const typF = document.getElementById('filterType').value;
+
+            return picks.filter(p => {
+                const matchRes = resF === 'all' || p.result === resF;
+                const matchTyp = typF === 'all' || p.type === typF;
+                return matchRes && matchTyp;
+            }).sort((a,b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('picksTableBody');
+            tbody.innerHTML = '';
+
+            data.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = `border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors status-${p.result}`;
+                
+                tr.innerHTML = `
+                    <td class="p-3">
+                        <div class="font-bold text-blue-400">${p.date}</div>
+                        <div class="text-[10px] text-slate-400">${p.match}</div>
+                    </td>
+                    <td class="p-3">
+                        <div class="font-semibold">${p.market}</div>
+                        <div class="text-[10px] text-slate-300 italic">${p.selection}</div>
+                    </td>
+                    <td class="p-3 font-mono font-bold">${p.odds.toFixed(2)}</td>
+                    <td class="p-3 font-mono">u${p.stake}</td>
+                    <td class="p-3 text-center">
+                        <span class="${p.ev > 0 ? 'text-green-400' : 'text-slate-500'} font-mono text-[10px]">
+                            ${p.ev}%
+                        </span>
+                    </td>
+                    <td class="p-3 font-bold ${p.profit > 0 ? 'text-green-400' : p.profit < 0 ? 'text-red-400' : 'text-slate-400'}">
+                        ${p.profit > 0 ? '+' : ''}${p.profit.toFixed(2)}
+                    </td>
+                    <td class="p-3 text-center space-x-2">
+                        <button onclick="deletePick(${p.id})" class="text-red-500 hover:text-red-300">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function calculateMetrics(data) {
+            const totalPicks = data.length;
+            const settled = data.filter(p => p.result !== 'pendiente');
+            const wins = settled.filter(p => p.result === 'win' || p.result === 'half-win').length;
+            
+            const totalProfit = data.reduce((acc, p) => acc + p.profit, 0);
+            const totalStaked = data.reduce((acc, p) => acc + p.stake, 0);
+            const yieldVal = totalStaked > 0 ? (totalProfit / totalStaked) * 100 : 0;
+            const winrate = settled.length > 0 ? (wins / settled.length) * 100 : 0;
+            
+            // UI Updates
+            document.getElementById('currentBank').innerText = `$${(config.initialBank + totalProfit).toFixed(2)}`;
+            document.getElementById('totalProfit').innerText = `${totalProfit > 0 ? '+' : ''}$${totalProfit.toFixed(2)}`;
+            document.getElementById('totalProfit').className = `text-xl font-bold ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`;
+            document.getElementById('globalROI').innerText = `${yieldVal.toFixed(2)}%`;
+
+            const miniDashboard = document.getElementById('miniDashboard');
+            miniDashboard.innerHTML = `
+                <div class="glass-card p-3 rounded-xl">
+                    <p class="text-[10px] text-slate-400 uppercase">Total Picks</p>
+                    <p class="text-lg font-bold">${totalPicks}</p>
+                </div>
+                <div class="glass-card p-3 rounded-xl">
+                    <p class="text-[10px] text-slate-400 uppercase">Winrate</p>
+                    <p class="text-lg font-bold text-green-400">${winrate.toFixed(1)}%</p>
+                </div>
+                <div class="glass-card p-3 rounded-xl">
+                    <p class="text-[10px] text-slate-400 uppercase">Yield</p>
+                    <p class="text-lg font-bold text-blue-400">${yieldVal.toFixed(1)}%</p>
+                </div>
+                <div class="glass-card p-3 rounded-xl">
+                    <p class="text-[10px] text-slate-400 uppercase">Stake Total</p>
+                    <p class="text-lg font-bold">${totalStaked.toFixed(1)}u</p>
+                </div>
+            `;
+        }
+
+        // --- GRÁFICAS ---
+        function initCharts() {
+            const ctxYield = document.getElementById('yieldChart').getContext('2d');
+            yieldChart = new Chart(ctxYield, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Profit Acumulado',
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        data: [],
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { grid: { color: '#334155' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            const ctxMarket = document.getElementById('marketChart').getContext('2d');
+            marketChart = new Chart(ctxMarket, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Profit por Mercado',
+                        backgroundColor: '#10b981',
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateCharts(data) {
+            // Curva de bankroll
+            const sorted = [...data].sort((a,b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time));
+            let runningProfit = 0;
+            const history = sorted.map(p => {
+                runningProfit += p.profit;
+                return runningProfit.toFixed(2);
+            });
+
+            yieldChart.data.labels = sorted.map(p => p.date);
+            yieldChart.data.datasets[0].data = history;
+            yieldChart.update();
+
+            // Mercados
+            const marketData = {};
+            data.forEach(p => {
+                marketData[p.market] = (marketData[p.market] || 0) + p.profit;
+            });
+
+            marketChart.data.labels = Object.keys(marketData);
+            marketChart.data.datasets[0].data = Object.values(marketData);
+            marketChart.update();
+        }
+
+        // --- UTILIDADES ---
+        function saveConfig() {
+            localStorage.setItem('betConfig', JSON.stringify(config));
+        }
+
+        function resetApp() {
+            if(confirm('¿BORRAR TODO? Esta acción no se puede deshacer.')) {
+                localStorage.removeItem('picks');
+                picks = [];
+                renderAll();
+            }
+        }
+
+        function exportCSV() {
+            if(picks.length === 0) return alert('No hay datos para exportar');
+            let csv = 'Fecha,Partido,Liga,Mercado,Pick,Cuota,Stake,EV,Resultado,Profit,Bookie,Tipo\n';
+            picks.forEach(p => {
+                csv += `${p.date},"${p.match}","${p.league}",${p.market},"${p.selection}",${p.odds},${p.stake},${p.ev},${p.result},${p.profit},${p.bookie},${p.type}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('hidden', '');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `picks_export_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
