@@ -183,9 +183,21 @@
         const getData = () => footballData;
 
         async function loadFromSupabase() {
+            // Obtenemos el usuario actual
+            const { data: { user } } = await _supabase.auth.getUser();
+            
+            if (!user) {
+                console.error("No hay sesión iniciada");
+                // Redirigir si no hay sesión (Opcional)
+                // window.location.href = "login.html";
+                return;
+            }
+
+            // Filtrar datos SOLO del usuario que inició sesión
             const { data, error } = await _supabase
                 .from('football_data')
-                .select('*');
+                .select('*')
+                .eq('user_id', user.id);
 
             if (error) {
                 console.error("Error cargando datos:", error);
@@ -302,20 +314,18 @@
             globalEl.textContent = probAlMenosUno.toFixed(1) + '%';
             progressEl.style.width = probAlMenosUno + '%';
 
-            // Reset de colores
             containerEl.className = "flex flex-col justify-center items-center p-8 bg-amber-50 rounded-xl border border-amber-100 max-w-md mx-auto";
             labelEl.className = "text-xs font-bold text-amber-600 uppercase mb-2";
             globalEl.className = "text-6xl font-black text-amber-700";
             progressEl.className = "bg-amber-500 h-3 rounded-full transition-all duration-1000";
-            cardEl.style.borderColor = "#f59e0b"; // amber-500
+            cardEl.style.borderColor = "#f59e0b"; 
 
-            // MEJORA: Verde Esmeralda si >= 55%
             if (probAlMenosUno >= 55) {
                 containerEl.className = "flex flex-col justify-center items-center p-8 bg-emerald-50 rounded-xl border border-emerald-100 max-w-md mx-auto";
                 labelEl.className = "text-xs font-bold text-emerald-600 uppercase mb-2";
                 globalEl.className = "text-6xl font-black text-emerald-600";
                 progressEl.className = "bg-emerald-500 h-3 rounded-full transition-all duration-1000";
-                cardEl.style.borderColor = "#10b981"; // emerald-500
+                cardEl.style.borderColor = "#10b981"; 
             }
 
             const advice = document.getElementById('oneMoreAdvice');
@@ -481,15 +491,12 @@
             lines.forEach(line => {
                 const probOver = calculateOverProb(lambdas, line);
                 
-                // Lógica de colores condicionales (MEJORA SOLICITADA)
                 let overColorClass = "text-green-600";
                 
-                // Si es Full Time y la línea es 2.5, marcar si es >= 55%
                 if (prefix === 'ft' && line === 2.5 && probOver >= 55) {
                     overColorClass = "text-emerald-600";
                 }
                 
-                // Si es Half Time y la línea es 0.5, marcar si es >= 70%
                 if (prefix === 'ht' && line === 0.5 && probOver >= 70) {
                     overColorClass = "text-emerald-600";
                 }
@@ -497,7 +504,6 @@
                 const row = document.createElement('div');
                 row.className = `grid grid-cols-3 p-3 text-center text-sm items-center`;
                 
-                // Aplicamos la clase de color dinámicamente al valor del Over
                 row.innerHTML = `
                     <div class="font-bold text-slate-700">${line}</div>
                     <div class="${overColorClass} font-bold">${probOver.toFixed(1)}%</div>
