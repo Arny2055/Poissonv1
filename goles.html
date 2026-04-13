@@ -16,6 +16,9 @@
         .bg-gold-100 { background-color: #fef3c7; }
         .border-gold-200 { border-color: #fde68a; }
         .text-gold-700 { color: #b45309; }
+        /* Color Verde Esmeralda para alertas */
+        .bg-emerald-500 { background-color: #10b981 !important; }
+        .text-emerald-600 { color: #059669 !important; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -71,15 +74,15 @@
                 </div>
             </div>
 
-            <div class="card p-6 border-t-4 border-amber-500 shadow-lg">
+            <div class="card p-6 border-t-4 border-amber-500 shadow-lg" id="oneMoreCard">
                 <div class="flex items-center justify-center gap-2 mb-4">
                     <span class="text-2xl">⏳</span>
                     <h3 class="text-xl font-black text-slate-800 uppercase tracking-tight">Un Gol Más (Minuto 70+)</h3>
                 </div>
                 <p class="text-center text-xs text-slate-500 mb-6 italic">Probabilidad estadística de ver al menos un gol adicional en los últimos 20 minutos del encuentro.</p>
                 
-                <div class="flex flex-col justify-center items-center p-8 bg-amber-50 rounded-xl border border-amber-100 max-w-md mx-auto">
-                    <span class="text-xs font-bold text-amber-600 uppercase mb-2">Probabilidad de Gol 70' - 90'</span>
+                <div id="oneMoreContainer" class="flex flex-col justify-center items-center p-8 bg-amber-50 rounded-xl border border-amber-100 max-w-md mx-auto">
+                    <span id="oneMoreLabel" class="text-xs font-bold text-amber-600 uppercase mb-2">Probabilidad de Gol 70' - 90'</span>
                     <div id="globalOneMoreProb" class="text-6xl font-black text-amber-700">--%</div>
                     <div class="mt-6 w-full bg-amber-200 rounded-full h-3">
                         <div id="oneMoreProgressBar" class="bg-amber-500 h-3 rounded-full transition-all duration-1000" style="width: 0%"></div>
@@ -291,8 +294,29 @@
             const probAlMenosUno = (1 - probZeroGoles) * 100;
 
             const globalEl = document.getElementById('globalOneMoreProb');
+            const progressEl = document.getElementById('oneMoreProgressBar');
+            const containerEl = document.getElementById('oneMoreContainer');
+            const labelEl = document.getElementById('oneMoreLabel');
+            const cardEl = document.getElementById('oneMoreCard');
+
             globalEl.textContent = probAlMenosUno.toFixed(1) + '%';
-            document.getElementById('oneMoreProgressBar').style.width = probAlMenosUno + '%';
+            progressEl.style.width = probAlMenosUno + '%';
+
+            // Reset de colores
+            containerEl.className = "flex flex-col justify-center items-center p-8 bg-amber-50 rounded-xl border border-amber-100 max-w-md mx-auto";
+            labelEl.className = "text-xs font-bold text-amber-600 uppercase mb-2";
+            globalEl.className = "text-6xl font-black text-amber-700";
+            progressEl.className = "bg-amber-500 h-3 rounded-full transition-all duration-1000";
+            cardEl.style.borderColor = "#f59e0b"; // amber-500
+
+            // MEJORA: Verde Esmeralda si >= 55%
+            if (probAlMenosUno >= 55) {
+                containerEl.className = "flex flex-col justify-center items-center p-8 bg-emerald-50 rounded-xl border border-emerald-100 max-w-md mx-auto";
+                labelEl.className = "text-xs font-bold text-emerald-600 uppercase mb-2";
+                globalEl.className = "text-6xl font-black text-emerald-600";
+                progressEl.className = "bg-emerald-500 h-3 rounded-full transition-all duration-1000";
+                cardEl.style.borderColor = "#10b981"; // emerald-500
+            }
 
             const advice = document.getElementById('oneMoreAdvice');
             if(probAlMenosUno > 68) {
@@ -456,9 +480,23 @@
             xgEl.innerHTML = `xG esperado: ${(lambdas.h + lambdas.a).toFixed(2)} goles`;
             lines.forEach(line => {
                 const probOver = calculateOverProb(lambdas, line);
+                
+                // Lógica de colores condicionales
+                let overColorClass = "text-green-600";
+                
+                // MEJORA: Over 2.5 FT >= 55% -> Verde Esmeralda
+                if (prefix === 'ft' && line === 2.5 && probOver >= 55) {
+                    overColorClass = "text-emerald-600";
+                }
+                
+                // MEJORA: Over 0.5 HT >= 70% -> Verde Esmeralda
+                if (prefix === 'ht' && line === 0.5 && probOver >= 70) {
+                    overColorClass = "text-emerald-600";
+                }
+
                 const row = document.createElement('div');
                 row.className = `grid grid-cols-3 p-3 text-center text-sm items-center`;
-                row.innerHTML = `<div class="font-bold text-slate-700">${line}</div><div class="text-green-600 font-bold">${probOver.toFixed(1)}%</div><div class="text-red-600 font-semibold">${(100 - probOver).toFixed(1)}%</div>`;
+                row.innerHTML = `<div class="font-bold text-slate-700">${line}</div><div class="${overColorClass} font-bold">${probOver.toFixed(1)}%</div><div class="text-red-600 font-semibold">${(100 - probOver).toFixed(1)}%</div>`;
                 container.appendChild(row);
             });
         }
