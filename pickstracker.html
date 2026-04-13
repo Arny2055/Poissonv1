@@ -143,6 +143,17 @@
         .tag-loss { background: rgba(231, 76, 60, 0.2); color: var(--accent-red); }
         .tag-void { background: rgba(136, 146, 176, 0.2); color: var(--text-dim); }
 
+        /* Selector de resultado en tabla */
+        .select-result-table {
+            width: auto;
+            padding: 4px;
+            font-size: 0.75rem;
+            background: #1a202c;
+            border: 1px solid var(--border);
+            color: white;
+            border-radius: 4px;
+        }
+
         /* --- INSIGHTS --- */
         .insight-box {
             padding: 12px;
@@ -385,6 +396,15 @@
         resetForm();
     }
 
+    // NUEVA FUNCIÓN: Cambiar resultado directamente en el historial
+    function updateBetResult(id, newResult) {
+        const index = bets.findIndex(b => b.id === id);
+        if (index !== -1) {
+            bets[index].result = newResult;
+            saveAndRefresh();
+        }
+    }
+
     function deleteBet(id) {
         bets = bets.filter(b => b.id !== id);
         saveAndRefresh();
@@ -436,7 +456,7 @@
             chartData.push(runningBank);
             chartLabels.push(`B${index + 1}`);
 
-            // Add to table
+            // Add to table with interactive select
             const row = `
                 <tr>
                     <td>${b.date}</td>
@@ -446,7 +466,14 @@
                         ${(b.edge * 100).toFixed(1)}%
                     </td>
                     <td>${(b.evPercent * 100).toFixed(1)}%</td>
-                    <td><span class="tag tag-${b.result.toLowerCase()}">${b.result}</span></td>
+                    <td>
+                        <select onchange="updateBetResult(${b.id}, this.value)" class="select-result-table">
+                            <option value="Pending" ${b.result === 'Pending' ? 'selected' : ''}>⏳</option>
+                            <option value="Win" ${b.result === 'Win' ? 'selected' : ''}>✅ Ganada</option>
+                            <option value="Loss" ${b.result === 'Loss' ? 'selected' : ''}>❌ Perdida</option>
+                            <option value="Void" ${b.result === 'Void' ? 'selected' : ''}>⚪ Nula</option>
+                        </select>
+                    </td>
                     <td><i class="fa fa-trash" onclick="deleteBet(${b.id})" style="color: var(--accent-red); cursor:pointer;"></i></td>
                 </tr>
             `;
