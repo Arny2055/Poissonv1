@@ -15,12 +15,29 @@
         .bg-win { background-color: #dcfce7; } /* Scored > Conceded */
         .bg-draw { background-color: #fef9c3; } /* Scored = Conceded */
         .bg-loss { background-color: #fee2e2; } /* Scored < Conceded */
+        
+        /* Estilos para el Bloqueo de Sesión */
+        #authModal { background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); }
     </style>
 </head>
 <body class="p-4 md:p-8">
 
+    <div id="authModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full border border-slate-200">
+            <h2 class="text-2xl font-bold mb-2 text-slate-800">Acceso a la Nube</h2>
+            <p class="text-sm text-slate-500 mb-6">Ingresa tu identificador (UUID) para cargar tus ligas personales.</p>
+            <input type="text" id="uuidInput" placeholder="Pega tu UUID aquí..." class="w-full border border-slate-300 p-3 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm">
+            <button onclick="login()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg">Entrar a mi Perfil</button>
+            <p class="text-center text-[10px] text-slate-400 mt-4 uppercase tracking-widest">Protección de Datos BetAGS</p>
+        </div>
+    </div>
+
     <div class="max-w-6xl mx-auto">
         <header class="mb-8 text-center">
+            <div class="flex justify-between items-center mb-4">
+                <span id="userBadge" class="text-[10px] bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-bold">CARGANDO...</span>
+                <button onclick="logout()" class="text-xs text-slate-400 hover:text-red-500 underline">Cerrar Sesión / Cambiar Usuario</button>
+            </div>
             <h1 class="text-3xl font-700 text-slate-800 tracking-tight">Data Manager - Tablas de Fútbol</h1>
             <p class="text-slate-500">Gestión de estadísticas para modelos de Poisson en la Nube</p>
 
@@ -125,17 +142,46 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- COLOCA TU UUID AQUÍ PARA ADMINISTRAR TUS PROPIAS LIGAS ---
-        const MI_USER_UUID = 'ee870510-098a-41d3-8efc-ce4d883df6f2'; 
+        // --- MANEJO DE SESIÓN PRIVADA ---
+        let MI_USER_UUID = localStorage.getItem('betags_user_uuid');
+
+        function initAuth() {
+            if (!MI_USER_UUID) {
+                document.getElementById('authModal').classList.remove('hidden');
+            } else {
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('userBadge').textContent = `SESIÓN: ${MI_USER_UUID.substring(0,8)}...`;
+                loadFromSupabase();
+            }
+        }
+
+        function login() {
+            const input = document.getElementById('uuidInput').value.trim();
+            if (input.length < 10) {
+                alert("Por favor ingresa un UUID válido.");
+                return;
+            }
+            localStorage.setItem('betags_user_uuid', input);
+            MI_USER_UUID = input;
+            initAuth();
+        }
+
+        function logout() {
+            if(confirm("¿Cerrar sesión? Se pedirá el UUID nuevamente.")) {
+                localStorage.removeItem('betags_user_uuid');
+                location.reload();
+            }
+        }
 
         let footballData = [];
 
-        // --- FUNCIÓN PARA CARGAR DESDE LA NUBE (FILTRADO POR USUARIO) ---
+        // --- FUNCIÓN PARA CARGAR DESDE LA NUBE (FILTRADO POR USUARIO DINÁMICO) ---
         async function loadFromSupabase() {
+            if (!MI_USER_UUID) return;
             const { data, error } = await _supabase
                 .from('football_data')
                 .select('*')
-                .eq('user_id', MI_USER_UUID); // Solo carga lo que te pertenece
+                .eq('user_id', MI_USER_UUID); 
 
             if (error) {
                 console.error("Error cargando Supabase:", error);
@@ -152,7 +198,7 @@
             }
         }
 
-        // --- FUNCIÓN PARA GUARDAR (VINCULADO A TU UUID) ---
+        // --- FUNCIÓN PARA GUARDAR (VINCULADO AL USUARIO ACTUAL) ---
         async function saveAllTables() {
             const league = document.getElementById('leagueName').value.trim();
             if (!league) {
@@ -189,7 +235,7 @@
                                 tabla_json: parsedRows,
                                 is_time: isTime,
                                 fecha: new Date().toISOString().split('T')[0],
-                                user_id: MI_USER_UUID // Se guarda con tu identificador
+                                user_id: MI_USER_UUID 
                             });
 
                         if (error) {
@@ -400,7 +446,6 @@
 
         async function deleteFromSupabase(liga, tipo) {
             if (confirm(`¿Eliminar ${tipo} de ${liga} en tu cuenta?`)) {
-                // Se agrega user_id para asegurar que solo borras lo tuyo
                 const { error } = await _supabase.from('football_data').delete().match({ liga, tipo, user_id: MI_USER_UUID });
                 if (!error) await loadFromSupabase();
             }
@@ -408,14 +453,12 @@
 
         async function clearAllData() {
             if (confirm("¿Borrar TODAS tus ligas guardadas?")) {
-                // Solo borra registros que te pertenecen
                 const { error } = await _supabase.from('football_data').delete().eq('user_id', MI_USER_UUID);
                 if (!error) await loadFromSupabase();
             }
         }
 
         function exportData() {
-            // Exporta solo tus datos cargados
             const blob = new Blob([JSON.stringify(footballData, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
@@ -438,7 +481,7 @@
                             tabla_json: item.tabla,
                             is_time: item.isTimeSegment,
                             fecha: item.fecha,
-                            user_id: MI_USER_UUID // Al importar, se asocian a tu UUID
+                            user_id: MI_USER_UUID 
                         });
                     }
                     await loadFromSupabase();
@@ -448,7 +491,8 @@
             reader.readAsText(file);
         }
 
-        loadFromSupabase();
+        // --- INICIALIZACIÓN ---
+        initAuth();
     </script>
 </body>
 </html>
