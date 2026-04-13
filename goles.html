@@ -481,22 +481,28 @@
             lines.forEach(line => {
                 const probOver = calculateOverProb(lambdas, line);
                 
-                // Lógica de colores condicionales
+                // Lógica de colores condicionales (MEJORA SOLICITADA)
                 let overColorClass = "text-green-600";
                 
-                // MEJORA: Over 2.5 FT >= 55% -> Verde Esmeralda
+                // Si es Full Time y la línea es 2.5, marcar si es >= 55%
                 if (prefix === 'ft' && line === 2.5 && probOver >= 55) {
                     overColorClass = "text-emerald-600";
                 }
                 
-                // MEJORA: Over 0.5 HT >= 70% -> Verde Esmeralda
+                // Si es Half Time y la línea es 0.5, marcar si es >= 70%
                 if (prefix === 'ht' && line === 0.5 && probOver >= 70) {
                     overColorClass = "text-emerald-600";
                 }
 
                 const row = document.createElement('div');
                 row.className = `grid grid-cols-3 p-3 text-center text-sm items-center`;
-                row.innerHTML = `<div class="font-bold text-slate-700">${line}</div><div class="${overColorClass} font-bold">${probOver.toFixed(1)}%</div><div class="text-red-600 font-semibold">${(100 - probOver).toFixed(1)}%</div>`;
+                
+                // Aplicamos la clase de color dinámicamente al valor del Over
+                row.innerHTML = `
+                    <div class="font-bold text-slate-700">${line}</div>
+                    <div class="${overColorClass} font-bold">${probOver.toFixed(1)}%</div>
+                    <div class="text-red-600 font-semibold">${(100 - probOver).toFixed(1)}%</div>
+                `;
                 container.appendChild(row);
             });
         }
