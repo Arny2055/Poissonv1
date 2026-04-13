@@ -135,7 +135,6 @@
 
             if (error) {
                 console.error("Error cargando Supabase:", error);
-                alert("Error al conectar con la nube.");
             } else {
                 footballData = data.map(item => ({
                     liga: item.liga,
@@ -149,7 +148,7 @@
             }
         }
 
-        // --- FUNCIÓN PARA GUARDAR (MEJORADA CON ALERTAS ESPECÍFICAS) ---
+        // --- FUNCIÓN PARA GUARDAR ---
         async function saveAllTables() {
             const league = document.getElementById('leagueName').value.trim();
             if (!league) {
@@ -186,11 +185,11 @@
                                 tabla_json: parsedRows,
                                 is_time: isTime,
                                 fecha: new Date().toISOString().split('T')[0]
-                            }, { onConflict: 'liga, tipo' });
+                            });
 
                         if (error) {
                             console.error("Error en upsert:", error);
-                            errors.push(`Error al subir tabla ${input.name}`);
+                            errors.push(`Error al subir tabla ${input.name}: ${error.message}`);
                         } else {
                             count++;
                             document.getElementById(input.id).value = '';
@@ -208,9 +207,7 @@
 
             if (count > 0) {
                 let msg = `Sincronizado con éxito: ${count} tabla(s).`;
-                if (errors.length > 0) {
-                    msg += `\n\nAtención:\n- ${errors.join('\n- ')}`;
-                }
+                if (errors.length > 0) msg += `\n\nAtención:\n- ${errors.join('\n- ')}`;
                 alert(msg);
                 await loadFromSupabase();
             } else if (errors.length > 0) {
@@ -218,7 +215,7 @@
             }
         }
 
-        // --- LÓGICA DE PARSEO ---
+        // --- LÓGICA DE PARSEO (ORIGINAL PRESERVADA) ---
         function parseRawData(text) {
             const lines = text.split('\n');
             const result = [];
@@ -386,7 +383,7 @@
                     <div class="flex justify-between items-start mb-4">
                         <div>
                             <h3 class="text-lg font-bold text-slate-800">${entry.liga} - <span class="text-blue-600">${entry.tipo}</span></h3>
-                            <span class="text-xs text-slate-400 font-mono">Actualizado: ${entry.fecha} ${entry.isTimeSegment ? ' (Segments)' : ''}</span>
+                            <span class="text-xs text-slate-400 font-mono">Actualizado: ${entry.fecha}</span>
                         </div>
                         <button onclick="deleteFromSupabase('${entry.liga}', '${entry.tipo}')" class="text-red-400 hover:text-red-600 text-sm">Eliminar</button>
                     </div>
@@ -396,36 +393,17 @@
             });
         }
 
-        // --- ELIMINAR TABLA (SIN CONTRASEÑA) ---
         async function deleteFromSupabase(liga, tipo) {
-            if (confirm(`¿Estás seguro de que quieres eliminar la tabla ${tipo} de ${liga} de la nube?`)) {
-                const { error } = await _supabase
-                    .from('football_data')
-                    .delete()
-                    .match({ liga: liga, tipo: tipo });
-
-                if (error) {
-                    alert("Error al borrar.");
-                } else {
-                    await loadFromSupabase();
-                }
+            if (confirm(`¿Eliminar ${tipo} de ${liga}?`)) {
+                const { error } = await _supabase.from('football_data').delete().match({ liga, tipo });
+                if (!error) await loadFromSupabase();
             }
         }
 
-        // --- ELIMINAR TODO (SIN CONTRASEÑA) ---
         async function clearAllData() {
-            if (confirm("¿Confirmas que deseas borrar TODA la base de datos en la nube?")) {
-                const { error } = await _supabase
-                    .from('football_data')
-                    .delete()
-                    .neq('liga', 'un_valor_imposible');
-
-                if (!error) {
-                    alert("Base de datos limpiada con éxito.");
-                    await loadFromSupabase();
-                } else {
-                    alert("Error al intentar limpiar los datos.");
-                }
+            if (confirm("¿Borrar TODA la base de datos?")) {
+                const { error } = await _supabase.from('football_data').delete().neq('liga', 'un_valor_imposible');
+                if (!error) await loadFromSupabase();
             }
         }
 
@@ -445,20 +423,18 @@
             reader.onload = async function(e) {
                 try {
                     const imported = JSON.parse(e.target.result);
-                    if (Array.isArray(imported)) {
-                        for (const item of imported) {
-                            await _supabase.from('football_data').upsert({
-                                liga: item.liga,
-                                tipo: item.tipo,
-                                tabla_json: item.tabla,
-                                is_time: item.isTimeSegment,
-                                fecha: item.fecha
-                            });
-                        }
-                        await loadFromSupabase();
-                        alert("Datos importados a la nube");
+                    for (const item of imported) {
+                        await _supabase.from('football_data').upsert({
+                            liga: item.liga,
+                            tipo: item.tipo,
+                            tabla_json: item.tabla,
+                            is_time: item.isTimeSegment,
+                            fecha: item.fecha
+                        });
                     }
-                } catch (err) { alert("Error: JSON no válido."); }
+                    await loadFromSupabase();
+                    alert("Importación completa.");
+                } catch (err) { alert("Error en el JSON."); }
             };
             reader.readAsText(file);
         }
