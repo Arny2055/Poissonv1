@@ -136,17 +136,32 @@
         const getData = () => footballData;
 
         async function loadFromSupabase() {
-            const { data, error } = await _supabase.from('football_data').select('*');
+            // Obtenemos el usuario actual
+            const { data: { user } } = await _supabase.auth.getUser();
+            
+            if (!user) {
+                console.error("No hay sesión iniciada");
+                return;
+            }
+
+            // MEJORA: Solo mostrar ligas del ID con el que se inició sesión
+            const { data, error } = await _supabase
+                .from('football_data')
+                .select('*')
+                .eq('user_id', user.id);
+
             if (error) {
                 console.error("Error cargando datos:", error);
                 return;
             }
+
             footballData = data.map(item => ({
                 liga: item.liga,
                 tipo: item.tipo,
                 fecha: item.fecha,
                 tabla: item.tabla_json
             }));
+
             init(); 
         }
 
