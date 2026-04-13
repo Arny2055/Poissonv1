@@ -8,14 +8,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --bg-deep: #0a0e14;
-            --bg-card: #151a21;
-            --accent-blue: #007aff;
-            --accent-green: #2ecc71;
-            --accent-red: #e74c3c;
-            --text-main: #e0e0e0;
-            --text-dim: #8892b0;
-            --border: #232d3b;
+            --bg-deep: #f3f4f6; /* Fondo claro general */
+            --bg-card: #ffffff; /* Fondos de tarjetas blancos */
+            --accent-blue: #2563eb; /* Azul estándar de index.html */
+            --accent-green: #16a34a; 
+            --accent-red: #dc2626;
+            --text-main: #1f2937; /* Texto principal oscuro */
+            --text-dim: #6b7280; /* Texto secundario gris */
+            --border: #e5e7eb; /* Bordes claros */
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
@@ -30,12 +30,12 @@
         /* --- UI COMPONENTS --- */
         .header {
             padding: 20px;
-            background: linear-gradient(145deg, #1a202c, #0a0e14);
+            background: #ffffff;
             border-bottom: 1px solid var(--border);
             text-align: center;
         }
 
-        .header h1 { font-size: 1.2rem; letter-spacing: 2px; color: var(--accent-blue); }
+        .header h1 { font-size: 1.2rem; letter-spacing: 2px; color: var(--accent-blue); font-weight: 800; }
 
         /* Estilos de Navegación */
         .nav-container {
@@ -53,15 +53,17 @@
             font-size: 0.8rem;
             text-decoration: none;
             text-align: center;
-            background: #1d232d;
+            background: #f9fafb;
             color: var(--text-main);
             border-radius: 8px;
             border: 1px solid var(--border);
             transition: 0.3s;
+            font-weight: 600;
         }
 
         .nav-btn:active {
             background: var(--accent-blue);
+            color: white;
             transform: scale(0.95);
         }
 
@@ -80,10 +82,11 @@
             border-radius: 12px;
             border: 1px solid var(--border);
             text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        .stat-card span { display: block; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; }
-        .stat-card b { font-size: 1.1rem; color: #fff; }
+        .stat-card span { display: block; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; font-weight: bold; }
+        .stat-card b { font-size: 1.1rem; color: var(--text-main); }
         .stat-card.highlight { border-left: 4px solid var(--accent-blue); }
 
         /* --- FORM --- */
@@ -93,6 +96,7 @@
             padding: 20px;
             margin-bottom: 20px;
             border: 1px solid var(--border);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .form-row {
@@ -103,13 +107,13 @@
         }
 
         .input-group { margin-bottom: 15px; }
-        label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; }
+        label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; font-weight: 600; }
         input, select {
             width: 100%;
             padding: 12px;
-            background: #0d1117;
+            background: #ffffff;
             border: 1px solid var(--border);
-            color: white;
+            color: var(--text-main);
             border-radius: 8px;
             font-size: 1rem;
         }
@@ -125,13 +129,13 @@
         }
 
         .btn-primary { background: var(--accent-blue); color: white; }
-        .btn-outline { background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); margin-top: 10px; }
+        .btn-outline { background: white; border: 1px solid var(--accent-blue); color: var(--accent-blue); margin-top: 10px; }
 
         /* --- TABLE & LISTS --- */
         .table-container { overflow-x: auto; margin-top: 20px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-        th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 1px solid var(--border); }
-        td { padding: 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+        th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 2px solid var(--border); background: #f9fafb; }
+        td { padding: 12px; border-bottom: 1px solid var(--border); white-space: nowrap; color: var(--text-main); }
 
         .tag {
             padding: 2px 6px;
@@ -139,18 +143,18 @@
             font-size: 0.7rem;
             font-weight: bold;
         }
-        .tag-win { background: rgba(46, 204, 113, 0.2); color: var(--accent-green); }
-        .tag-loss { background: rgba(231, 76, 60, 0.2); color: var(--accent-red); }
-        .tag-void { background: rgba(136, 146, 176, 0.2); color: var(--text-dim); }
+        .tag-win { background: #dcfce7; color: var(--accent-green); }
+        .tag-loss { background: #fee2e2; color: var(--accent-red); }
+        .tag-void { background: #f3f4f6; color: var(--text-dim); }
 
         /* Selector de resultado en tabla */
         .select-result-table {
             width: auto;
             padding: 4px;
             font-size: 0.75rem;
-            background: #1a202c;
+            background: #ffffff;
             border: 1px solid var(--border);
-            color: white;
+            color: var(--text-main);
             border-radius: 4px;
         }
 
@@ -164,8 +168,8 @@
             align-items: center;
             gap: 10px;
         }
-        .insight-alert { background: rgba(231, 76, 60, 0.1); border: 1px solid var(--accent-red); color: #ffbcbc; }
-        .insight-fire { background: rgba(46, 204, 113, 0.1); border: 1px solid var(--accent-green); color: #b7ffcf; }
+        .insight-alert { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+        .insight-fire { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
 
         /* --- CHARTS --- */
         .chart-box { height: 250px; margin-top: 20px; }
@@ -180,7 +184,7 @@
 <body>
 
 <div class="header">
-    <h1>APUESTA SYSTEM <span style="color: #fff;">PRO</span></h1>
+    <h1>APUESTA SYSTEM <span style="color: var(--text-main);">PRO</span></h1>
     <p style="font-size: 0.7rem; color: var(--text-dim);">QUANTITATIVE ENGINE v2.0</p>
 </div>
 
@@ -238,7 +242,7 @@
     </div>
 
     <div class="card">
-        <h3 style="margin-bottom: 15px; font-size: 0.9rem; color: var(--accent-blue);">NUEVA OPERACIÓN</h3>
+        <h3 style="margin-bottom: 15px; font-size: 0.9rem; color: var(--accent-blue); text-transform: uppercase; font-weight: 800;">NUEVA OPERACIÓN</h3>
         
         <div class="form-row">
             <div class="input-group">
@@ -299,7 +303,7 @@
     </div>
 
     <div class="card">
-        <h3 style="font-size: 0.9rem;">EVOLUCIÓN DE BANK</h3>
+        <h3 style="font-size: 0.9rem; text-transform: uppercase; font-weight: 800; color: var(--text-main); margin-bottom: 15px;">EVOLUCIÓN DE BANK</h3>
         <div class="chart-box">
             <canvas id="mainChart"></canvas>
         </div>
@@ -307,7 +311,7 @@
 
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <h3 style="font-size: 0.9rem;">HISTORIAL QUANT</h3>
+            <h3 style="font-size: 0.9rem; text-transform: uppercase; font-weight: 800;">HISTORIAL QUANT</h3>
             <button onclick="exportCSV()" style="width: auto; padding: 5px 10px; font-size: 0.7rem;" class="btn-outline">Exportar CSV</button>
         </div>
         <div class="table-container">
@@ -396,7 +400,6 @@
         resetForm();
     }
 
-    // NUEVA FUNCIÓN: Cambiar resultado directamente en el historial
     function updateBetResult(id, newResult) {
         const index = bets.findIndex(b => b.id === id);
         if (index !== -1) {
@@ -454,15 +457,14 @@
             }
 
             chartData.push(runningBank);
-            chartLabels.push(`B${index + 1}`);
+            chartLabels.push(`${index + 1}`);
 
-            // Add to table with interactive select
             const row = `
                 <tr>
                     <td>${b.date}</td>
-                    <td>${b.match}<br><small>${b.league}</small></td>
+                    <td>${b.match}<br><small style="color:var(--text-dim)">${b.league}</small></td>
                     <td>${b.odds.toFixed(2)}</td>
-                    <td style="color: ${b.edge > 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">
+                    <td style="color: ${b.edge > 0 ? 'var(--accent-green)' : 'var(--accent-red)'}; font-weight:bold">
                         ${(b.edge * 100).toFixed(1)}%
                     </td>
                     <td>${(b.evPercent * 100).toFixed(1)}%</td>
@@ -480,7 +482,6 @@
             body.innerHTML += row;
         });
 
-        // Update Dashboard
         document.getElementById('stat-bank').innerText = `$${runningBank.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
         document.getElementById('stat-profit').innerText = `$${totalProfit.toLocaleString()}`;
         document.getElementById('stat-profit').style.color = totalProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
@@ -493,7 +494,6 @@
         generateInsights(processedBets);
     }
 
-    // --- INSIGHTS ENGINE ---
     function generateInsights(processedBets) {
         const container = document.getElementById('insights-container');
         container.innerHTML = '';
@@ -515,7 +515,6 @@
         }
     }
 
-    // --- CHART ENGINE ---
     function renderChart(labels, data) {
         const ctx = document.getElementById('mainChart').getContext('2d');
         if(myChart) myChart.destroy();
@@ -527,12 +526,13 @@
                 datasets: [{
                     label: 'Bankroll',
                     data: data,
-                    borderColor: '#007aff',
-                    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                    borderColor: '#2563eb',
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
                     borderWidth: 3,
                     fill: true,
                     tension: 0.4,
-                    pointRadius: 2
+                    pointRadius: 3,
+                    pointBackgroundColor: '#2563eb'
                 }]
             },
             options: {
@@ -540,14 +540,13 @@
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    y: { grid: { color: '#232d3b' }, ticks: { color: '#8892b0' } },
-                    x: { grid: { display: false }, ticks: { color: '#8892b0' } }
+                    y: { grid: { color: '#e5e7eb' }, ticks: { color: '#6b7280' } },
+                    x: { grid: { display: false }, ticks: { color: '#6b7280' } }
                 }
             }
         });
     }
 
-    // --- UTILS ---
     function backupData() {
         const blob = new Blob([JSON.stringify(bets)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
@@ -577,7 +576,6 @@
         }
     }
 
-    // Init
     window.onload = updateSystem;
 </script>
 </body>
