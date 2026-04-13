@@ -188,7 +188,8 @@
         function init() {
             const leagueSelect = document.getElementById('selectLeague');
             leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
-            const ligas = [...new Set(footballData.map(item => item.liga))];
+            // MEJORA: Orden alfabético de ligas
+            const ligas = [...new Set(footballData.map(item => item.liga))].sort((a, b) => a.localeCompare(b));
             ligas.forEach(l => {
                 const opt = document.createElement('option');
                 opt.value = opt.textContent = l;
@@ -203,10 +204,20 @@
             const aSel = document.getElementById('awayTeam');
             hSel.innerHTML = aSel.innerHTML = '<option value="">--</option>';
             if (!liga) return;
+            
             const tHome = getData().find(t => t.liga === liga && t.tipo === 'Home');
             const tAway = getData().find(t => t.liga === liga && t.tipo === 'Away');
-            if(tHome) tHome.tabla.forEach(t => hSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
-            if(tAway) tAway.tabla.forEach(t => aSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
+            
+            if(tHome) {
+                // MEJORA: Orden alfabético de equipos locales
+                const sortedHome = [...tHome.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
+                sortedHome.forEach(t => hSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
+            }
+            if(tAway) {
+                // MEJORA: Orden alfabético de equipos visitantes
+                const sortedAway = [...tAway.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
+                sortedAway.forEach(t => aSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
+            }
         }
 
         function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / factorial(k); }
