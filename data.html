@@ -125,13 +125,17 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        // --- COLOCA TU UUID AQUÍ PARA ADMINISTRAR TUS PROPIAS LIGAS ---
+        const MI_USER_UUID = 'TU_UUID_AQUI'; 
+
         let footballData = [];
 
-        // --- FUNCIÓN PARA CARGAR DESDE LA NUBE ---
+        // --- FUNCIÓN PARA CARGAR DESDE LA NUBE (FILTRADO POR USUARIO) ---
         async function loadFromSupabase() {
             const { data, error } = await _supabase
                 .from('football_data')
-                .select('*');
+                .select('*')
+                .eq('user_id', MI_USER_UUID); // Solo carga lo que te pertenece
 
             if (error) {
                 console.error("Error cargando Supabase:", error);
@@ -148,7 +152,7 @@
             }
         }
 
-        // --- FUNCIÓN PARA GUARDAR ---
+        // --- FUNCIÓN PARA GUARDAR (VINCULADO A TU UUID) ---
         async function saveAllTables() {
             const league = document.getElementById('leagueName').value.trim();
             if (!league) {
@@ -184,7 +188,8 @@
                                 tipo: input.type,
                                 tabla_json: parsedRows,
                                 is_time: isTime,
-                                fecha: new Date().toISOString().split('T')[0]
+                                fecha: new Date().toISOString().split('T')[0],
+                                user_id: MI_USER_UUID // Se guarda con tu identificador
                             });
 
                         if (error) {
@@ -206,7 +211,7 @@
             }
 
             if (count > 0) {
-                let msg = `Sincronizado con éxito: ${count} tabla(s).`;
+                let msg = `Sincronizado con éxito en tu cuenta: ${count} tabla(s).`;
                 if (errors.length > 0) msg += `\n\nAtención:\n- ${errors.join('\n- ')}`;
                 alert(msg);
                 await loadFromSupabase();
@@ -283,7 +288,7 @@
             const filter = document.getElementById('leagueFilter');
             const currentSelection = filter.value;
             const leagues = [...new Set(footballData.map(item => item.liga))].sort();
-            filter.innerHTML = '<option value="">-- Selecciona una liga guardada --</option>';
+            filter.innerHTML = '<option value="">-- Mis ligas guardadas --</option>';
             leagues.forEach(league => {
                 const option = document.createElement('option');
                 option.value = league;
@@ -299,12 +304,12 @@
             container.innerHTML = '';
 
             if (footballData.length === 0) {
-                container.innerHTML = '<div class="card p-8 text-center text-gray-400">No hay datos en la nube.</div>';
+                container.innerHTML = '<div class="card p-8 text-center text-gray-400">No hay datos en tu cuenta.</div>';
                 return;
             }
 
             if (!selectedLeague) {
-                container.innerHTML = '<div class="card p-8 text-center text-blue-400 font-medium">Selecciona una liga para visualizar datos.</div>';
+                container.innerHTML = '<div class="card p-8 text-center text-blue-400 font-medium">Selecciona una de tus ligas para visualizar.</div>';
                 return;
             }
             
@@ -394,25 +399,28 @@
         }
 
         async function deleteFromSupabase(liga, tipo) {
-            if (confirm(`¿Eliminar ${tipo} de ${liga}?`)) {
-                const { error } = await _supabase.from('football_data').delete().match({ liga, tipo });
+            if (confirm(`¿Eliminar ${tipo} de ${liga} en tu cuenta?`)) {
+                // Se agrega user_id para asegurar que solo borras lo tuyo
+                const { error } = await _supabase.from('football_data').delete().match({ liga, tipo, user_id: MI_USER_UUID });
                 if (!error) await loadFromSupabase();
             }
         }
 
         async function clearAllData() {
-            if (confirm("¿Borrar TODA la base de datos?")) {
-                const { error } = await _supabase.from('football_data').delete().neq('liga', 'un_valor_imposible');
+            if (confirm("¿Borrar TODAS tus ligas guardadas?")) {
+                // Solo borra registros que te pertenecen
+                const { error } = await _supabase.from('football_data').delete().eq('user_id', MI_USER_UUID);
                 if (!error) await loadFromSupabase();
             }
         }
 
         function exportData() {
+            // Exporta solo tus datos cargados
             const blob = new Blob([JSON.stringify(footballData, null, 2)], { type: "application/json" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = url;
-            a.download = `betags_cloud_export_${new Date().getTime()}.json`;
+            a.download = `mis_ligas_betags_${new Date().getTime()}.json`;
             a.click();
         }
 
@@ -429,11 +437,12 @@
                             tipo: item.tipo,
                             tabla_json: item.tabla,
                             is_time: item.isTimeSegment,
-                            fecha: item.fecha
+                            fecha: item.fecha,
+                            user_id: MI_USER_UUID // Al importar, se asocian a tu UUID
                         });
                     }
                     await loadFromSupabase();
-                    alert("Importación completa.");
+                    alert("Importación completa en tu perfil.");
                 } catch (err) { alert("Error en el JSON."); }
             };
             reader.readAsText(file);
