@@ -48,9 +48,35 @@
         /* Bloqueo de contenido si no está logeado */
         .blur-content { filter: blur(20px); pointer-events: none; user-select: none; }
         #mainAppContent { transition: filter 0.5s ease; }
+
+        /* Modal Envío Pick */
+        #pickModal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+        #pickModal.active { display: flex; }
     </style>
 </head>
 <body class="p-4 md:p-8">
+
+    <div id="pickModal">
+        <div class="bg-white p-6 rounded-xl shadow-2xl w-80">
+            <h3 class="font-bold text-slate-800 mb-2">Enviar a Tracker</h3>
+            <p id="modalInfo" class="text-xs text-slate-500 mb-4"></p>
+            <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cuota Real</label>
+            <input type="number" id="modalOdds" step="0.01" placeholder="1.90" class="w-full border p-2 rounded mb-4 text-lg font-bold">
+            <div class="flex gap-2">
+                <button onclick="cerrarModalPick()" class="flex-1 py-2 text-sm font-bold text-slate-400">CANCELAR</button>
+                <button onclick="confirmarEnvioPick()" class="flex-1 py-2 bg-blue-600 text-white rounded font-bold">ENVIAR</button>
+            </div>
+        </div>
+    </div>
 
     <div id="loginModal"> 
         <div class="login-card p-8 rounded-2xl w-full max-w-[340px] border border-slate-700">
@@ -231,6 +257,7 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let footballData = []; 
+        let tempPickData = null; // Almacén temporal para el pick a enviar
 
         // 1. LÓGICA DE AUTENTICACIÓN
         function openLogin() { document.getElementById('loginModal').classList.add('active'); }
@@ -363,7 +390,6 @@
         }
 
         async function init() {
-            // Se verifica el usuario primero para evitar el parpadeo del login
             await checkUser();
             
             const leagueSelect = document.getElementById('selectLeague');
@@ -498,6 +524,41 @@
             displayResults('ht', htRes);
         }
 
+        // --- NUEVA LÓGICA DE INTERACCIÓN CON EL TRACKER ---
+        function abrirModalPick(mercado, seleccion, prob) {
+            const liga = document.getElementById('selectLeague').value;
+            const home = document.getElementById('homeTeam').value;
+            const away = document.getElementById('awayTeam').value;
+
+            tempPickData = {
+                league: liga,
+                match: `${home} vs ${away}`,
+                market: mercado,
+                selection: seleccion,
+                prob: prob,
+                date: new Date().toISOString().split('T')[0]
+            };
+
+            document.getElementById('modalInfo').innerText = `${tempPickData.match} | ${mercado}: ${seleccion} (${prob}%)`;
+            document.getElementById('pickModal').classList.add('active');
+            document.getElementById('modalOdds').focus();
+        }
+
+        function cerrarModalPick() {
+            document.getElementById('pickModal').classList.remove('active');
+            document.getElementById('modalOdds').value = '';
+        }
+
+        function confirmarEnvioPick() {
+            const odds = document.getElementById('modalOdds').value;
+            if(!odds || odds <= 1) { alert("Ingresa una cuota válida"); return; }
+            
+            tempPickData.odds = odds;
+            // Guardar en localStorage para que el tracker lo jale
+            localStorage.setItem('pendingPick', JSON.stringify(tempPickData));
+            window.location.href = 'pickstracker.html';
+        }
+
         function displayResults(prefix, res) {
             const c1x2 = document.getElementById(`${prefix}1x2`);
             const cDC = document.getElementById(`${prefix}DC`);
@@ -514,28 +575,29 @@
             const homeClass = res.probAnotarLocal >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
             const awayClass = res.probAnotarAway >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
 
+            // Se añaden onclicks a los contenedores
             c1x2.innerHTML = `
-                <div class="flex justify-between text-sm p-2 ${homeClass} border rounded transition-colors"><span>Local</span><span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span></div>
-                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Empate</span><span class="font-bold text-gray-500">${res.draw.toFixed(1)}%</span></div>
-                <div class="flex justify-between text-sm p-2 ${awayClass} border rounded transition-colors"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>`;
+                <div onclick="abrirModalPick('1X2', 'Local', ${res.win.toFixed(1)})" class="cursor-pointer flex justify-between text-sm p-2 ${homeClass} border rounded transition-colors hover:scale-[1.02]"><span>Local</span><span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span></div>
+                <div onclick="abrirModalPick('1X2', 'Empate', ${res.draw.toFixed(1)})" class="cursor-pointer flex justify-between text-sm p-2 bg-gray-50 rounded hover:scale-[1.02]"><span>Empate</span><span class="font-bold text-gray-500">${res.draw.toFixed(1)}%</span></div>
+                <div onclick="abrirModalPick('1X2', 'Visita', ${res.loss.toFixed(1)})" class="cursor-pointer flex justify-between text-sm p-2 ${awayClass} border rounded transition-colors hover:scale-[1.02]"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>`;
             
             cDC.innerHTML = `
-                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>1X</span><span class="font-bold">${(res.win + res.draw).toFixed(1)}%</span></div>
-                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>X2</span><span class="font-bold">${(res.loss + res.draw).toFixed(1)}%</span></div>
-                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>12</span><span class="font-bold">${(res.win + res.loss).toFixed(1)}%</span></div>`;
+                <div onclick="abrirModalPick('DC', '1X', ${(res.win + res.draw).toFixed(1)})" class="cursor-pointer flex justify-between text-sm p-2 bg-gray-50 rounded hover:scale-[1.02]"><span>1X</span><span class="font-bold">${(res.win + res.draw).toFixed(1)}%</span></div>
+                <div onclick="abrirModalPick('DC', 'X2', ${(res.loss + res.draw).toFixed(1)})" class="cursor-pointer flex justify-between text-sm p-2 bg-gray-50 rounded hover:scale-[1.02]"><span>X2</span><span class="font-bold">${(res.loss + res.draw).toFixed(1)}%</span></div>
+                <div onclick="abrirModalPick('DC', '12', ${(res.win + res.loss).toFixed(1)})" class="cursor-pointer flex justify-between text-sm p-2 bg-gray-50 rounded hover:scale-[1.02]"><span>12</span><span class="font-bold">${(res.win + res.loss).toFixed(1)}%</span></div>`;
             
             cDNB.innerHTML = `
-                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>DNB 1</span><span class="font-bold text-blue-600">${dnbH.toFixed(1)}%</span></div>
-                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>DNB 2</span><span class="font-bold text-red-600">${dnbA.toFixed(1)}%</span></div>`;
+                <div onclick="abrirModalPick('DNB', 'DNB Local', ${dnbH.toFixed(1)})" class="cursor-pointer flex justify-between text-sm p-2 bg-gray-50 rounded hover:scale-[1.02]"><span>DNB 1</span><span class="font-bold text-blue-600">${dnbH.toFixed(1)}%</span></div>
+                <div onclick="abrirModalPick('DNB', 'DNB Visita', ${dnbA.toFixed(1)})" class="cursor-pointer flex justify-between text-sm p-2 bg-gray-50 rounded hover:scale-[1.02]"><span>DNB 2</span><span class="font-bold text-red-600">${dnbA.toFixed(1)}%</span></div>`;
 
-            cCS.innerHTML = res.topScores.map(s => `<div class="flex justify-between text-sm p-2 bg-indigo-50 rounded border border-indigo-100"><span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span></div>`).join('');
+            cCS.innerHTML = res.topScores.map(s => `<div onclick="abrirModalPick('CS', '${s.score}', ${s.prob.toFixed(1)})" class="cursor-pointer flex justify-between text-sm p-2 bg-indigo-50 rounded border border-indigo-100 hover:scale-[1.02]"><span class="font-bold text-indigo-900">${s.score}</span><span class="font-bold text-indigo-600">${s.prob.toFixed(1)}%</span></div>`).join('');
 
-            cFGE.innerHTML = `<div class="space-y-2"><p class="text-[10px] font-bold text-blue-600 uppercase">Si Local anota primero (${res.probAnotarLocal.toFixed(1)}%)</p>${res.condLocalScores.map(s => `<div class="flex justify-between text-[11px] p-2 bg-white border border-emerald-100 rounded"><span class="font-semibold">${s.score}</span><span class="text-emerald-600 font-bold">${s.prob.toFixed(1)}%</span></div>`).join('')}</div><div class="space-y-2"><p class="text-[10px] font-bold text-red-600 uppercase">Si Visita anota primero (${res.probAnotarAway.toFixed(1)}%)</p>${res.condAwayScores.map(s => `<div class="flex justify-between text-[11px] p-2 bg-white border border-red-100 rounded"><span class="font-semibold">${s.score}</span><span class="text-red-600 font-bold">${s.prob.toFixed(1)}%</span></div>`).join('')}</div>`;
+            cFGE.innerHTML = `<div class="space-y-2"><p class="text-[10px] font-bold text-blue-600 uppercase">Si Local anota primero (${res.probAnotarLocal.toFixed(1)}%)</p>${res.condLocalScores.map(s => `<div onclick="abrirModalPick('FGE', '${s.score}', ${s.prob.toFixed(1)})" class="cursor-pointer flex justify-between text-[11px] p-2 bg-white border border-emerald-100 rounded hover:scale-[1.02]"><span class="font-semibold">${s.score}</span><span class="text-emerald-600 font-bold">${s.prob.toFixed(1)}%</span></div>`).join('')}</div><div class="space-y-2"><p class="text-[10px] font-bold text-red-600 uppercase">Si Visita anota primero (${res.probAnotarAway.toFixed(1)}%)</p>${res.condAwayScores.map(s => `<div onclick="abrirModalPick('FGE', '${s.score}', ${s.prob.toFixed(1)})" class="cursor-pointer flex justify-between text-[11px] p-2 bg-white border border-red-100 rounded hover:scale-[1.02]"><span class="font-semibold">${s.score}</span><span class="text-red-600 font-bold">${s.prob.toFixed(1)}%</span></div>`).join('')}</div>`;
 
             let hdHTML = `<div class="handicap-row grid-header-hd text-center mb-1"><span>Línea</span><span>Local</span><span>Empate</span><span>Visita</span></div>`;
-            [1,2,3].forEach(n => { hdHTML += `<div class="handicap-row p-2 border-b border-gray-50 text-xs hover:bg-slate-50"><span class="font-bold text-gray-500 italic">Local +${n}</span><span class="text-blue-600 font-bold text-center">${(res.hLocal[n].w * 100).toFixed(1)}%</span><span class="text-gray-600 font-bold text-center">${(res.hLocal[n].d * 100).toFixed(1)}%</span><span class="text-red-600 font-bold text-center">${(res.hLocal[n].l * 100).toFixed(1)}%</span></div>`; });
+            [1,2,3].forEach(n => { hdHTML += `<div class="handicap-row p-2 border-b border-gray-50 text-xs hover:bg-slate-50"><span class="font-bold text-gray-500 italic">Local +${n}</span><span onclick="abrirModalPick('AH', 'Local +${n}', ${(res.hLocal[n].w * 100).toFixed(1)})" class="cursor-pointer text-blue-600 font-bold text-center hover:bg-blue-100">${(res.hLocal[n].w * 100).toFixed(1)}%</span><span onclick="abrirModalPick('AH', 'EH +${n} Draw', ${(res.hLocal[n].d * 100).toFixed(1)})" class="cursor-pointer text-gray-600 font-bold text-center hover:bg-gray-100">${(res.hLocal[n].d * 100).toFixed(1)}%</span><span onclick="abrirModalPick('AH', 'Visitante -${n}', ${(res.hLocal[n].l * 100).toFixed(1)})" class="cursor-pointer text-red-600 font-bold text-center hover:bg-red-100">${(res.hLocal[n].l * 100).toFixed(1)}%</span></div>`; });
             hdHTML += `<div class="h-4"></div>`; 
-            [1,2,3].forEach(n => { hdHTML += `<div class="handicap-row p-2 border-b border-gray-50 text-xs hover:bg-slate-50"><span class="font-bold text-gray-500 italic">Visita +${n}</span><span class="text-blue-600 font-bold text-center">${(res.hVisit[n].w * 100).toFixed(1)}%</span><span class="text-gray-600 font-bold text-center">${(res.hVisit[n].d * 100).toFixed(1)}%</span><span class="text-red-600 font-bold text-center">${(res.hVisit[n].l * 100).toFixed(1)}%</span></div>`; });
+            [1,2,3].forEach(n => { hdHTML += `<div class="handicap-row p-2 border-b border-gray-50 text-xs hover:bg-slate-50"><span class="font-bold text-gray-500 italic">Visita +${n}</span><span onclick="abrirModalPick('AH', 'Local -${n}', ${(res.hVisit[n].w * 100).toFixed(1)})" class="cursor-pointer text-blue-600 font-bold text-center hover:bg-blue-100">${(res.hVisit[n].w * 100).toFixed(1)}%</span><span onclick="abrirModalPick('AH', 'EH Visita +${n} Draw', ${(res.hVisit[n].d * 100).toFixed(1)})" class="cursor-pointer text-gray-600 font-bold text-center hover:bg-gray-100">${(res.hVisit[n].d * 100).toFixed(1)}%</span><span onclick="abrirModalPick('AH', 'Visitante +${n}', ${(res.hVisit[n].l * 100).toFixed(1)})" class="cursor-pointer text-red-600 font-bold text-center hover:bg-red-100">${(res.hVisit[n].l * 100).toFixed(1)}%</span></div>`; });
             cHD.innerHTML = hdHTML;
 
             xgEl.innerHTML = `xG Proyectado: Local ${res.xh} - Visitante ${res.xa}`;
