@@ -59,18 +59,21 @@
 
         <div id="resultsWrapper" class="hidden space-y-6">
             
-            <div class="card p-6 border-t-4 border-red-500 bg-red-50 shadow-md">
+            <div class="card p-6 border-t-4 border-violet-600 bg-violet-50 shadow-lg">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-lg font-bold text-red-800 uppercase tracking-tighter">🚨 Escenario Live: Empate 0-0 HT</h3>
-                    <span class="bg-red-200 text-red-700 text-[10px] font-bold px-2 py-1 rounded">ESTADÍSTICA RESIDUAL</span>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">⚡</span>
+                        <h3 class="text-lg font-bold text-violet-900 uppercase tracking-tighter">Escenario Live: Empate 0-0 HT</h3>
+                    </div>
+                    <span class="bg-violet-200 text-violet-700 text-[10px] font-bold px-2 py-1 rounded shadow-sm">ESTADÍSTICA RESIDUAL</span>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                     <div class="text-center md:text-left">
-                        <p class="text-sm text-red-700 font-medium">Si el partido llega al descanso 0-0, la probabilidad de ver 2 goles o más en el 2do tiempo es:</p>
+                        <p class="text-sm text-violet-800 font-semibold">Si el partido llega al descanso sin goles, la probabilidad recalculada de ver 2 goles o más (Over 1.5 FT) es de:</p>
                     </div>
-                    <div class="flex flex-col items-center justify-center p-4 bg-white rounded-lg border border-red-200">
-                        <span class="text-xs font-bold text-slate-400 uppercase">Prob. Over 1.5 FT</span>
-                        <div id="liveOver15HT" class="text-4xl font-black text-red-600">--%</div>
+                    <div class="flex flex-col items-center justify-center p-4 bg-white rounded-lg border-2 border-violet-200">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase mb-1">Nueva Prob. Over 1.5 FT</span>
+                        <div id="liveOver15HT" class="text-5xl font-black text-violet-700">--%</div>
                     </div>
                 </div>
             </div>
@@ -323,17 +326,14 @@
             }
         }
 
-        // --- NUEVA FUNCIÓN: RECALCULO OVER 1.5 SI 0-0 HT ---
+        // --- FUNCIÓN DE MEJORA: RECALCULO OVER 1.5 SI 0-0 HT ---
         function calculateLiveOver15(ftLambdas) {
-            // Si el partido está 0-0 al medio tiempo, nos queda el 50% del tiempo.
-            // Usamos las lambdas FT multiplicadas por 0.5 (tiempo restante) 
-            // y aplicamos un factor de aceleración (1.15x) por tendencia de goles en 2do tiempo.
+            // Lógica intacta: 50% tiempo restante + Factor de aceleración 1.15x
             const residualLambda = {
                 h: ftLambdas.h * 0.5 * 1.15,
                 a: ftLambdas.a * 0.5 * 1.15
             };
             
-            // Calculamos Probabilidad de Over 1.5 en el tiempo restante (2do Tiempo)
             const probOver15Live = calculateOverProb(residualLambda, 1.5);
             
             const display = document.getElementById('liveOver15HT');
@@ -470,7 +470,7 @@
                 renderIndividualTables(ftLambdas);
                 calculateTotalGoalRanges(ftLambdas);
                 calculateOneMoreGoal(ftLambdas, homeSegments, awaySegments);
-                calculateLiveOver15(ftLambdas); // Llamada a la nueva función
+                calculateLiveOver15(ftLambdas); // Ejecución del recálculo HT 0-0
 
                 document.getElementById('probIfHomeScores').textContent = calculateOverIfGoal(ftLambdas, 'home', 2.5).toFixed(1) + '%';
                 document.getElementById('probIfAwayScores').textContent = calculateOverIfGoal(ftLambdas, 'away', 2.5).toFixed(1) + '%';
