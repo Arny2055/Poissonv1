@@ -60,25 +60,6 @@
 
         <div id="resultsWrapper" class="hidden space-y-6">
             
-            <div class="card p-6 border-t-4 border-violet-600 bg-violet-50 shadow-lg">
-                <div class="flex items-center justify-between mb-4">
-                    <div class="flex items-center gap-2">
-                        <span class="text-xl">⚡</span>
-                        <h3 class="text-lg font-bold text-violet-900 uppercase tracking-tighter">Escenario Live: Empate 0-0 HT</h3>
-                    </div>
-                    <span class="bg-violet-200 text-violet-700 text-[10px] font-bold px-2 py-1 rounded shadow-sm">ESTADÍSTICA RESIDUAL</span>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                    <div class="text-center md:text-left">
-                        <p class="text-sm text-violet-800 font-semibold">Si el partido llega al descanso sin goles, la probabilidad recalculada de ver 2 goles o más (Over 1.5 FT) es de:</p>
-                    </div>
-                    <div class="flex flex-col items-center justify-center p-4 bg-white rounded-lg border-2 border-violet-200">
-                        <span class="text-[10px] font-bold text-slate-400 uppercase mb-1">Nueva Prob. Over 1.5 FT</span>
-                        <div id="liveOver15HT" class="text-5xl font-black text-violet-700">--%</div>
-                    </div>
-                </div>
-            </div>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div class="card p-4">
                     <h4 class="text-sm font-bold text-slate-600 mb-2 uppercase text-center">Distribución Prob. Goles (Local)</h4>
@@ -326,18 +307,6 @@
             }
         }
 
-        function calculateLiveOver15(ftLambdas) {
-            const residualLambda = {
-                h: ftLambdas.h * 0.5 * 1.15,
-                a: ftLambdas.a * 0.5 * 1.15
-            };
-            
-            const probOver15Live = calculateOverProb(residualLambda, 1.5);
-            
-            const display = document.getElementById('liveOver15HT');
-            display.textContent = probOver15Live.toFixed(1) + '%';
-        }
-
         function renderChart(canvasId, label, dataObj) {
             if (charts[canvasId]) charts[canvasId].destroy();
             const ctx = document.getElementById(canvasId).getContext('2d');
@@ -468,7 +437,6 @@
                 renderIndividualTables(ftLambdas);
                 calculateTotalGoalRanges(ftLambdas);
                 calculateOneMoreGoal(ftLambdas, homeSegments, awaySegments);
-                calculateLiveOver15(ftLambdas);
 
                 document.getElementById('probIfHomeScores').textContent = calculateOverIfGoal(ftLambdas, 'home', 2.5).toFixed(1) + '%';
                 document.getElementById('probIfAwayScores').textContent = calculateOverIfGoal(ftLambdas, 'away', 2.5).toFixed(1) + '%';
