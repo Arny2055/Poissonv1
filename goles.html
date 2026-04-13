@@ -188,8 +188,6 @@
             
             if (!user) {
                 console.error("No hay sesión iniciada");
-                // Redirigir si no hay sesión (Opcional)
-                // window.location.href = "login.html";
                 return;
             }
 
@@ -219,7 +217,8 @@
             const leagueSelect = document.getElementById('selectLeague');
             leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
             
-            const ligas = [...new Set(footballData.map(item => item.liga))];
+            // Extraer ligas únicas y ordenarlas alfabéticamente
+            const ligas = [...new Set(footballData.map(item => item.liga))].sort();
             
             ligas.forEach(liga => {
                 const opt = document.createElement('option');
@@ -537,10 +536,20 @@
             const hSel = document.getElementById('homeTeam');
             const aSel = document.getElementById('awayTeam');
             hSel.innerHTML = aSel.innerHTML = '<option value="">--</option>';
+            
             const tHome = getData().find(t => t.liga === liga && t.tipo === 'Home');
             const tAway = getData().find(t => t.liga === liga && t.tipo === 'Away');
-            if(tHome) tHome.tabla.forEach(t => hSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
-            if(tAway) tAway.tabla.forEach(t => aSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
+            
+            if(tHome) {
+                // Ordenar equipos locales alfabéticamente
+                const sortedHome = [...tHome.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
+                sortedHome.forEach(t => hSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
+            }
+            if(tAway) {
+                // Ordenar equipos visitantes alfabéticamente
+                const sortedAway = [...tAway.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
+                sortedAway.forEach(t => aSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
+            }
         }
 
         loadFromSupabase();
