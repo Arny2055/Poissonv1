@@ -73,6 +73,10 @@
                     <label class="block text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1">Código de Acceso</label>
                     <input type="password" id="loginPass" placeholder="••••••••" class="login-input w-full p-3 rounded-lg text-sm">
                 </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase ml-1 mb-1">Identificador UUID</label>
+                    <input type="text" id="loginUUID" placeholder="Tu identificador único" class="login-input w-full p-3 rounded-lg text-sm font-mono">
+                </div>
             </div>
 
             <div class="mt-8 flex flex-col gap-3">
@@ -239,12 +243,23 @@
         async function handleLogin() {
             const email = document.getElementById('loginEmail').value;
             const password = document.getElementById('loginPass').value;
+            const uuid = document.getElementById('loginUUID').value.trim();
+
+            if(!uuid) {
+                alert("Debes ingresar tu UUID para continuar.");
+                return;
+            }
+
             const { error } = await _supabase.auth.signInWithPassword({ email, password });
             
             if (error) alert("Error: " + error.message);
             else {
+                // MEJORA: Guardamos el UUID en localStorage para data.html
+                localStorage.setItem('betags_user_uuid', uuid);
                 closeLogin();
                 checkUser();
+                // Recargamos datos de Supabase ahora con el UUID correcto
+                loadFromSupabase();
             }
         }
 
@@ -252,6 +267,7 @@
             const { data: { user } } = await _supabase.auth.getUser();
             if (user) {
                 await _supabase.auth.signOut();
+                localStorage.removeItem('betags_user_uuid');
                 checkUser();
             } else {
                 openLogin();
@@ -264,13 +280,15 @@
             const info = document.getElementById('userInfo');
             const modal = document.getElementById('loginModal');
             const appContent = document.getElementById('mainAppContent');
+            const storedUUID = localStorage.getItem('betags_user_uuid');
             
-            if (user) {
+            // Verificamos tanto el login de Supabase como la existencia del UUID
+            if (user && storedUUID) {
                 modal.classList.remove('active');
                 appContent.classList.remove('blur-content');
                 btn.innerText = "Logout";
                 btn.classList.replace('bg-slate-800', 'bg-red-600');
-                info.innerText = user.email;
+                info.innerText = `${user.email} (ID: ${storedUUID.substring(0,5)}...)`;
                 info.classList.remove('hidden');
             } else {
                 modal.classList.add('active');
@@ -284,26 +302,27 @@
         // 2. LÓGICA DE DATOS
         async function guardarLigaNueva(nombreDeLaLiga) {
             const { data: { user } } = await _supabase.auth.getUser();
-            if (!user) {
-                alert("Debes iniciar sesión para guardar datos");
+            const uuid = localStorage.getItem('betags_user_uuid');
+            if (!user || !uuid) {
+                alert("Debes iniciar sesión con tu UUID para guardar datos");
                 openLogin();
                 return;
             }
             const { error } = await _supabase
                 .from('ligas')
-                .insert([{ nombre: nombreDeLaLiga, user_id: user.id }]);
+                .insert([{ nombre: nombreDeLaLiga, user_id: uuid }]);
 
             if (error) console.error("Error:", error.message);
             else cargarMisLigas();
         }
 
         async function cargarMisLigas() {
-            const { data: { user } } = await _supabase.auth.getUser();
-            if (!user) return;
+            const uuid = localStorage.getItem('betags_user_uuid');
+            if (!uuid) return;
             const { data: ligas, error } = await _supabase
                 .from('ligas')
                 .select('*')
-                .eq('user_id', user.id);
+                .eq('user_id', uuid);
             if (!error) console.log("Ligas del usuario:", ligas);
         }
 
@@ -349,7 +368,14 @@
         }
 
         async function loadFromSupabase() {
-            const { data, error } = await _supabase.from('football_data').select('*');
+            const uuid = localStorage.getItem('betags_user_uuid');
+            if(!uuid) return;
+
+            const { data, error } = await _supabase
+                .from('football_data')
+                .select('*')
+                .eq('user_id', uuid);
+                
             if (error) { console.error("Error cargando datos:", error); return; }
 
             footballData = data.map(item => ({
