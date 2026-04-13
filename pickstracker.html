@@ -3,524 +3,521 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BetTracker Pro - Gestión de Picks</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>APUESTA SYSTEM PRO – QUANT EDITION</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        :root {
+            --bg-deep: #0a0e14;
+            --bg-card: #151a21;
+            --accent-blue: #007aff;
+            --accent-green: #2ecc71;
+            --accent-red: #e74c3c;
+            --text-main: #e0e0e0;
+            --text-dim: #8892b0;
+            --border: #232d3b;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
+            background-color: var(--bg-deep);
+            color: var(--text-main);
+            line-height: 1.4;
+            padding-bottom: 50px;
         }
-        .glass-card {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+
+        /* --- UI COMPONENTS --- */
+        .header {
+            padding: 20px;
+            background: linear-gradient(145deg, #1a202c, #0a0e14);
+            border-bottom: 1px solid var(--border);
+            text-align: center;
         }
-        input, select, textarea {
-            background-color: #1e293b !important;
-            border: 1px solid #334155 !important;
-            color: white !important;
+
+        .header h1 { font-size: 1.2rem; letter-spacing: 2px; color: var(--accent-blue); }
+
+        .container { padding: 15px; max-width: 1200px; margin: auto; }
+
+        .grid-dashboard {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
         }
-        .status-win { border-left: 4px solid #22c55e; }
-        .status-loss { border-left: 4px solid #ef4444; }
-        .status-void { border-left: 4px solid #94a3b8; }
-        .status-pending { border-left: 4px solid #eab308; }
-        
-        /* Custom scrollbar */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .stat-card span { display: block; font-size: 0.75rem; color: var(--text-dim); text-transform: uppercase; }
+        .stat-card b { font-size: 1.1rem; color: #fff; }
+        .stat-card.highlight { border-left: 4px solid var(--accent-blue); }
+
+        /* --- FORM --- */
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .input-group { margin-bottom: 15px; }
+        label { display: block; font-size: 0.8rem; color: var(--text-dim); margin-bottom: 5px; }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            background: #0d1117;
+            border: 1px solid var(--border);
+            color: white;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            border-radius: 10px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-primary { background: var(--accent-blue); color: white; }
+        .btn-outline { background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); margin-top: 10px; }
+
+        /* --- TABLE & LISTS --- */
+        .table-container { overflow-x: auto; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+        td { padding: 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+
+        .tag {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .tag-win { background: rgba(46, 204, 113, 0.2); color: var(--accent-green); }
+        .tag-loss { background: rgba(231, 76, 60, 0.2); color: var(--accent-red); }
+        .tag-void { background: rgba(136, 146, 176, 0.2); color: var(--text-dim); }
+
+        /* --- INSIGHTS --- */
+        .insight-box {
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .insight-alert { background: rgba(231, 76, 60, 0.1); border: 1px solid var(--accent-red); color: #ffbcbc; }
+        .insight-fire { background: rgba(46, 204, 113, 0.1); border: 1px solid var(--accent-green); color: #b7ffcf; }
+
+        /* --- CHARTS --- */
+        .chart-box { height: 250px; margin-top: 20px; }
+
+        /* Responsive Mobile Fixes */
+        @media (max-width: 600px) {
+            .grid-dashboard { grid-template-columns: repeat(2, 1fr); }
+            .form-row { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
-<body class="p-2 md:p-6">
+<body>
 
-    <div class="max-w-7xl mx-auto space-y-6">
-        
-        <header class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="md:col-span-1 space-y-2">
-                <input type="text" id="projectName" value="BetTracker Pro" class="text-2xl font-bold bg-transparent border-none p-0 w-full focus:ring-0 uppercase tracking-wider text-blue-400">
-                <div class="flex items-center gap-2">
-                    <span class="text-xs text-slate-400 uppercase">Banca Inicial: $</span>
-                    <input type="number" id="initialBank" value="1000" step="0.1" class="w-24 text-sm font-semibold rounded px-1">
-                </div>
-            </div>
-            
-            <div class="md:col-span-3 grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="glass-card p-4 rounded-xl text-center">
-                    <p class="text-xs text-slate-400 uppercase">Banca Actual</p>
-                    <p id="currentBank" class="text-xl font-bold text-white">$0.00</p>
-                </div>
-                <div class="glass-card p-4 rounded-xl text-center">
-                    <p class="text-xs text-slate-400 uppercase">Profit Total</p>
-                    <p id="totalProfit" class="text-xl font-bold">$0.00</p>
-                </div>
-                <div class="glass-card p-4 rounded-xl text-center">
-                    <p class="text-xs text-slate-400 uppercase">ROI Global</p>
-                    <p id="globalROI" class="text-xl font-bold text-blue-400">0%</p>
-                </div>
-                <div class="flex flex-col gap-2">
-                    <button onclick="exportCSV()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 px-4 rounded-lg transition-all">EXPORTAR CSV</button>
-                    <button onclick="resetApp()" class="bg-red-600/20 hover:bg-red-600 text-red-500 hover:text-white text-xs font-bold py-2 px-4 rounded-lg transition-all border border-red-600/50">RESET</button>
-                </div>
-            </div>
-        </header>
+<div class="header">
+    <h1>APUESTA SYSTEM <span style="color: #fff;">PRO</span></h1>
+    <p style="font-size: 0.7rem; color: var(--text-dim);">QUANTITATIVE ENGINE v2.0</p>
+</div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            <section class="lg:col-span-1 space-y-4">
-                <div class="glass-card p-5 rounded-2xl shadow-xl">
-                    <h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <i data-lucide="plus-circle" class="w-5 h-5 text-blue-400"></i> Nuevo Pick
-                    </h2>
-                    <form id="pickForm" class="space-y-3">
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Fecha</label>
-                                <input type="date" id="date" required class="w-full text-sm p-2 rounded-lg">
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Hora</label>
-                                <input type="time" id="time" required class="w-full text-sm p-2 rounded-lg">
-                            </div>
-                        </div>
-                        
-                        <div>
-                            <label class="text-[10px] text-slate-400 uppercase">Liga / Torneo</label>
-                            <input type="text" id="league" placeholder="Ej: La Liga" required class="w-full text-sm p-2 rounded-lg">
-                        </div>
-
-                        <div>
-                            <label class="text-[10px] text-slate-400 uppercase">Partido</label>
-                            <input type="text" id="match" placeholder="Equipo A vs Equipo B" required class="w-full text-sm p-2 rounded-lg">
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Mercado</label>
-                                <select id="market" class="w-full text-sm p-2 rounded-lg">
-                                    <option value="1X2">1X2</option>
-                                    <option value="DC">Doble Oportunidad</option>
-                                    <option value="O/U">Over/Under</option>
-                                    <option value="BTTS">BTTS</option>
-                                    <option value="AH">Handicap</option>
-                                    <option value="DNB">DNB</option>
-                                    <option value="CS">Correct Score</option>
-                                    <option value="FGE">First Goal Effect</option>
-                                    <option value="Player Prop">Player Prop</option>
-                                    <option value="Otro">Otro</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Selección</label>
-                                <input type="text" id="selection" placeholder="Ej: Real Madrid" required class="w-full text-sm p-2 rounded-lg">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-2">
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Cuota</label>
-                                <input type="number" id="odds" step="0.001" placeholder="1.90" required class="w-full text-sm p-2 rounded-lg">
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Stake</label>
-                                <input type="number" id="stake" step="0.1" placeholder="1" required class="w-full text-sm p-2 rounded-lg" value="1">
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Prob. %</label>
-                                <input type="number" id="prob" step="1" placeholder="55" class="w-full text-sm p-2 rounded-lg">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Casa</label>
-                                <input type="text" id="bookie" placeholder="Bet365" class="w-full text-sm p-2 rounded-lg">
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Tipo</label>
-                                <select id="type" class="w-full text-sm p-2 rounded-lg">
-                                    <option value="Pre-match">Pre-match</option>
-                                    <option value="Live">Live</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Estado</label>
-                                <select id="result" class="w-full text-sm p-2 rounded-lg">
-                                    <option value="pendiente">Pendiente</option>
-                                    <option value="win">Win</option>
-                                    <option value="loss">Loss</option>
-                                    <option value="void">Void</option>
-                                    <option value="half-win">Half Win</option>
-                                    <option value="half-loss">Half Loss</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label class="text-[10px] text-slate-400 uppercase">Emoción</label>
-                                <select id="emotion" class="w-full text-sm p-2 rounded-lg">
-                                    <option value="Tranquilo">Tranquilo</option>
-                                    <option value="Dudoso">Dudoso</option>
-                                    <option value="Impulsivo">Impulsivo</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="text-[10px] text-slate-400 uppercase">Cierre (CLV)</label>
-                            <input type="number" id="clv" step="0.01" placeholder="Cuota cierre" class="w-full text-sm p-2 rounded-lg">
-                        </div>
-
-                        <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-green-900/20 mt-2">
-                            GUARDAR PICK
-                        </button>
-                    </form>
-                </div>
-            </section>
-
-            <section class="lg:col-span-2 space-y-6">
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="miniDashboard">
-                    </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="glass-card p-4 rounded-2xl h-64">
-                        <canvas id="yieldChart"></canvas>
-                    </div>
-                    <div class="glass-card p-4 rounded-2xl h-64">
-                        <canvas id="marketChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="glass-card p-4 rounded-2xl flex flex-wrap gap-4 items-center">
-                    <span class="text-xs font-bold text-slate-400 uppercase">Filtros:</span>
-                    <select id="filterResult" onchange="renderAll()" class="text-xs p-1 rounded bg-slate-800">
-                        <option value="all">Todos los resultados</option>
-                        <option value="win">Solo Win</option>
-                        <option value="loss">Solo Loss</option>
-                        <option value="pendiente">Pendientes</option>
-                    </select>
-                    <select id="filterType" onchange="renderAll()" class="text-xs p-1 rounded bg-slate-800">
-                        <option value="all">Todos los tipos</option>
-                        <option value="Pre-match">Pre-match</option>
-                        <option value="Live">Live</option>
-                    </select>
-                </div>
-
-                <div class="glass-card rounded-2xl overflow-hidden shadow-xl">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left text-xs">
-                            <thead class="bg-slate-800 text-slate-300 uppercase">
-                                <tr>
-                                    <th class="p-3">Fecha/Partido</th>
-                                    <th class="p-3">Mercado/Pick</th>
-                                    <th class="p-3">Cuota</th>
-                                    <th class="p-3">Stake</th>
-                                    <th class="p-3 text-center">EV%</th>
-                                    <th class="p-3">Profit</th>
-                                    <th class="p-3 text-center">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="picksTableBody">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
+<div class="container">
+    
+    <div class="grid-dashboard">
+        <div class="stat-card highlight">
+            <span>Bank Actual</span>
+            <b id="stat-bank">$0.00</b>
+        </div>
+        <div class="stat-card">
+            <span>Profit Neto</span>
+            <b id="stat-profit">$0.00</b>
+        </div>
+        <div class="stat-card">
+            <span>Yield %</span>
+            <b id="stat-yield">0.00%</b>
+        </div>
+        <div class="stat-card">
+            <span>Winrate</span>
+            <b id="stat-winrate">0%</b>
+        </div>
+        <div class="stat-card">
+            <span>Edge Promedio</span>
+            <b id="stat-edge">0.00%</b>
+        </div>
+        <div class="stat-card">
+            <span>EV Acumulado</span>
+            <b id="stat-ev">$0.00</b>
         </div>
     </div>
 
-    <script>
-        let picks = JSON.parse(localStorage.getItem('picks')) || [];
-        let config = JSON.parse(localStorage.getItem('betConfig')) || { initialBank: 1000, projectName: 'BetTracker Pro' };
-        let yieldChart, marketChart;
+    <div id="insights-container"></div>
 
-        // --- INICIALIZACIÓN ---
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('initialBank').value = config.initialBank;
-            document.getElementById('projectName').value = config.projectName;
-            
-            // Lógica para recibir pick desde index.html
-            const pendingPick = JSON.parse(localStorage.getItem('pendingPick'));
-            if (pendingPick) {
-                document.getElementById('date').value = pendingPick.date;
-                document.getElementById('league').value = pendingPick.league;
-                document.getElementById('match').value = pendingPick.match;
-                document.getElementById('market').value = pendingPick.market;
-                document.getElementById('selection').value = pendingPick.selection;
-                document.getElementById('odds').value = pendingPick.odds;
-                document.getElementById('prob').value = pendingPick.prob;
-                
-                // Limpiar después de usarlo
-                localStorage.removeItem('pendingPick');
-                
-                // Poner el foco en el stake para que el usuario solo confirme
-                document.getElementById('stake').focus();
+    <div class="card">
+        <div class="form-row" style="align-items: flex-end;">
+            <div class="input-group">
+                <label>Bank Inicial ($)</label>
+                <input type="number" id="config-bank" value="1000" onchange="updateSystem()">
+            </div>
+            <div class="input-group">
+                <label>Modo de Stake</label>
+                <select id="config-stake-mode" onchange="updateSystem()">
+                    <option value="percent">Porcentaje (%)</option>
+                    <option value="fixed">Fijo ($)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-bottom: 15px; font-size: 0.9rem; color: var(--accent-blue);">NUEVA OPERACIÓN</h3>
+        
+        <div class="form-row">
+            <div class="input-group">
+                <label>Partido / Evento</label>
+                <input type="text" id="inp-match" placeholder="Ej: Real Madrid vs Barca">
+            </div>
+            <div class="input-group">
+                <label>Liga</label>
+                <input type="text" id="inp-league" placeholder="La Liga">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="input-group">
+                <label>Mercado</label>
+                <select id="inp-market">
+                    <option value="1X2">1X2</option>
+                    <option value="O/U">Over/Under</option>
+                    <option value="BTTS">BTTS</option>
+                    <option value="Handicap">Handicap</option>
+                    <option value="Otros">Otros</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Cuota Inicial</label>
+                <input type="number" id="inp-odds" step="0.01" placeholder="1.90">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="input-group">
+                <label>Prob. Estimada (%)</label>
+                <input type="number" id="inp-prob" placeholder="55">
+            </div>
+            <div class="input-group">
+                <label>Stake (Valor)</label>
+                <input type="number" id="inp-stake-val" placeholder="1">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="input-group">
+                <label>Cuota Cierre (CLV)</label>
+                <input type="number" id="inp-closing-odds" step="0.01" placeholder="1.85">
+            </div>
+            <div class="input-group">
+                <label>Resultado</label>
+                <select id="inp-result">
+                    <option value="Pending">Pendiente</option>
+                    <option value="Win">Ganada</option>
+                    <option value="Loss">Perdida</option>
+                    <option value="Void">Nula</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn-primary" onclick="addBet()">REGISTRAR APUESTA</button>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size: 0.9rem;">EVOLUCIÓN DE BANK</h3>
+        <div class="chart-box">
+            <canvas id="mainChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="font-size: 0.9rem;">HISTORIAL QUANT</h3>
+            <button onclick="exportCSV()" style="width: auto; padding: 5px 10px; font-size: 0.7rem;" class="btn-outline">Exportar CSV</button>
+        </div>
+        <div class="table-container">
+            <table id="betTable">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Partido</th>
+                        <th>Cuota</th>
+                        <th>Edge</th>
+                        <th>EV %</th>
+                        <th>Res</th>
+                        <th>Acción</th>
+                    </tr>
+                </thead>
+                <tbody id="betBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <button class="btn-outline" onclick="backupData()">DESCARGAR BACKUP JSON</button>
+    <button class="btn-outline" style="border-color: #e74c3c; color: #e74c3c;" onclick="clearAll()">BORRAR TODO</button>
+
+</div>
+
+<script>
+    // --- STATE MANAGEMENT ---
+    let bets = JSON.parse(localStorage.getItem('quant_bets')) || [];
+    let myChart = null;
+
+    // --- CORE CALCULATIONS ENGINE ---
+    function calculateQuantMetrics(bet, currentBank) {
+        const impliedProb = 1 / bet.odds;
+        const probEstimada = bet.prob / 100;
+        
+        const edge = probEstimada - impliedProb;
+        const evPercent = (probEstimada * (bet.odds - 1)) - (1 - probEstimada);
+        
+        // Stake Calculation
+        let investment = 0;
+        const stakeMode = document.getElementById('config-stake-mode').value;
+        if(stakeMode === 'percent') {
+            investment = (bet.stakeVal / 100) * currentBank;
+        } else {
+            investment = bet.stakeVal;
+        }
+
+        const evCash = investment * evPercent;
+        const clv = bet.closingOdds ? (bet.odds - bet.closingOdds) : 0;
+
+        let profit = 0;
+        let units = 0;
+        if(bet.result === 'Win') {
+            profit = investment * (bet.odds - 1);
+            units = (bet.odds - 1);
+        } else if(bet.result === 'Loss') {
+            profit = -investment;
+            units = -1;
+        } else if(bet.result === 'Void') {
+            profit = 0;
+            units = 0;
+        }
+
+        return { ...bet, impliedProb, edge, evPercent, evCash, investment, profit, units, clv };
+    }
+
+    // --- UI ACTIONS ---
+    function addBet() {
+        const newBet = {
+            id: Date.now(),
+            date: new Date().toLocaleDateString(),
+            match: document.getElementById('inp-match').value || 'Evento Genérico',
+            league: document.getElementById('inp-league').value || 'Sin Liga',
+            market: document.getElementById('inp-market').value,
+            odds: parseFloat(document.getElementById('inp-odds').value),
+            prob: parseFloat(document.getElementById('inp-prob').value),
+            stakeVal: parseFloat(document.getElementById('inp-stake-val').value),
+            closingOdds: parseFloat(document.getElementById('inp-closing-odds').value) || 0,
+            result: document.getElementById('inp-result').value
+        };
+
+        if(!newBet.odds || !newBet.stakeVal) return alert("Completa los campos técnicos.");
+
+        bets.push(newBet);
+        saveAndRefresh();
+        resetForm();
+    }
+
+    function deleteBet(id) {
+        bets = bets.filter(b => b.id !== id);
+        saveAndRefresh();
+    }
+
+    function saveAndRefresh() {
+        localStorage.setItem('quant_bets', JSON.stringify(bets));
+        updateSystem();
+    }
+
+    function resetForm() {
+        document.getElementById('inp-match').value = '';
+        document.getElementById('inp-odds').value = '';
+        document.getElementById('inp-prob').value = '';
+        document.getElementById('inp-stake-val').value = '';
+    }
+
+    // --- REFRESH SYSTEM ---
+    function updateSystem() {
+        const initialBank = parseFloat(document.getElementById('config-bank').value) || 0;
+        let runningBank = initialBank;
+        let totalProfit = 0;
+        let totalInversion = 0;
+        let wins = 0;
+        let totalSettled = 0;
+        let totalEdge = 0;
+        let totalEV = 0;
+        let chartData = [initialBank];
+        let chartLabels = ['Inicio'];
+
+        const processedBets = [];
+        const body = document.getElementById('betBody');
+        body.innerHTML = '';
+
+        bets.forEach((rawBet, index) => {
+            const b = calculateQuantMetrics(rawBet, runningBank);
+            processedBets.push(b);
+
+            if(b.result !== 'Pending') {
+                runningBank += b.profit;
+                totalProfit += b.profit;
+                totalInversion += b.investment;
+                totalSettled++;
+                if(b.result === 'Win') wins++;
+                totalEdge += b.edge;
+                totalEV += b.evCash;
             }
 
-            lucide.createIcons();
-            initCharts();
-            renderAll();
-        });
+            chartData.push(runningBank);
+            chartLabels.push(`B${index + 1}`);
 
-        // --- EVENTOS ---
-        document.getElementById('initialBank').addEventListener('change', (e) => {
-            config.initialBank = parseFloat(e.target.value) || 0;
-            saveConfig();
-            renderAll();
-        });
-
-        document.getElementById('projectName').addEventListener('change', (e) => {
-            config.projectName = e.target.value;
-            saveConfig();
-        });
-
-        document.getElementById('pickForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            savePick();
-        });
-
-        // --- FUNCIONES CORE ---
-        function savePick() {
-            const odds = parseFloat(document.getElementById('odds').value);
-            const prob = parseFloat(document.getElementById('prob').value) || 0;
-            const stake = parseFloat(document.getElementById('stake').value);
-            
-            // Cálculo automático de EV
-            const calculatedEV = prob > 0 ? ((prob/100) * odds) - 1 : 0;
-
-            const pick = {
-                id: Date.now(),
-                date: document.getElementById('date').value,
-                time: document.getElementById('time').value || "00:00",
-                league: document.getElementById('league').value,
-                match: document.getElementById('match').value,
-                market: document.getElementById('market').value,
-                selection: document.getElementById('selection').value,
-                odds: odds,
-                stake: stake,
-                prob: prob,
-                ev: (calculatedEV * 100).toFixed(2),
-                bookie: document.getElementById('bookie').value,
-                type: document.getElementById('type').value,
-                result: document.getElementById('result').value,
-                emotion: document.getElementById('emotion').value,
-                clv: document.getElementById('clv').value || null,
-                profit: calculateProfit(document.getElementById('result').value, stake, odds)
-            };
-
-            picks.push(pick);
-            localStorage.setItem('picks', JSON.stringify(picks));
-            document.getElementById('pickForm').reset();
-            // Resetear stake por defecto tras limpiar form
-            document.getElementById('stake').value = 1;
-            renderAll();
-        }
-
-        function calculateProfit(result, stake, odds) {
-            switch(result) {
-                case 'win': return stake * (odds - 1);
-                case 'loss': return -stake;
-                case 'void': return 0;
-                case 'half-win': return (stake * (odds - 1)) / 2;
-                case 'half-loss': return -stake / 2;
-                default: return 0;
-            }
-        }
-
-        function deletePick(id) {
-            if(confirm('¿Eliminar este pick?')) {
-                picks = picks.filter(p => p.id !== id);
-                localStorage.setItem('picks', JSON.stringify(picks));
-                renderAll();
-            }
-        }
-
-        function renderAll() {
-            const filteredPicks = applyFilters();
-            renderTable(filteredPicks);
-            calculateMetrics(filteredPicks);
-            updateCharts(filteredPicks);
-        }
-
-        function applyFilters() {
-            const resF = document.getElementById('filterResult').value;
-            const typF = document.getElementById('filterType').value;
-
-            return picks.filter(p => {
-                const matchRes = resF === 'all' || p.result === resF;
-                const matchTyp = typF === 'all' || p.type === typF;
-                return matchRes && matchTyp;
-            }).sort((a,b) => new Date(b.date + ' ' + b.time) - new Date(a.date + ' ' + a.time));
-        }
-
-        function renderTable(data) {
-            const tbody = document.getElementById('picksTableBody');
-            tbody.innerHTML = '';
-
-            data.forEach(p => {
-                const tr = document.createElement('tr');
-                tr.className = `border-b border-slate-700/50 hover:bg-slate-800/30 transition-colors status-${p.result}`;
-                
-                tr.innerHTML = `
-                    <td class="p-3">
-                        <div class="font-bold text-blue-400">${p.date}</div>
-                        <div class="text-[10px] text-slate-400">${p.match}</div>
+            // Add to table
+            const row = `
+                <tr>
+                    <td>${b.date}</td>
+                    <td>${b.match}<br><small>${b.league}</small></td>
+                    <td>${b.odds.toFixed(2)}</td>
+                    <td style="color: ${b.edge > 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">
+                        ${(b.edge * 100).toFixed(1)}%
                     </td>
-                    <td class="p-3">
-                        <div class="font-semibold">${p.market}</div>
-                        <div class="text-[10px] text-slate-300 italic">${p.selection}</div>
-                    </td>
-                    <td class="p-3 font-mono font-bold">${p.odds.toFixed(2)}</td>
-                    <td class="p-3 font-mono">u${p.stake}</td>
-                    <td class="p-3 text-center">
-                        <span class="${p.ev > 0 ? 'text-green-400' : 'text-slate-500'} font-mono text-[10px]">
-                            ${p.ev}%
-                        </span>
-                    </td>
-                    <td class="p-3 font-bold ${p.profit > 0 ? 'text-green-400' : p.profit < 0 ? 'text-red-400' : 'text-slate-400'}">
-                        ${p.profit > 0 ? '+' : ''}${p.profit.toFixed(2)}
-                    </td>
-                    <td class="p-3 text-center space-x-2">
-                        <button onclick="deletePick(${p.id})" class="text-red-500 hover:text-red-300">
-                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function calculateMetrics(data) {
-            const totalPicks = data.length;
-            const settled = data.filter(p => p.result !== 'pendiente');
-            const wins = settled.filter(p => p.result === 'win' || p.result === 'half-win').length;
-            
-            const totalProfit = data.reduce((acc, p) => acc + p.profit, 0);
-            const totalStaked = data.reduce((acc, p) => acc + p.stake, 0);
-            const yieldVal = totalStaked > 0 ? (totalProfit / totalStaked) * 100 : 0;
-            const winrate = settled.length > 0 ? (wins / settled.length) * 100 : 0;
-            
-            // UI Updates
-            document.getElementById('currentBank').innerText = `$${(config.initialBank + totalProfit).toFixed(2)}`;
-            document.getElementById('totalProfit').innerText = `${totalProfit > 0 ? '+' : ''}$${totalProfit.toFixed(2)}`;
-            document.getElementById('totalProfit').className = `text-xl font-bold ${totalProfit >= 0 ? 'text-green-400' : 'text-red-400'}`;
-            document.getElementById('globalROI').innerText = `${yieldVal.toFixed(2)}%`;
-
-            const miniDashboard = document.getElementById('miniDashboard');
-            miniDashboard.innerHTML = `
-                <div class="glass-card p-3 rounded-xl">
-                    <p class="text-[10px] text-slate-400 uppercase">Total Picks</p>
-                    <p class="text-lg font-bold">${totalPicks}</p>
-                </div>
-                <div class="glass-card p-3 rounded-xl">
-                    <p class="text-[10px] text-slate-400 uppercase">Winrate</p>
-                    <p class="text-lg font-bold text-green-400">${winrate.toFixed(1)}%</p>
-                </div>
-                <div class="glass-card p-3 rounded-xl">
-                    <p class="text-[10px] text-slate-400 uppercase">Yield</p>
-                    <p class="text-lg font-bold text-blue-400">${yieldVal.toFixed(1)}%</p>
-                </div>
-                <div class="glass-card p-3 rounded-xl">
-                    <p class="text-[10px] text-slate-400 uppercase">Stake Total</p>
-                    <p class="text-lg font-bold">${totalStaked.toFixed(1)}u</p>
-                </div>
+                    <td>${(b.evPercent * 100).toFixed(1)}%</td>
+                    <td><span class="tag tag-${b.result.toLowerCase()}">${b.result}</span></td>
+                    <td><i class="fa fa-trash" onclick="deleteBet(${b.id})" style="color: var(--accent-red); cursor:pointer;"></i></td>
+                </tr>
             `;
-        }
+            body.innerHTML += row;
+        });
 
-        // --- GRÁFICAS ---
-        function initCharts() {
-            const ctxYield = document.getElementById('yieldChart').getContext('2d');
-            yieldChart = new Chart(ctxYield, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Profit Acumulado',
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        data: [],
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { grid: { color: '#334155' } },
-                        x: { grid: { display: false } }
-                    }
-                }
-            });
+        // Update Dashboard
+        document.getElementById('stat-bank').innerText = `$${runningBank.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+        document.getElementById('stat-profit').innerText = `$${totalProfit.toLocaleString()}`;
+        document.getElementById('stat-profit').style.color = totalProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+        document.getElementById('stat-yield').innerText = totalInversion > 0 ? ((totalProfit / totalInversion) * 100).toFixed(2) + '%' : '0%';
+        document.getElementById('stat-winrate').innerText = totalSettled > 0 ? ((wins / totalSettled) * 100).toFixed(1) + '%' : '0%';
+        document.getElementById('stat-edge').innerText = totalSettled > 0 ? ((totalEdge / totalSettled) * 100).toFixed(2) + '%' : '0.00%';
+        document.getElementById('stat-ev').innerText = `$${totalEV.toFixed(2)}`;
 
-            const ctxMarket = document.getElementById('marketChart').getContext('2d');
-            marketChart = new Chart(ctxMarket, {
-                type: 'bar',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Profit por Mercado',
-                        backgroundColor: '#10b981',
-                        data: []
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
+        renderChart(chartLabels, chartData);
+        generateInsights(processedBets);
+    }
 
-        function updateCharts(data) {
-            const sorted = [...data].sort((a,b) => new Date(a.date + ' ' + a.time) - new Date(b.date + ' ' + b.time));
-            let runningProfit = 0;
-            const history = sorted.map(p => {
-                runningProfit += p.profit;
-                return runningProfit.toFixed(2);
-            });
+    // --- INSIGHTS ENGINE ---
+    function generateInsights(processedBets) {
+        const container = document.getElementById('insights-container');
+        container.innerHTML = '';
+        
+        const marketStats = {};
+        processedBets.filter(b => b.result !== 'Pending').forEach(b => {
+            if(!marketStats[b.market]) marketStats[b.market] = { p: 0, count: 0 };
+            marketStats[b.market].p += b.profit;
+            marketStats[b.market].count++;
+        });
 
-            yieldChart.data.labels = sorted.map(p => p.date);
-            yieldChart.data.datasets[0].data = history;
-            yieldChart.update();
-
-            const marketData = {};
-            data.forEach(p => {
-                marketData[p.market] = (marketData[p.market] || 0) + p.profit;
-            });
-
-            marketChart.data.labels = Object.keys(marketData);
-            marketChart.data.datasets[0].data = Object.values(marketData);
-            marketChart.update();
-        }
-
-        // --- UTILIDADES ---
-        function saveConfig() { localStorage.setItem('betConfig', JSON.stringify(config)); }
-        function resetApp() {
-            if(confirm('¿BORRAR TODO? Esta acción no se puede deshacer.')) {
-                localStorage.removeItem('picks');
-                picks = [];
-                renderAll();
+        for (let m in marketStats) {
+            if(marketStats[m].p < 0 && marketStats[m].count > 2) {
+                container.innerHTML += `<div class="insight-box insight-alert"><i class="fa fa-warning"></i> Cuidado: El mercado ${m} tiene pérdidas acumuladas.</div>`;
+            }
+            if(marketStats[m].p > (parseFloat(document.getElementById('config-bank').value) * 0.1)) {
+                container.innerHTML += `<div class="insight-box insight-fire"><i class="fa fa-fire"></i> ¡Dominando ${m}! Es tu mercado más rentable.</div>`;
             }
         }
+    }
 
-        function exportCSV() {
-            if(picks.length === 0) return alert('No hay datos para exportar');
-            let csv = 'Fecha,Partido,Liga,Mercado,Pick,Cuota,Stake,EV,Resultado,Profit,Bookie,Tipo\n';
-            picks.forEach(p => {
-                csv += `${p.date},"${p.match}","${p.league}",${p.market},"${p.selection}",${p.odds},${p.stake},${p.ev},${p.result},${p.profit},${p.bookie},${p.type}\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.setAttribute('hidden', ''); a.setAttribute('href', url);
-            a.setAttribute('download', `picks_export_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    // --- CHART ENGINE ---
+    function renderChart(labels, data) {
+        const ctx = document.getElementById('mainChart').getContext('2d');
+        if(myChart) myChart.destroy();
+        
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Bankroll',
+                    data: data,
+                    borderColor: '#007aff',
+                    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: '#232d3b' }, ticks: { color: '#8892b0' } },
+                    x: { grid: { display: false }, ticks: { color: '#8892b0' } }
+                }
+            }
+        });
+    }
+
+    // --- UTILS ---
+    function backupData() {
+        const blob = new Blob([JSON.stringify(bets)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `backup_quant_${Date.now()}.json`;
+        a.click();
+    }
+
+    function exportCSV() {
+        let csv = "Fecha,Partido,Liga,Mercado,Cuota,Stake,Edge,EV,Resultado\n";
+        bets.forEach(b => {
+            csv += `${b.date},${b.match},${b.league},${b.market},${b.odds},${b.stakeVal},${b.prob},${b.result}\n`;
+        });
+        const blob = new Blob([csv], {type: 'text/csv'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'operaciones_quant.csv';
+        a.click();
+    }
+
+    function clearAll() {
+        if(confirm("¿Estás seguro de borrar todos los datos? Esta acción es irreversible.")) {
+            bets = [];
+            saveAndRefresh();
         }
-    </script>
+    }
+
+    // Init
+    window.onload = updateSystem;
+</script>
 </body>
 </html>
