@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Pronósticos Guardados</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-2xl mx-auto">
+        <header class="mb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">Pronósticos</h1>
+                <p class="text-xs text-slate-500 font-bold uppercase">Historial del Súper Analizador</p>
+            </div>
+            <a href="goles.html" class="bg-white border border-slate-200 p-2 rounded-lg shadow-sm text-xs font-bold">⬅ Volver</a>
+        </header>
+
+        <div id="loading" class="text-center py-10 text-slate-400 italic">Cargando pronósticos...</div>
+        
+        <div id="pronosticosList" class="space-y-4">
+            </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://idugbbdlyirhzgczpbhu.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk';
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function loadPronosticos() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) {
+                document.getElementById('loading').textContent = "Debes iniciar sesión.";
+                return;
+            }
+
+            const { data, error } = await _supabase
+                .from('pronosticos')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('fecha', { ascending: false });
+
+            document.getElementById('loading').classList.add('hidden');
+
+            const container = document.getElementById('pronosticosList');
+            if (error || !data.length) {
+                container.innerHTML = `<div class="text-center py-10 text-slate-400">No hay pronósticos guardados aún.</div>`;
+                return;
+            }
+
+            data.forEach(p => {
+                const colorScore = parseFloat(p.score) >= 70 ? 'text-emerald-600' : (parseFloat(p.score) >= 55 ? 'text-amber-600' : 'text-rose-600');
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${p.liga}</span>
+                        <span class="text-[10px] text-slate-400">${new Date(p.fecha).toLocaleDateString()}</span>
+                    </div>
+                    <h3 class="text-lg font-black text-slate-800 leading-tight mb-3">${p.partido}</h3>
+                    <div class="grid grid-cols-3 gap-2 mb-4">
+                        <div class="text-center bg-slate-50 p-2 rounded">
+                            <span class="block text-[8px] font-bold text-slate-500 uppercase">Over 2.5</span>
+                            <span class="text-sm font-black text-slate-700">${p.prob_o25}%</span>
+                        </div>
+                        <div class="text-center bg-slate-50 p-2 rounded">
+                            <span class="block text-[8px] font-bold text-slate-500 uppercase">Gol HT</span>
+                            <span class="text-sm font-black text-slate-700">${p.prob_ht}%</span>
+                        </div>
+                        <div class="text-center bg-slate-50 p-2 rounded">
+                            <span class="block text-[8px] font-bold text-slate-500 uppercase">Prob. Éxito</span>
+                            <span class="text-sm font-black ${colorScore}">${p.score}%</span>
+                        </div>
+                    </div>
+                    <div class="text-[11px] font-bold text-slate-600 border-t pt-2 italic">
+                        ${p.diagnostico}
+                    </div>
+                    <button onclick="eliminarPronostico(${p.id})" class="absolute top-2 right-2 text-slate-300 hover:text-rose-500 transition">✕</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function eliminarPronostico(id) {
+            if(!confirm("¿Borrar este pronóstico?")) return;
+            const { error } = await _supabase.from('pronosticos').delete().eq('id', id);
+            if(!error) location.reload();
+        }
+
+        loadPronosticos();
+    </script>
+</body>
+</html>
