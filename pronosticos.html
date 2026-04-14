@@ -21,16 +21,54 @@
             <a href="goles.html" class="bg-white border border-slate-200 p-2 rounded-lg shadow-sm text-xs font-bold">⬅ Volver</a>
         </header>
 
+        <!-- BOTÓN AUTOMÁTICO -->
+        <button onclick="escanearValorAutomatico()"
+        class="mb-4 w-full bg-emerald-600 text-white py-2 rounded-lg font-bold text-sm">
+        🔥 Escanear Valor Automático
+        </button>
+
         <div id="loading" class="text-center py-10 text-slate-400 italic">Cargando pronósticos...</div>
         
-        <div id="pronosticosList" class="space-y-4">
-            </div>
+        <div id="pronosticosList" class="space-y-4"></div>
     </div>
 
     <script>
         const SUPABASE_URL = 'https://idugbbdlyirhzgczpbhu.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk';
+        const SUPABASE_KEY = 'TU_KEY'; 
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ===== ODDS API =====
+        const ODDS_API_KEY = 'TU_API_KEY_AQUI';
+
+        async function obtenerOdds(partido) {
+            try {
+                const res = await fetch(`https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=totals&apiKey=${ODDS_API_KEY}`);
+                const data = await res.json();
+
+                const match = data.find(m => 
+                    partido.toLowerCase().includes(m.home_team.toLowerCase()) || 
+                    partido.toLowerCase().includes(m.away_team.toLowerCase())
+                );
+
+                if (!match) return null;
+
+                const market = match.bookmakers?.[0]?.markets?.find(m => m.key === "totals");
+                if (!market) return null;
+
+                const over = market.outcomes.find(o => o.name === "Over" && o.point === 2.5);
+
+                return over ? over.price : null;
+
+            } catch (e) {
+                console.error("Error odds:", e);
+                return null;
+            }
+        }
+
+        function calcularEV(probabilidad, cuota) {
+            const prob = probabilidad / 100;
+            return (prob * cuota) - 1;
+        }
 
         async function loadPronosticos() {
             const { data: { user } } = await _supabase.auth.getUser();
@@ -80,10 +118,88 @@
                     <div class="text-[11px] font-bold text-slate-600 border-t pt-2 italic">
                         ${p.diagnostico}
                     </div>
+
+                    <!-- BOTÓN VALUE -->
+                    <button onclick="buscarValor('${p.partido}', ${p.score}, ${p.id})"
+                    class="mt-3 w-full bg-indigo-600 text-white text-xs font-bold py-2 rounded-lg">
+                    Buscar Valor
+                    </button>
+
+                    <div id="valor-${p.id}" class="text-xs mt-2 font-bold"></div>
+
                     <button onclick="eliminarPronostico(${p.id})" class="absolute top-2 right-2 text-slate-300 hover:text-rose-500 transition">✕</button>
                 `;
                 container.appendChild(card);
             });
+
+            // AUTO SCAN (3s después)
+            setTimeout(() => {
+                escanearValorAutomatico();
+            }, 3000);
+        }
+
+        async function buscarValor(partido, score, id) {
+            const cuota = await obtenerOdds(partido);
+            const contenedor = document.getElementById(`valor-${id}`);
+
+            if (!cuota) {
+                contenedor.innerHTML = "❌ Sin cuota";
+                return;
+            }
+
+            const ev = calcularEV(score, cuota);
+
+            if (ev > 0) {
+                contenedor.innerHTML = `✅ VALUE BET | Cuota: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
+                contenedor.className = "text-emerald-600 text-xs mt-2 font-bold";
+                await guardarValueBet(partido, score, cuota, ev);
+            } else {
+                contenedor.innerHTML = `❌ Sin valor | Cuota: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
+                contenedor.className = "text-rose-600 text-xs mt-2 font-bold";
+            }
+        }
+
+        async function guardarValueBet(partido, score, cuota, ev) {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) return;
+
+            await _supabase.from('value_bets').insert([
+                {
+                    user_id: user.id,
+                    partido: partido,
+                    probabilidad: score,
+                    cuota: cuota,
+                    ev: ev,
+                    fecha: new Date()
+                }
+            ]);
+        }
+
+        async function escanearValorAutomatico() {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: pronosticos } = await _supabase
+                .from('pronosticos')
+                .select('*')
+                .eq('user_id', user.id);
+
+            for (const p of pronosticos) {
+                const cuota = await obtenerOdds(p.partido);
+                if (!cuota) continue;
+
+                const ev = calcularEV(p.score, cuota);
+
+                if (ev > 0) {
+                    await guardarValueBet(p.partido, p.score, cuota, ev);
+
+                    const contenedor = document.getElementById(`valor-${p.id}`);
+                    if (contenedor) {
+                        contenedor.innerHTML = `🔥 AUTO VALUE | Cuota: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
+                        contenedor.className = "text-emerald-600 text-xs mt-2 font-bold";
+                    }
+                }
+            }
         }
 
         async function eliminarPronostico(id) {
