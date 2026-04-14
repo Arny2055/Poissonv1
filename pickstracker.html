@@ -5,17 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>APUESTA SYSTEM PRO – QUANT EDITION</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root {
-            --bg-deep: #f3f4f6; /* Fondo claro general */
-            --bg-card: #ffffff; /* Fondos de tarjetas blancos */
-            --accent-blue: #2563eb; /* Azul estándar de index.html */
+            --bg-deep: #f3f4f6; 
+            --bg-card: #ffffff; 
+            --accent-blue: #2563eb; 
             --accent-green: #16a34a; 
             --accent-red: #dc2626;
-            --text-main: #1f2937; /* Texto principal oscuro */
-            --text-dim: #6b7280; /* Texto secundario gris */
-            --border: #e5e7eb; /* Bordes claros */
+            --text-main: #1f2937; 
+            --text-dim: #6b7280; 
+            --border: #e5e7eb; 
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
@@ -174,7 +175,6 @@
         /* --- CHARTS --- */
         .chart-box { height: 250px; margin-top: 20px; }
 
-        /* Responsive Mobile Fixes */
         @media (max-width: 600px) {
             .grid-dashboard { grid-template-columns: repeat(2, 1fr); }
             .form-row { grid-template-columns: 1fr; }
@@ -299,7 +299,7 @@
             </div>
         </div>
 
-        <button class="btn-primary" onclick="addBet()">REGISTRAR APUESTA</button>
+        <button id="btn-registrar" class="btn-primary" onclick="addBet()">REGISTRAR Y ENVIAR A SUPABASE</button>
     </div>
 
     <div class="card">
@@ -338,6 +338,11 @@
 </div>
 
 <script>
+    // --- CONFIGURACIÓN SUPABASE ---
+    const SUPABASE_URL = 'https://idugbbdlyirhzgczpbhu.supabase.co'; 
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     // --- STATE MANAGEMENT ---
     let bets = JSON.parse(localStorage.getItem('quant_bets')) || [];
     let myChart = null;
@@ -346,11 +351,9 @@
     function calculateQuantMetrics(bet, currentBank) {
         const impliedProb = 1 / bet.odds;
         const probEstimada = bet.prob / 100;
-        
         const edge = probEstimada - impliedProb;
         const evPercent = (probEstimada * (bet.odds - 1)) - (1 - probEstimada);
         
-        // Stake Calculation
         let investment = 0;
         const stakeMode = document.getElementById('config-stake-mode').value;
         if(stakeMode === 'percent') {
@@ -363,47 +366,82 @@
         const clv = bet.closingOdds ? (bet.odds - bet.closingOdds) : 0;
 
         let profit = 0;
-        let units = 0;
-        if(bet.result === 'Win') {
-            profit = investment * (bet.odds - 1);
-            units = (bet.odds - 1);
-        } else if(bet.result === 'Loss') {
-            profit = -investment;
-            units = -1;
-        } else if(bet.result === 'Void') {
-            profit = 0;
-            units = 0;
-        }
+        if(bet.result === 'Win') profit = investment * (bet.odds - 1);
+        else if(bet.result === 'Loss') profit = -investment;
+        else if(bet.result === 'Void') profit = 0;
 
-        return { ...bet, impliedProb, edge, evPercent, evCash, investment, profit, units, clv };
+        return { ...bet, impliedProb, edge, evPercent, evCash, investment, profit, clv };
     }
 
     // --- UI ACTIONS ---
-    function addBet() {
+    async function addBet() {
+        const { data: { user } } = await _supabase.auth.getUser();
+        if (!user) return alert("Debes iniciar sesión para guardar picks.");
+
+        const btn = document.getElementById('btn-registrar');
+        btn.disabled = true;
+        btn.innerText = "ENVIANDO...";
+
         const newBet = {
             id: Date.now(),
-            date: new Date().toLocaleDateString(),
+            date: new Date().toISOString(), // ISO para Supabase
             match: document.getElementById('inp-match').value || 'Evento Genérico',
             league: document.getElementById('inp-league').value || 'Sin Liga',
             market: document.getElementById('inp-market').value,
-            odds: parseFloat(document.getElementById('inp-odds').value),
+            odds: parseFloat(document.getElementById('inp-odds.value')),
             prob: parseFloat(document.getElementById('inp-prob').value),
             stakeVal: parseFloat(document.getElementById('inp-stake-val').value),
             closingOdds: parseFloat(document.getElementById('inp-closing-odds').value) || 0,
             result: document.getElementById('inp-result').value
         };
 
-        if(!newBet.odds || !newBet.stakeVal) return alert("Completa los campos técnicos.");
+        if(!newBet.odds || !newBet.stakeVal) {
+            btn.disabled = false;
+            btn.innerText = "REGISTRAR Y ENVIAR A SUPABASE";
+            return alert("Completa los campos técnicos.");
+        }
 
-        bets.push(newBet);
-        saveAndRefresh();
-        resetForm();
+        try {
+            // ENVÍO A SUPABASE
+            const { error } = await _supabase
+                .from('picks_tracker')
+                .insert([{
+                    user_id: user.id,
+                    match_name: newBet.match,
+                    league: newBet.league,
+                    market: newBet.market,
+                    odds: newBet.odds,
+                    estimated_prob: newBet.prob,
+                    stake: newBet.stakeVal,
+                    result: newBet.result,
+                    created_at: newBet.date
+                }]);
+
+            if (error) throw error;
+
+            // Guardar localmente y refrescar
+            bets.push(newBet);
+            saveAndRefresh();
+            resetForm();
+            alert("Pick guardado exitosamente en Supabase.");
+
+        } catch (err) {
+            console.error(err);
+            alert("Error al enviar a Supabase, pero se guardó localmente.");
+            bets.push(newBet);
+            saveAndRefresh();
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "REGISTRAR Y ENVIAR A SUPABASE";
+        }
     }
 
-    function updateBetResult(id, newResult) {
+    async function updateBetResult(id, newResult) {
         const index = bets.findIndex(b => b.id === id);
         if (index !== -1) {
             bets[index].result = newResult;
+            
+            // Opcional: Actualizar también en Supabase si tienes el ID de la fila
             saveAndRefresh();
         }
     }
@@ -423,9 +461,9 @@
         document.getElementById('inp-odds').value = '';
         document.getElementById('inp-prob').value = '';
         document.getElementById('inp-stake-val').value = '';
+        document.getElementById('inp-league').value = '';
     }
 
-    // --- REFRESH SYSTEM ---
     function updateSystem() {
         const initialBank = parseFloat(document.getElementById('config-bank').value) || 0;
         let runningBank = initialBank;
@@ -459,9 +497,11 @@
             chartData.push(runningBank);
             chartLabels.push(`${index + 1}`);
 
+            const displayDate = new Date(b.date).toLocaleDateString();
+
             const row = `
                 <tr>
-                    <td>${b.date}</td>
+                    <td>${displayDate}</td>
                     <td>${b.match}<br><small style="color:var(--text-dim)">${b.league}</small></td>
                     <td>${b.odds.toFixed(2)}</td>
                     <td style="color: ${b.edge > 0 ? 'var(--accent-green)' : 'var(--accent-red)'}; font-weight:bold">
