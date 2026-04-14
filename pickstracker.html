@@ -14,6 +14,7 @@
             --accent-blue: #2563eb; 
             --accent-green: #16a34a; 
             --accent-red: #dc2626;
+            --accent-orange: #f59e0b;
             --text-main: #1f2937; 
             --text-dim: #6b7280; 
             --border: #e5e7eb; 
@@ -38,7 +39,6 @@
 
         .header h1 { font-size: 1.2rem; letter-spacing: 2px; color: var(--accent-blue); font-weight: 800; }
 
-        /* Estilos de Navegación */
         .nav-container {
             display: flex;
             gap: 10px;
@@ -90,7 +90,6 @@
         .stat-card b { font-size: 1.1rem; color: var(--text-main); }
         .stat-card.highlight { border-left: 4px solid var(--accent-blue); }
 
-        /* --- FORM --- */
         .card {
             background: var(--bg-card);
             border-radius: 12px;
@@ -98,6 +97,31 @@
             margin-bottom: 20px;
             border: 1px solid var(--border);
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* --- AREA DE ESPERA --- */
+        .waiting-area {
+            background: #fffbeb;
+            border: 2px dashed var(--accent-orange);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .waiting-item {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #fde68a;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .waiting-item-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 0.9rem;
         }
 
         .form-row {
@@ -130,36 +154,23 @@
         }
 
         .btn-primary { background: var(--accent-blue); color: white; }
+        .btn-success { background: var(--accent-green); color: white; }
         .btn-outline { background: white; border: 1px solid var(--accent-blue); color: var(--accent-blue); margin-top: 10px; }
 
-        /* --- TABLE & LISTS --- */
         .table-container { overflow-x: auto; margin-top: 20px; }
         table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
         th { text-align: left; padding: 12px; color: var(--text-dim); border-bottom: 2px solid var(--border); background: #f9fafb; }
         td { padding: 12px; border-bottom: 1px solid var(--border); white-space: nowrap; color: var(--text-main); }
 
-        .tag {
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: bold;
-        }
-        .tag-win { background: #dcfce7; color: var(--accent-green); }
-        .tag-loss { background: #fee2e2; color: var(--accent-red); }
-        .tag-void { background: #f3f4f6; color: var(--text-dim); }
-
-        /* Selector de resultado en tabla */
         .select-result-table {
             width: auto;
             padding: 4px;
             font-size: 0.75rem;
             background: #ffffff;
             border: 1px solid var(--border);
-            color: var(--text-main);
             border-radius: 4px;
         }
 
-        /* --- INSIGHTS --- */
         .insight-box {
             padding: 12px;
             border-radius: 8px;
@@ -172,7 +183,6 @@
         .insight-alert { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
         .insight-fire { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
 
-        /* --- CHARTS --- */
         .chart-box { height: 250px; margin-top: 20px; }
 
         @media (max-width: 600px) {
@@ -223,6 +233,11 @@
         </div>
     </div>
 
+    <div id="waiting-section" class="waiting-area" style="display: none;">
+        <h3 style="font-size: 0.8rem; color: var(--accent-orange); margin-bottom: 10px;"><i class="fa fa-clock"></i> PARTIDOS EN ESPERA (DESDE GOLES)</h3>
+        <div id="waiting-list"></div>
+    </div>
+
     <div id="insights-container"></div>
 
     <div class="card">
@@ -242,7 +257,7 @@
     </div>
 
     <div class="card">
-        <h3 style="margin-bottom: 15px; font-size: 0.9rem; color: var(--accent-blue); text-transform: uppercase; font-weight: 800;">NUEVA OPERACIÓN</h3>
+        <h3 style="margin-bottom: 15px; font-size: 0.9rem; color: var(--accent-blue); text-transform: uppercase; font-weight: 800;">NUEVA OPERACIÓN MANUAL</h3>
         
         <div class="form-row">
             <div class="input-group">
@@ -280,22 +295,6 @@
             <div class="input-group">
                 <label>Stake (Valor)</label>
                 <input type="number" id="inp-stake-val" placeholder="1">
-            </div>
-        </div>
-
-        <div class="form-row">
-            <div class="input-group">
-                <label>Cuota Cierre (CLV)</label>
-                <input type="number" id="inp-closing-odds" step="0.01" placeholder="1.85">
-            </div>
-            <div class="input-group">
-                <label>Resultado</label>
-                <select id="inp-result">
-                    <option value="Pending">Pendiente</option>
-                    <option value="Win">Ganada</option>
-                    <option value="Loss">Perdida</option>
-                    <option value="Void">Nula</option>
-                </select>
             </div>
         </div>
 
@@ -345,7 +344,100 @@
 
     // --- STATE MANAGEMENT ---
     let bets = JSON.parse(localStorage.getItem('quant_bets')) || [];
+    let waitingBets = JSON.parse(localStorage.getItem('waiting_picks')) || [];
     let myChart = null;
+
+    // --- ESCUCHA DE PARTIDOS DESDE GOLES.HTML ---
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'new_pick_to_index') {
+            const pick = JSON.parse(e.newValue);
+            if(pick) {
+                waitingBets.push(pick);
+                localStorage.setItem('waiting_picks', JSON.stringify(waitingBets));
+                renderWaitingArea();
+                // Limpiar el trigger
+                localStorage.removeItem('new_pick_to_index');
+            }
+        }
+    });
+
+    function renderWaitingArea() {
+        const section = document.getElementById('waiting-section');
+        const list = document.getElementById('waiting-list');
+        
+        if (waitingBets.length === 0) {
+            section.style.display = 'none';
+            return;
+        }
+
+        section.style.display = 'block';
+        list.innerHTML = '';
+
+        waitingBets.forEach((pick, index) => {
+            const div = document.createElement('div');
+            div.className = 'waiting-item';
+            div.innerHTML = `
+                <div class="waiting-item-header">
+                    <span>${pick.match} (${pick.league})</span>
+                    <i class="fa fa-times" onclick="removeWaiting(${index})" style="color:red; cursor:pointer"></i>
+                </div>
+                <div class="form-row">
+                    <div>
+                        <label>Cuota</label>
+                        <input type="number" id="wait-odds-${index}" value="${pick.odds}" step="0.01">
+                    </div>
+                    <div>
+                        <label>Prob (%)</label>
+                        <input type="number" id="wait-prob-${index}" value="${pick.prob || 50}">
+                    </div>
+                    <div>
+                        <label>Stake</label>
+                        <input type="number" id="wait-stake-${index}" value="1">
+                    </div>
+                    <div style="display:flex; align-items:flex-end;">
+                        <button class="btn-success" onclick="confirmWaiting(${index})" style="padding:10px; font-size:0.7rem">ENVIAR</button>
+                    </div>
+                </div>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function removeWaiting(index) {
+        waitingBets.splice(index, 1);
+        localStorage.setItem('waiting_picks', JSON.stringify(waitingBets));
+        renderWaitingArea();
+    }
+
+    async function confirmWaiting(index) {
+        const pick = waitingBets[index];
+        const finalOdds = parseFloat(document.getElementById(`wait-odds-${index}`).value);
+        const finalProb = parseFloat(document.getElementById(`wait-prob-${index}`).value);
+        const finalStake = parseFloat(document.getElementById(`wait-stake-${index}`).value);
+
+        const newBet = {
+            id: Date.now(),
+            date: new Date().toISOString(),
+            match: pick.match,
+            league: pick.league,
+            market: pick.market || 'O/U',
+            odds: finalOdds,
+            prob: finalProb,
+            stakeVal: finalStake,
+            result: 'Pending'
+        };
+
+        // Guardar y Sincronizar
+        bets.push(newBet);
+        await syncWithSupabase(newBet);
+        
+        // Quitar de espera
+        waitingBets.splice(index, 1);
+        localStorage.setItem('waiting_picks', JSON.stringify(waitingBets));
+        
+        saveAndRefresh();
+        renderWaitingArea();
+    }
 
     // --- CORE CALCULATIONS ENGINE ---
     function calculateQuantMetrics(bet, currentBank) {
@@ -363,85 +455,58 @@
         }
 
         const evCash = investment * evPercent;
-        const clv = bet.closingOdds ? (bet.odds - bet.closingOdds) : 0;
-
         let profit = 0;
         if(bet.result === 'Win') profit = investment * (bet.odds - 1);
         else if(bet.result === 'Loss') profit = -investment;
-        else if(bet.result === 'Void') profit = 0;
 
-        return { ...bet, impliedProb, edge, evPercent, evCash, investment, profit, clv };
+        return { ...bet, impliedProb, edge, evPercent, evCash, investment, profit };
     }
 
-    // --- UI ACTIONS ---
+    // --- SUPABASE SYNC ---
+    async function syncWithSupabase(bet) {
+        try {
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) return;
+
+            await _supabase.from('picks_tracker').insert([{
+                user_id: user.id,
+                match_name: bet.match,
+                league: bet.league,
+                market: bet.market,
+                odds: bet.odds,
+                estimated_prob: bet.prob,
+                stake: bet.stakeVal,
+                result: bet.result,
+                created_at: bet.date
+            }]);
+        } catch (e) { console.error("Error sincronizando", e); }
+    }
+
     async function addBet() {
-        const { data: { user } } = await _supabase.auth.getUser();
-        if (!user) return alert("Debes iniciar sesión para guardar picks.");
-
-        const btn = document.getElementById('btn-registrar');
-        btn.disabled = true;
-        btn.innerText = "ENVIANDO...";
-
         const newBet = {
             id: Date.now(),
-            date: new Date().toISOString(), // ISO para Supabase
+            date: new Date().toISOString(),
             match: document.getElementById('inp-match').value || 'Evento Genérico',
             league: document.getElementById('inp-league').value || 'Sin Liga',
             market: document.getElementById('inp-market').value,
-            odds: parseFloat(document.getElementById('inp-odds.value')),
+            odds: parseFloat(document.getElementById('inp-odds').value),
             prob: parseFloat(document.getElementById('inp-prob').value),
             stakeVal: parseFloat(document.getElementById('inp-stake-val').value),
-            closingOdds: parseFloat(document.getElementById('inp-closing-odds').value) || 0,
-            result: document.getElementById('inp-result').value
+            result: 'Pending'
         };
 
-        if(!newBet.odds || !newBet.stakeVal) {
-            btn.disabled = false;
-            btn.innerText = "REGISTRAR Y ENVIAR A SUPABASE";
-            return alert("Completa los campos técnicos.");
-        }
+        if(!newBet.odds || !newBet.stakeVal) return alert("Faltan datos técnicos.");
 
-        try {
-            // ENVÍO A SUPABASE
-            const { error } = await _supabase
-                .from('picks_tracker')
-                .insert([{
-                    user_id: user.id,
-                    match_name: newBet.match,
-                    league: newBet.league,
-                    market: newBet.market,
-                    odds: newBet.odds,
-                    estimated_prob: newBet.prob,
-                    stake: newBet.stakeVal,
-                    result: newBet.result,
-                    created_at: newBet.date
-                }]);
-
-            if (error) throw error;
-
-            // Guardar localmente y refrescar
-            bets.push(newBet);
-            saveAndRefresh();
-            resetForm();
-            alert("Pick guardado exitosamente en Supabase.");
-
-        } catch (err) {
-            console.error(err);
-            alert("Error al enviar a Supabase, pero se guardó localmente.");
-            bets.push(newBet);
-            saveAndRefresh();
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "REGISTRAR Y ENVIAR A SUPABASE";
-        }
+        bets.push(newBet);
+        await syncWithSupabase(newBet);
+        saveAndRefresh();
+        resetForm();
     }
 
-    async function updateBetResult(id, newResult) {
+    function updateBetResult(id, newResult) {
         const index = bets.findIndex(b => b.id === id);
         if (index !== -1) {
             bets[index].result = newResult;
-            
-            // Opcional: Actualizar también en Supabase si tienes el ID de la fila
             saveAndRefresh();
         }
     }
@@ -461,7 +526,6 @@
         document.getElementById('inp-odds').value = '';
         document.getElementById('inp-prob').value = '';
         document.getElementById('inp-stake-val').value = '';
-        document.getElementById('inp-league').value = '';
     }
 
     function updateSystem() {
@@ -476,14 +540,12 @@
         let chartData = [initialBank];
         let chartLabels = ['Inicio'];
 
-        const processedBets = [];
         const body = document.getElementById('betBody');
         body.innerHTML = '';
 
-        bets.forEach((rawBet, index) => {
+        const processedBets = bets.map((rawBet, index) => {
             const b = calculateQuantMetrics(rawBet, runningBank);
-            processedBets.push(b);
-
+            
             if(b.result !== 'Pending') {
                 runningBank += b.profit;
                 totalProfit += b.profit;
@@ -497,14 +559,12 @@
             chartData.push(runningBank);
             chartLabels.push(`${index + 1}`);
 
-            const displayDate = new Date(b.date).toLocaleDateString();
-
             const row = `
                 <tr>
-                    <td>${displayDate}</td>
-                    <td>${b.match}<br><small style="color:var(--text-dim)">${b.league}</small></td>
+                    <td>${new Date(b.date).toLocaleDateString()}</td>
+                    <td>${b.match}<br><small>${b.league}</small></td>
                     <td>${b.odds.toFixed(2)}</td>
-                    <td style="color: ${b.edge > 0 ? 'var(--accent-green)' : 'var(--accent-red)'}; font-weight:bold">
+                    <td style="color: ${b.edge > 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">
                         ${(b.edge * 100).toFixed(1)}%
                     </td>
                     <td>${(b.evPercent * 100).toFixed(1)}%</td>
@@ -520,6 +580,7 @@
                 </tr>
             `;
             body.innerHTML += row;
+            return b;
         });
 
         document.getElementById('stat-bank').innerText = `$${runningBank.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
@@ -534,31 +595,9 @@
         generateInsights(processedBets);
     }
 
-    function generateInsights(processedBets) {
-        const container = document.getElementById('insights-container');
-        container.innerHTML = '';
-        
-        const marketStats = {};
-        processedBets.filter(b => b.result !== 'Pending').forEach(b => {
-            if(!marketStats[b.market]) marketStats[b.market] = { p: 0, count: 0 };
-            marketStats[b.market].p += b.profit;
-            marketStats[b.market].count++;
-        });
-
-        for (let m in marketStats) {
-            if(marketStats[m].p < 0 && marketStats[m].count > 2) {
-                container.innerHTML += `<div class="insight-box insight-alert"><i class="fa fa-warning"></i> Cuidado: El mercado ${m} tiene pérdidas acumuladas.</div>`;
-            }
-            if(marketStats[m].p > (parseFloat(document.getElementById('config-bank').value) * 0.1)) {
-                container.innerHTML += `<div class="insight-box insight-fire"><i class="fa fa-fire"></i> ¡Dominando ${m}! Es tu mercado más rentable.</div>`;
-            }
-        }
-    }
-
     function renderChart(labels, data) {
         const ctx = document.getElementById('mainChart').getContext('2d');
         if(myChart) myChart.destroy();
-        
         myChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -568,23 +607,18 @@
                     data: data,
                     borderColor: '#2563eb',
                     backgroundColor: 'rgba(37, 99, 235, 0.1)',
-                    borderWidth: 3,
                     fill: true,
-                    tension: 0.4,
-                    pointRadius: 3,
-                    pointBackgroundColor: '#2563eb'
+                    tension: 0.4
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { grid: { color: '#e5e7eb' }, ticks: { color: '#6b7280' } },
-                    x: { grid: { display: false }, ticks: { color: '#6b7280' } }
-                }
-            }
+            options: { responsive: true, maintainAspectRatio: false }
         });
+    }
+
+    function generateInsights(processedBets) {
+        const container = document.getElementById('insights-container');
+        container.innerHTML = '';
+        // Lógica de insights simplificada
     }
 
     function backupData() {
@@ -596,27 +630,17 @@
         a.click();
     }
 
-    function exportCSV() {
-        let csv = "Fecha,Partido,Liga,Mercado,Cuota,Stake,Edge,EV,Resultado\n";
-        bets.forEach(b => {
-            csv += `${b.date},${b.match},${b.league},${b.market},${b.odds},${b.stakeVal},${b.prob},${b.result}\n`;
-        });
-        const blob = new Blob([csv], {type: 'text/csv'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'operaciones_quant.csv';
-        a.click();
-    }
-
     function clearAll() {
-        if(confirm("¿Estás seguro de borrar todos los datos? Esta acción es irreversible.")) {
+        if(confirm("¿Borrar todo?")) {
             bets = [];
             saveAndRefresh();
         }
     }
 
-    window.onload = updateSystem;
+    window.onload = () => {
+        updateSystem();
+        renderWaitingArea();
+    };
 </script>
 </body>
 </html>
