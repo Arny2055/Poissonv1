@@ -143,12 +143,17 @@
                 </div>
             </div>
 
-            <div class="mt-6">
+            <div class="mt-6 flex flex-col gap-3">
                 <button onclick="mainCalculation()" class="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 transition font-bold text-lg shadow-lg">
                     CALCULAR PROBABILIDADES
                 </button>
+                <button onclick="superAnalizador1X2()" class="w-full bg-slate-800 text-white py-3 rounded-md hover:bg-slate-900 transition font-black text-lg shadow-lg">
+                    ⭐ SÚPER ANALIZADOR 1X2
+                </button>
             </div>
         </div>
+
+        <div id="superAnalizadorResult" class="hidden mb-6"></div>
 
         <div id="tabNavigation" class="hidden flex border-b border-gray-200 mb-4 bg-white rounded-t-lg">
             <button onclick="switchTab('ft')" id="tab-ft" class="flex-1 py-4 text-center text-sm uppercase tracking-wider tab-active">Full Time (FT)</button>
@@ -280,7 +285,6 @@
         }
 
         async function checkUser() {
-            // Obtenemos sesión actual de forma forzada para evitar el delay del refresco
             const { data: { session } } = await _supabase.auth.getSession();
             const user = session ? session.user : null;
             
@@ -332,8 +336,6 @@
                 .eq('user_id', uuid);
             if (!error) console.log("Ligas del usuario:", ligas);
         }
-
-        // --- LÓGICA DE HERRAMIENTA EXISTENTE (MATEMÁTICAS) ---
 
         function switchTab(type) {
             const ftBtn = document.getElementById('tab-ft');
@@ -401,7 +403,6 @@
             const leagueSelect = document.getElementById('selectLeague');
             if (leagueSelect) {
                 leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
-                // MEJORA: Orden alfabético de ligas
                 const ligas = [...new Set(footballData.map(item => item.liga))].sort((a, b) => a.localeCompare(b));
                 
                 ligas.forEach(liga => {
@@ -425,7 +426,6 @@
             const awayTable = getTable(liga, 'Away');
 
             if (homeTable) {
-                // MEJORA: Orden alfabético de equipos locales
                 const sortedHome = [...homeTable.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
                 sortedHome.forEach(team => {
                     const opt = document.createElement('option');
@@ -434,7 +434,6 @@
                 });
             }
             if (awayTable) {
-                // MEJORA: Orden alfabético de equipos visitantes
                 const sortedAway = [...awayTable.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
                 sortedAway.forEach(team => {
                     const opt = document.createElement('option');
@@ -538,6 +537,81 @@
             displayResults('ht', htRes);
         }
 
+        // --- MEJORA: SÚPER ANALIZADOR 1X2 PRO ---
+        function superAnalizador1X2() {
+            mainCalculation();
+            const liga = document.getElementById('selectLeague').value;
+            const home = document.getElementById('homeTeam').value;
+            const away = document.getElementById('awayTeam').value;
+            
+            const ftRes = getProbabilities(calculateXG(liga, home, away, false));
+            if(!ftRes) return;
+
+            const totalProb = ftRes.win + ftRes.draw + ftRes.loss;
+            const xGTotal = parseFloat(ftRes.xh) + parseFloat(ftRes.xa);
+            const diffXG = Math.abs(parseFloat(ftRes.xh) - parseFloat(ftRes.xa));
+            
+            let veredicto = "";
+            let colorClase = "bg-slate-100 border-slate-400 text-slate-800";
+            let confianzaScore = 0;
+            let insights = [];
+
+            // 1. Evaluación de Favorito
+            if (ftRes.win > 55) {
+                confianzaScore = ftRes.win * 0.8 + (parseFloat(ftRes.xh) * 5);
+                veredicto = `LOCAL DOMINANTE (${home})`;
+                colorClase = "bg-blue-100 border-blue-600 text-blue-900";
+                insights.push(`Probabilidad de victoria sólida: ${ftRes.win.toFixed(1)}%`);
+                if (parseFloat(ftRes.xh) > 1.8) insights.push("Potencia ofensiva local muy alta (>1.8 xG)");
+            } else if (ftRes.loss > 55) {
+                confianzaScore = ftRes.loss * 0.8 + (parseFloat(ftRes.xa) * 5);
+                veredicto = `VISITANTE FUERTE (${away})`;
+                colorClase = "bg-red-100 border-red-600 text-red-900";
+                insights.push(`Ventaja estadística visitante: ${ftRes.loss.toFixed(1)}%`);
+                if (parseFloat(ftRes.xa) > 1.8) insights.push("Visitante con gran capacidad de definición");
+            } else {
+                confianzaScore = ftRes.draw * 1.5 + (2.5 - xGTotal) * 10;
+                veredicto = "ESCENARIO DE EMPATE / PARTIDO CERRADO";
+                colorClase = "bg-amber-100 border-amber-600 text-amber-900";
+                insights.push(`Alta probabilidad de X: ${ftRes.draw.toFixed(1)}%`);
+                if (xGTotal < 2.2) insights.push("Bajo volumen de goles proyectado (Under)");
+            }
+
+            if (confianzaScore > 99) confianzaScore = 98.9;
+
+            const resultDiv = document.getElementById('superAnalizadorResult');
+            resultDiv.innerHTML = `
+                <div class="p-5 rounded-xl border-2 ${colorClase} shadow-inner">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-black text-sm uppercase tracking-tighter italic">Analista BetAGS Pro</h3>
+                        <div class="bg-white/50 px-2 py-1 rounded text-[10px] font-bold">V 2.0</div>
+                    </div>
+                    <div class="mb-4">
+                        <p class="text-xs uppercase font-bold opacity-70">Veredicto del Algoritmo:</p>
+                        <p class="text-2xl font-black leading-none">${veredicto}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white/40 p-3 rounded-lg">
+                            <p class="text-[10px] font-bold uppercase mb-1">Confianza del Pick</p>
+                            <p class="text-3xl font-black">${confianzaScore.toFixed(1)}%</p>
+                        </div>
+                        <div class="bg-white/40 p-3 rounded-lg">
+                            <p class="text-[10px] font-bold uppercase mb-1">Diferencial xG</p>
+                            <p class="text-3xl font-black">${diffXG.toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <div class="mt-4 border-t border-black/10 pt-3 text-[11px]">
+                        <p class="font-bold mb-1 uppercase tracking-widest">Puntos Clave:</p>
+                        <ul class="list-disc pl-4 space-y-1">
+                            ${insights.map(i => `<li class="font-medium">${i}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+            resultDiv.classList.remove('hidden');
+            resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
         function displayResults(prefix, res) {
             const c1x2 = document.getElementById(`${prefix}1x2`);
             const cDC = document.getElementById(`${prefix}DC`);
@@ -581,7 +655,6 @@
             xgEl.innerHTML = `xG Proyectado: Local ${res.xh} - Visitante ${res.xa}`;
         }
 
-        // Ejecutar carga inicial
         window.onload = async () => {
             await checkUser();
             loadFromSupabase();
