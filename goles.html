@@ -502,23 +502,28 @@
             });
         }
 
-        // --- ENVIAR A TRACKER ---
+        // --- ENVIAR A TRACKER Y AREA DE ESPERA ---
         function enviarATracker(liga, home, away, prob) {
             const pick = {
                 id: Date.now(),
                 fecha: new Date().toLocaleDateString(),
                 liga: liga,
-                partido: `${home} vs ${away}`,
-                seleccion: 'Over 2.5 FT',
-                probabilidad: prob.toFixed(1) + '%',
+                match: `${home} vs ${away}`,
+                market: 'Over 2.5 FT',
+                prob: parseFloat(prob.toFixed(1)),
+                odds: 1.80, // Valor por defecto para ajustar en espera
                 estado: 'Pendiente'
             };
             
+            // 1. Guardar en historial local (Legacy)
             let picks = JSON.parse(localStorage.getItem('mis_picks')) || [];
-            picks.push(pick);
+            picks.push({ ...pick, partido: pick.match, seleccion: pick.market, probabilidad: pick.prob + '%' });
             localStorage.setItem('mis_picks', JSON.stringify(picks));
+
+            // 2. EMITIR CLAVE PARA BOTÓN DE ENVIAR (Área de Espera en index.html)
+            localStorage.setItem('new_pick_to_index', JSON.stringify(pick));
             
-            alert('🚀 Pronóstico Over 2.5 enviado con éxito al Tracker.');
+            alert('🚀 Pronóstico Over 2.5 enviado al área de espera del Dashboard.');
         }
 
         function analizarEstrategiaOver() {
