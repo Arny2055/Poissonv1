@@ -34,6 +34,7 @@
                 <a href="goles.html" class="bg-green-50 text-green-700 border border-green-200 py-2 px-4 rounded-md text-sm font-bold shadow-sm">⚽ Goles O/U</a>
                 <a href="btts.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">🔄 BTTS</a>
                 <a href="pickstracker.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">📊 Picks Tracker</a>
+                <a href="pronosticos.html" class="bg-indigo-50 text-indigo-700 border border-indigo-200 py-2 px-4 rounded-md text-sm font-bold shadow-sm">📋 Ver Pronósticos</a>
             </div>
         </header>
 
@@ -185,28 +186,20 @@
 
         let footballData = []; 
         let charts = {};
+        let currentAnalysis = null; // Almacenará los datos para enviar
 
         const getData = () => footballData;
 
         async function loadFromSupabase() {
-            // Obtenemos el usuario actual
             const { data: { user } } = await _supabase.auth.getUser();
-            
-            if (!user) {
-                console.error("No hay sesión iniciada");
-                return;
-            }
+            if (!user) return;
 
-            // Filtrar datos SOLO del usuario que inició sesión
             const { data, error } = await _supabase
                 .from('football_data')
                 .select('*')
                 .eq('user_id', user.id);
 
-            if (error) {
-                console.error("Error cargando datos:", error);
-                return;
-            }
+            if (error) return;
 
             footballData = data.map(item => ({
                 liga: item.liga,
@@ -222,10 +215,7 @@
         function init() {
             const leagueSelect = document.getElementById('selectLeague');
             leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
-            
-            // Extraer ligas únicas y ordenarlas alfabéticamente
             const ligas = [...new Set(footballData.map(item => item.liga))].sort();
-            
             ligas.forEach(liga => {
                 const opt = document.createElement('option');
                 opt.value = liga;
@@ -255,16 +245,12 @@
         function getSegmentPercentages(liga, teamName, type, over05HTProb = 0, over25FTProb = 0) {
             const dataEntry = getData().find(t => t.liga === liga && t.tipo === type);
             if (!dataEntry || !dataEntry.tabla) return null;
-
             const team = dataEntry.tabla.find(t => t.equipo === teamName);
             if (!team) return null;
-
             const totalScored = team.segments.reduce((acc, curr) => acc + curr.s, 0);
             const totalConceded = team.segments.reduce((acc, curr) => acc + curr.c, 0);
-
             const teamScored = team.segments.map(s => totalScored > 0 ? (s.s / totalScored * 100).toFixed(1) : 0);
             const teamConceded = team.segments.map(s => totalConceded > 0 ? (s.c / totalConceded * 100).toFixed(1) : 0);
-
             let leagueTotals = [0, 0, 0, 0, 0, 0];
             let leagueGrandTotal = 0;
             dataEntry.tabla.forEach(t => {
@@ -274,7 +260,6 @@
                 });
             });
             const leagueAvg = leagueTotals.map(v => leagueGrandTotal > 0 ? (v / leagueGrandTotal * 100).toFixed(1) : 0);
-
             const probHTDist = team.segments.map((s, idx) => {
                 if (idx > 2) return 0;
                 const weight0_45 = (parseFloat(teamScored[0]) + parseFloat(teamConceded[0]) + parseFloat(leagueAvg[0])) +
@@ -283,13 +268,11 @@
                 const currentWeight = (parseFloat(teamScored[idx]) + parseFloat(teamConceded[idx]) + parseFloat(leagueAvg[idx]));
                 return weight0_45 > 0 ? (over05HTProb * (currentWeight / weight0_45)).toFixed(1) : 0;
             });
-
             const probFTDist = team.segments.map((s, idx) => {
                 const totalWeight = team.segments.reduce((acc, _, i) => acc + (parseFloat(teamScored[i]) + parseFloat(teamConceded[i]) + parseFloat(leagueAvg[i])), 0);
                 const currentWeight = (parseFloat(teamScored[idx]) + parseFloat(teamConceded[idx]) + parseFloat(leagueAvg[idx]));
                 return totalWeight > 0 ? (over25FTProb * (currentWeight / totalWeight)).toFixed(1) : 0;
             });
-
             return { teamScored, teamConceded, leagueAvg, probHTDist, probFTDist };
         }
 
@@ -298,33 +281,23 @@
                 if(!seg) return 0.22;
                 return (parseFloat(seg.teamScored[4]) + parseFloat(seg.teamScored[5])) / 2 / 100;
             };
-            
             const weightH = getLateWeight(homeSegments);
             const weightA = getLateWeight(awaySegments);
-            
-            const lambdaLate = {
-                h: ftLambdas.h * weightH * 1.3, 
-                a: ftLambdas.a * weightA * 1.3
-            };
-
+            const lambdaLate = { h: ftLambdas.h * weightH * 1.3, a: ftLambdas.a * weightA * 1.3 };
             const probZeroGoles = poisson(0, lambdaLate.h) * poisson(0, lambdaLate.a);
             const probAlMenosUno = (1 - probZeroGoles) * 100;
-
             const globalEl = document.getElementById('globalOneMoreProb');
             const progressEl = document.getElementById('oneMoreProgressBar');
             const containerEl = document.getElementById('oneMoreContainer');
             const labelEl = document.getElementById('oneMoreLabel');
             const cardEl = document.getElementById('oneMoreCard');
-
             globalEl.textContent = probAlMenosUno.toFixed(1) + '%';
             progressEl.style.width = probAlMenosUno + '%';
-
             containerEl.className = "flex flex-col justify-center items-center p-8 bg-amber-50 rounded-xl border border-amber-100 max-w-md mx-auto";
             labelEl.className = "text-xs font-bold text-amber-600 uppercase mb-2";
             globalEl.className = "text-6xl font-black text-amber-700";
             progressEl.className = "bg-amber-500 h-3 rounded-full transition-all duration-1000";
             cardEl.style.borderColor = "#f59e0b"; 
-
             if (probAlMenosUno >= 55) {
                 containerEl.className = "flex flex-col justify-center items-center p-8 bg-emerald-50 rounded-xl border border-emerald-100 max-w-md mx-auto";
                 labelEl.className = "text-xs font-bold text-emerald-600 uppercase mb-2";
@@ -332,7 +305,6 @@
                 progressEl.className = "bg-emerald-500 h-3 rounded-full transition-all duration-1000";
                 cardEl.style.borderColor = "#10b981"; 
             }
-
             const advice = document.getElementById('oneMoreAdvice');
             if(probAlMenosUno > 68) {
                 advice.className = "mt-6 text-xs text-green-700 text-center font-bold px-4";
@@ -349,52 +321,21 @@
         function renderChart(canvasId, label, dataObj) {
             if (charts[canvasId]) charts[canvasId].destroy();
             const ctx = document.getElementById(canvasId).getContext('2d');
-            
             charts[canvasId] = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: ['0-15', '16-30', '31-45', '46-60', '61-75', '76-90'],
                     datasets: [
-                        {
-                            label: 'Anotados (%)',
-                            data: dataObj.teamScored,
-                            backgroundColor: 'rgba(34, 197, 94, 0.3)',
-                            borderColor: 'rgb(34, 197, 94)',
-                            borderWidth: 1,
-                            hidden: true
-                        },
-                        {
-                            label: 'Concedidos (%)',
-                            data: dataObj.teamConceded,
-                            backgroundColor: 'rgba(239, 68, 68, 0.3)',
-                            borderColor: 'rgb(239, 68, 68)',
-                            borderWidth: 1,
-                            hidden: true
-                        },
-                        {
-                            label: 'Prob. Over 0.5 HT (%)',
-                            data: dataObj.probHTDist,
-                            backgroundColor: 'rgba(59, 130, 246, 0.8)', 
-                            borderColor: 'rgb(59, 130, 246)',
-                            borderWidth: 2,
-                            hidden: false
-                        },
-                        {
-                            label: 'Prob. Over 2.5 FT (%)',
-                            data: dataObj.probFTDist,
-                            backgroundColor: 'rgba(139, 92, 246, 0.8)', 
-                            borderColor: 'rgb(139, 92, 246)',
-                            borderWidth: 2,
-                            hidden: false
-                        }
+                        { label: 'Anotados (%)', data: dataObj.teamScored, backgroundColor: 'rgba(34, 197, 94, 0.3)', borderColor: 'rgb(34, 197, 94)', borderWidth: 1, hidden: true },
+                        { label: 'Concedidos (%)', data: dataObj.teamConceded, backgroundColor: 'rgba(239, 68, 68, 0.3)', borderColor: 'rgb(239, 68, 68)', borderWidth: 1, hidden: true },
+                        { label: 'Prob. Over 0.5 HT (%)', data: dataObj.probHTDist, backgroundColor: 'rgba(59, 130, 246, 0.8)', borderColor: 'rgb(59, 130, 246)', borderWidth: 2, hidden: false },
+                        { label: 'Prob. Over 2.5 FT (%)', data: dataObj.probFTDist, backgroundColor: 'rgba(139, 92, 246, 0.8)', borderColor: 'rgb(139, 92, 246)', borderWidth: 2, hidden: false }
                     ]
                 },
                 options: {
                     responsive: true,
                     scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } },
-                    plugins: { 
-                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } }
-                    }
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 9 } } } }
                 }
             });
         }
@@ -495,25 +436,12 @@
             xgEl.innerHTML = `xG esperado: ${(lambdas.h + lambdas.a).toFixed(2)} goles`;
             lines.forEach(line => {
                 const probOver = calculateOverProb(lambdas, line);
-                
                 let overColorClass = "text-green-600";
-                
-                if (prefix === 'ft' && line === 2.5 && probOver >= 55) {
-                    overColorClass = "text-emerald-600";
-                }
-                
-                if (prefix === 'ht' && line === 0.5 && probOver >= 70) {
-                    overColorClass = "text-emerald-600";
-                }
-
+                if (prefix === 'ft' && line === 2.5 && probOver >= 55) overColorClass = "text-emerald-600";
+                if (prefix === 'ht' && line === 0.5 && probOver >= 70) overColorClass = "text-emerald-600";
                 const row = document.createElement('div');
                 row.className = `grid grid-cols-3 p-3 text-center text-sm items-center`;
-                
-                row.innerHTML = `
-                    <div class="font-bold text-slate-700">${line}</div>
-                    <div class="${overColorClass} font-bold">${probOver.toFixed(1)}%</div>
-                    <div class="text-red-600 font-semibold">${(100 - probOver).toFixed(1)}%</div>
-                `;
+                row.innerHTML = `<div class="font-bold text-slate-700">${line}</div><div class="${overColorClass} font-bold">${probOver.toFixed(1)}%</div><div class="text-red-600 font-semibold">${(100 - probOver).toFixed(1)}%</div>`;
                 container.appendChild(row);
             });
         }
@@ -521,40 +449,28 @@
         // --- MEJORA: LÓGICA DEL ANALIZADOR AVANZADO ---
         function analizarEstrategiaOver() {
             mainCalculation();
-
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
             const away = document.getElementById('awayTeam').value;
-            
             const ftLambdas = getLambdas(liga, home, away, false);
             const htLambdas = getLambdas(liga, home, away, true);
-            
             if (!ftLambdas || !htLambdas) return;
-
             const probO25 = calculateOverProb(ftLambdas, 2.5);
             const probO05HT = calculateOverProb(htLambdas, 0.5);
             const probHomeScoresFirstO25 = calculateOverIfGoal(ftLambdas, 'home', 2.5);
             const probAwayScoresFirstO25 = calculateOverIfGoal(ftLambdas, 'away', 2.5);
             const xGTotal = ftLambdas.h + ftLambdas.a;
-
-            // LÓGICA DE PROBABILIDAD DE ÉXITO (MEJORA)
-            // Calculamos un Score basado en Poisson, xG y Comportamiento HT
             let successScore = (probO25 * 0.5) + (probO05HT * 0.3) + ((xGTotal / 3) * 20);
             if (successScore > 100) successScore = 99.9;
-
             let diagnostico = "";
             let puntosFuertes = [];
             let advertencias = [];
             let colorClase = "bg-slate-100 border-slate-300 text-slate-700";
             let circleColor = "text-slate-500";
-
             if (probO25 >= 58) puntosFuertes.push("Poisson FT Sólido (" + probO25.toFixed(1) + "%)");
             if (probO05HT >= 70) puntosFuertes.push("Alta probabilidad de gol en HT (" + probO05HT.toFixed(1) + "%)");
             if (xGTotal > 2.6) puntosFuertes.push("xG proyectado alto (" + xGTotal.toFixed(2) + ")");
-
-            if (probHomeScoresFirstO25 < 48 || probAwayScoresFirstO25 < 48) {
-                advertencias.push("Tendencia de encierro: La probabilidad baja si un equipo marca primero.");
-            }
+            if (probHomeScoresFirstO25 < 48 || probAwayScoresFirstO25 < 48) advertencias.push("Tendencia de encierro: La probabilidad baja si un equipo marca primero.");
 
             if (probO25 >= 60 && advertencias.length === 0 && probO05HT > 68) {
                 diagnostico = "✅ ESCENARIO ELITE: Alta probabilidad y comportamiento de equipos estable.";
@@ -570,14 +486,18 @@
                 circleColor = "text-rose-600";
             }
 
+            // Almacenar el objeto de análisis para el envío
+            currentAnalysis = {
+                liga, match: `${home} vs ${away}`, probO25: probO25.toFixed(1), probHT: probO05HT.toFixed(1), 
+                score: successScore.toFixed(1), diag: diagnostico, xg: xGTotal.toFixed(2)
+            };
+
             const analyzerDiv = document.getElementById('advancedAnalyzerResult');
             analyzerDiv.innerHTML = `
                 <div class="p-5 rounded-xl border-2 ${colorClase} shadow-md relative overflow-hidden">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <h4 class="font-black uppercase text-xs mb-1 flex items-center gap-2">
-                                <span>🔍</span> Diagnóstico Avanzado de Goles
-                            </h4>
+                            <h4 class="font-black uppercase text-xs mb-1 flex items-center gap-2"><span>🔍</span> Diagnóstico Avanzado Goles</h4>
                             <p class="text-lg font-bold leading-tight">${diagnostico}</p>
                         </div>
                         <div class="text-right">
@@ -585,21 +505,50 @@
                             <span class="text-3xl font-black ${circleColor}">${successScore.toFixed(1)}%</span>
                         </div>
                     </div>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                        <div>
-                            <span class="font-bold block mb-1 underline uppercase">Puntos a Favor:</span>
-                            <ul class="list-disc pl-4 space-y-1">${puntosFuertes.length ? puntosFuertes.map(p => `<li>${p}</li>`).join('') : '<li>Ninguno destacable</li>'}</ul>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs mb-4">
+                        <div><span class="font-bold block mb-1 underline uppercase">Puntos a Favor:</span>
+                            <ul class="list-disc pl-4 space-y-1">${puntosFuertes.length ? puntosFuertes.map(p => `<li>${p}</li>`).join('') : '<li>Ninguno</li>'}</ul>
                         </div>
-                        <div>
-                            <span class="font-bold block mb-1 underline uppercase">Advertencias / Riesgos:</span>
-                            <ul class="list-disc pl-4 space-y-1">${advertencias.length ? advertencias.map(a => `<li>${a}</li>`).join('') : '<li>Sin riesgos de comportamiento detectados</li>'}</ul>
+                        <div><span class="font-bold block mb-1 underline uppercase">Advertencias:</span>
+                            <ul class="list-disc pl-4 space-y-1">${advertencias.length ? advertencias.map(a => `<li>${a}</li>`).join('') : '<li>Sin riesgos detectados</li>'}</ul>
                         </div>
                     </div>
+                    <button onclick="enviarPronostico()" class="w-full bg-white text-slate-800 border-2 border-slate-300 py-2 rounded font-black uppercase text-xs hover:bg-slate-50 transition">
+                        📥 ENVIAR A MIS PRONÓSTICOS
+                    </button>
                 </div>
             `;
             analyzerDiv.classList.remove('hidden');
             analyzerDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // --- NUEVA FUNCIÓN: ENVÍO DE PRONÓSTICO ---
+        async function enviarPronostico() {
+            if (!currentAnalysis) return;
+            
+            const { data: { user } } = await _supabase.auth.getUser();
+            if (!user) { alert("Inicia sesión para guardar"); return; }
+
+            const { error } = await _supabase
+                .from('pronosticos') // Asegúrate de crear esta tabla en Supabase
+                .insert([{
+                    user_id: user.id,
+                    liga: currentAnalysis.liga,
+                    partido: currentAnalysis.match,
+                    prob_o25: currentAnalysis.probO25,
+                    prob_ht: currentAnalysis.probHT,
+                    score: currentAnalysis.score,
+                    diagnostico: currentAnalysis.diag,
+                    xg_proyectado: currentAnalysis.xg,
+                    fecha: new Date().toISOString()
+                }]);
+
+            if (error) {
+                console.error(error);
+                alert("Error al guardar. Verifica si la tabla 'pronosticos' existe.");
+            } else {
+                alert("✅ Pronóstico enviado correctamente a pronosticos.html");
+            }
         }
 
         function saveMatchSelection() {
@@ -626,10 +575,8 @@
             const hSel = document.getElementById('homeTeam');
             const aSel = document.getElementById('awayTeam');
             hSel.innerHTML = aSel.innerHTML = '<option value="">--</option>';
-            
             const tHome = getData().find(t => t.liga === liga && t.tipo === 'Home');
             const tAway = getData().find(t => t.liga === liga && t.tipo === 'Away');
-            
             if(tHome) {
                 const sortedHome = [...tHome.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
                 sortedHome.forEach(t => hSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
