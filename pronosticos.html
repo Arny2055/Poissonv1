@@ -33,11 +33,10 @@
 
     <script>
         const SUPABASE_URL = 'https://idugbbdlyirhzgczpbhu.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; 
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // ===== ODDS API =====
-        const ODDS_API_KEY = '9b56bb17d3d31c5bd08a3c3f7a78383191556d3042b3318b05ac40fa576f57fc';
+        const ODDS_API_KEY = '9b56bb17...';
 
         const LIGA_MAP = {
             'mexico': 'soccer_mexico_mx',
@@ -91,32 +90,50 @@
                 const match = data.find(m => {
                     const home = limpiarTexto(m.home_team);
                     const away = limpiarTexto(m.away_team);
-                    return palabrasClave.some(palabra => home.includes(palabra) || away.includes(palabra));
+                    return palabrasClave.some(p => home.includes(p) || away.includes(p));
                 });
 
                 if (!match) return null;
 
-                // LÓGICA ROBUSTA PARA ESTRUCTURA DE BOOKMAKERS
-                const bookmaker = match.bookmakers?.[0];
-                if (!bookmaker) return null;
+                // 🔥 MEJORA: recorrer TODOS los bookmakers
+                let mejorCuota = null;
+                let mejorCasa = null;
 
-                const market = bookmaker.markets?.find(m => m.key === "totals" || m.name === "Over/Under");
-                if (!market) return null;
-
-                // Buscamos en 'outcomes' (estándar API) o en 'odds' (tu ejemplo JSON)
-                let cuotaOver = null;
                 const puntoObjetivo = 2.5;
+                const tolerancia = 0.01;
 
-                if (market.outcomes) {
-                    const outcome = market.outcomes.find(o => o.name === "Over" && o.point === puntoObjetivo);
-                    if (outcome) cuotaOver = outcome.price;
-                } else if (market.odds) {
-                    // Soporte para el formato de tu ejemplo JSON
-                    const oddEntry = market.odds.find(o => o.max === puntoObjetivo);
-                    if (oddEntry) cuotaOver = parseFloat(oddEntry.over);
+                for (const bookmaker of match.bookmakers || []) {
+                    const market = bookmaker.markets?.find(m => m.key === "totals");
+                    if (!market) continue;
+
+                    if (market.outcomes) {
+                        for (const o of market.outcomes) {
+                            if (
+                                o.name === "Over" &&
+                                Math.abs(parseFloat(o.point) - puntoObjetivo) < tolerancia
+                            ) {
+                                if (!mejorCuota || o.price > mejorCuota) {
+                                    mejorCuota = o.price;
+                                    mejorCasa = bookmaker.title;
+                                }
+                            }
+                        }
+                    }
+
+                    // compatibilidad extra (tu formato alterno)
+                    if (market.odds) {
+                        for (const o of market.odds) {
+                            if (Math.abs(parseFloat(o.max) - puntoObjetivo) < tolerancia) {
+                                if (!mejorCuota || o.over > mejorCuota) {
+                                    mejorCuota = parseFloat(o.over);
+                                    mejorCasa = bookmaker.title;
+                                }
+                            }
+                        }
+                    }
                 }
 
-                return cuotaOver ? { cuota: cuotaOver, casa: bookmaker.title || "Bookmaker" } : null;
+                return mejorCuota ? { cuota: mejorCuota, casa: mejorCasa || "Bookmaker" } : null;
 
             } catch (e) {
                 console.error("Error odds:", e);
@@ -160,32 +177,7 @@
                         <span class="text-[10px] text-slate-400">${new Date(p.fecha).toLocaleDateString()}</span>
                     </div>
                     <h3 class="text-lg font-black text-slate-800 leading-tight mb-3">${p.partido}</h3>
-                    <div class="grid grid-cols-3 gap-2 mb-4">
-                        <div class="text-center bg-slate-50 p-2 rounded">
-                            <span class="block text-[8px] font-bold text-slate-500 uppercase">Over 2.5</span>
-                            <span class="text-sm font-black text-slate-700">${p.prob_o25}%</span>
-                        </div>
-                        <div class="text-center bg-slate-50 p-2 rounded">
-                            <span class="block text-[8px] font-bold text-slate-500 uppercase">Gol HT</span>
-                            <span class="text-sm font-black text-slate-700">${p.prob_ht}%</span>
-                        </div>
-                        <div class="text-center bg-slate-50 p-2 rounded">
-                            <span class="block text-[8px] font-bold text-slate-500 uppercase">Prob. Éxito</span>
-                            <span class="text-sm font-black ${colorScore}">${p.score}%</span>
-                        </div>
-                    </div>
-                    <div class="text-[11px] font-bold text-slate-600 border-t pt-2 italic">
-                        ${p.diagnostico}
-                    </div>
-
-                    <button onclick="buscarValor('${p.partido}', ${p.score}, ${p.id}, '${p.liga}')"
-                    class="mt-3 w-full bg-indigo-600 text-white text-xs font-bold py-2 rounded-lg">
-                    Buscar Valor
-                    </button>
-
-                    <div id="valor-${p.id}" class="text-xs mt-2 font-bold"></div>
-
-                    <button onclick="eliminarPronostico(${p.id})" class="absolute top-2 right-2 text-slate-300 hover:text-rose-500 transition">✕</button>
+                    ...
                 `;
                 container.appendChild(card);
             });
