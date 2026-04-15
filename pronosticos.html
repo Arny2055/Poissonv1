@@ -22,7 +22,7 @@
         </header>
 
         <button onclick="escanearValorAutomatico()"
-        class="mb-4 w-full bg-emerald-600 text-white py-2 rounded-lg font-bold text-sm">
+        class="mb-4 w-full bg-emerald-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-emerald-700 transition-colors">
         🔥 Escanear Valor Automático
         </button>
 
@@ -32,11 +32,12 @@
     </div>
 
     <script>
+        // CORRECCIÓN: Se cerró la comilla faltante en SUPABASE_KEY
         const SUPABASE_URL = 'https://idugbbdlyirhzgczpbhu.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWgiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk'; 
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const ODDS_API_KEY = '9b56bb17...';
+        const ODDS_API_KEY = '9b56bb17...'; // Asegúrate de que esta sea tu clave real
 
         const LIGA_MAP = {
             'mexico': 'soccer_mexico_mx',
@@ -60,6 +61,7 @@
         };
 
         function limpiarTexto(texto) {
+            if (!texto) return "";
             return texto.toLowerCase()
                 .normalize("NFD")
                 .replace(/[\u0300-\u036f]/g, "")
@@ -95,10 +97,8 @@
 
                 if (!match) return null;
 
-                // 🔥 MEJORA: recorrer TODOS los bookmakers
                 let mejorCuota = null;
                 let mejorCasa = null;
-
                 const puntoObjetivo = 2.5;
                 const tolerancia = 0.01;
 
@@ -108,10 +108,7 @@
 
                     if (market.outcomes) {
                         for (const o of market.outcomes) {
-                            if (
-                                o.name === "Over" &&
-                                Math.abs(parseFloat(o.point) - puntoObjetivo) < tolerancia
-                            ) {
+                            if (o.name === "Over" && Math.abs(parseFloat(o.point) - puntoObjetivo) < tolerancia) {
                                 if (!mejorCuota || o.price > mejorCuota) {
                                     mejorCuota = o.price;
                                     mejorCasa = bookmaker.title;
@@ -119,22 +116,8 @@
                             }
                         }
                     }
-
-                    // compatibilidad extra (tu formato alterno)
-                    if (market.odds) {
-                        for (const o of market.odds) {
-                            if (Math.abs(parseFloat(o.max) - puntoObjetivo) < tolerancia) {
-                                if (!mejorCuota || o.over > mejorCuota) {
-                                    mejorCuota = parseFloat(o.over);
-                                    mejorCasa = bookmaker.title;
-                                }
-                            }
-                        }
-                    }
                 }
-
                 return mejorCuota ? { cuota: mejorCuota, casa: mejorCasa || "Bookmaker" } : null;
-
             } catch (e) {
                 console.error("Error odds:", e);
                 return null;
@@ -162,52 +145,43 @@
             document.getElementById('loading').classList.add('hidden');
 
             const container = document.getElementById('pronosticosList');
-            if (error || !data.length) {
+            if (error || !data || data.length === 0) {
                 container.innerHTML = `<div class="text-center py-10 text-slate-400">No hay pronósticos guardados aún.</div>`;
                 return;
             }
 
             data.forEach(p => {
-                const colorScore = parseFloat(p.score) >= 70 ? 'text-emerald-600' : (parseFloat(p.score) >= 55 ? 'text-amber-600' : 'text-rose-600');
+                const prob = parseFloat(p.score);
+                const colorScore = prob >= 70 ? 'text-emerald-600' : (prob >= 55 ? 'text-amber-600' : 'text-rose-600');
+                
                 const card = document.createElement('div');
                 card.className = "bg-white p-5 rounded-xl border border-slate-200 shadow-sm relative overflow-hidden";
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-2">
-                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${p.liga}</span>
-                        <span class="text-[10px] text-slate-400">${new Date(p.fecha).toLocaleDateString()}</span>
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${p.liga || 'Liga Desconocida'}</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] text-slate-400">${new Date(p.fecha).toLocaleDateString()}</span>
+                            <button onclick="eliminarPronostico('${p.id}')" class="text-rose-400 hover:text-rose-600 text-xs">✕</button>
+                        </div>
                     </div>
                     <h3 class="text-lg font-black text-slate-800 leading-tight mb-3">${p.partido}</h3>
-                    ...
+                    <div class="flex items-center justify-between border-t pt-3">
+                        <div>
+                            <p class="text-[10px] uppercase font-bold text-slate-400 tracking-tighter">Probabilidad Over 2.5</p>
+                            <p class="text-xl font-black ${colorScore}">${prob}%</p>
+                        </div>
+                        <div id="valor-${p.id}" class="text-right">
+                            <span class="text-[10px] text-slate-400 italic">Esperando escaneo...</span>
+                        </div>
+                    </div>
                 `;
                 container.appendChild(card);
             });
 
+            // Auto-escaneo tras carga inicial
             setTimeout(() => {
                 escanearValorAutomatico();
-            }, 3000);
-        }
-
-        async function buscarValor(partido, score, id, liga) {
-            const dataOdds = await obtenerOdds(partido, liga);
-            const contenedor = document.getElementById(`valor-${id}`);
-
-            if (!dataOdds) {
-                contenedor.innerHTML = "❌ Cuota no encontrada (Liga no activa o mercado cerrado)";
-                contenedor.className = "text-slate-400 text-[10px] mt-2 font-bold italic";
-                return;
-            }
-
-            const { cuota, casa } = dataOdds;
-            const ev = calcularEV(score, cuota);
-
-            if (ev > 0) {
-                contenedor.innerHTML = `✅ VALUE BET | ${casa}: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
-                contenedor.className = "text-emerald-600 text-xs mt-2 font-bold";
-                await guardarValueBet(partido, score, cuota, ev);
-            } else {
-                contenedor.innerHTML = `❌ Sin valor | ${casa}: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
-                contenedor.className = "text-rose-600 text-xs mt-2 font-bold";
-            }
+            }, 2000);
         }
 
         async function guardarValueBet(partido, score, cuota, ev) {
@@ -238,23 +212,32 @@
             if (!pronosticos) return;
 
             for (const p of pronosticos) {
+                const contenedor = document.getElementById(`valor-${p.id}`);
+                if (contenedor) contenedor.innerHTML = `<span class="text-[10px] text-emerald-500 animate-pulse font-bold">Buscando cuota...</span>`;
+                
                 const dataOdds = await obtenerOdds(p.partido, p.liga);
-                if (!dataOdds) continue;
+                
+                if (!dataOdds) {
+                    if (contenedor) {
+                        contenedor.innerHTML = "❌ Cuota no encontrada";
+                        contenedor.className = "text-right text-slate-400 text-[10px] font-bold italic";
+                    }
+                    continue;
+                }
 
                 const { cuota, casa } = dataOdds;
                 const ev = calcularEV(p.score, cuota);
 
-                const contenedor = document.getElementById(`valor-${p.id}`);
                 if (ev > 0) {
                     await guardarValueBet(p.partido, p.score, cuota, ev);
                     if (contenedor) {
-                        contenedor.innerHTML = `🔥 AUTO VALUE | ${casa}: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
-                        contenedor.className = "text-emerald-600 text-xs mt-2 font-bold";
+                        contenedor.innerHTML = `🔥 VALUE | ${casa}: ${cuota}<br><span class="text-emerald-600">EV: ${(ev*100).toFixed(2)}%</span>`;
+                        contenedor.className = "text-right text-emerald-600 text-xs font-bold leading-tight";
                     }
                 } else {
                     if (contenedor) {
-                        contenedor.innerHTML = `📊 Analizado | ${casa}: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
-                        contenedor.className = "text-slate-500 text-[10px] mt-2 font-bold";
+                        contenedor.innerHTML = `📊 ${casa}: ${cuota}<br><span class="text-slate-400">EV: ${(ev*100).toFixed(2)}%</span>`;
+                        contenedor.className = "text-right text-slate-500 text-[10px] font-bold leading-tight";
                     }
                 }
             }
@@ -264,8 +247,10 @@
             if(!confirm("¿Borrar este pronóstico?")) return;
             const { error } = await _supabase.from('pronosticos').delete().eq('id', id);
             if(!error) location.reload();
+            else alert("Error al eliminar");
         }
 
+        // Iniciar carga al abrir
         loadPronosticos();
     </script>
 </body>
