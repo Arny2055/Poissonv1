@@ -19,6 +19,7 @@
         .status-win { background-color: #dcfce7; color: #166534; }
         .status-loss { background-color: #fee2e2; color: #991b1b; }
         .status-pending { background-color: #fef9c3; color: #854d0e; }
+        .stat-card { background: white; padding: 1.25rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-bottom: 4px solid #e2e8f0; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -36,6 +37,29 @@
                 <a href="goles.html" class="bg-slate-800 border border-slate-900 px-3 py-2 rounded-lg shadow-sm text-xs font-bold text-white hover:bg-slate-700 transition-colors">⬅ Volver</a>
             </div>
         </header>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <div class="stat-card border-indigo-500">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Bank Inicial</span>
+                <input type="number" id="bankInicial" onchange="updateStatsLocal()" class="text-xl font-black text-slate-800 w-full bg-transparent outline-none" value="1000">
+            </div>
+            <div class="stat-card border-emerald-500">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Profit Total</span>
+                <span id="statProfit" class="text-xl font-black text-slate-800">0.00</span>
+            </div>
+            <div class="stat-card border-amber-500">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Yield (%)</span>
+                <span id="statYield" class="text-xl font-black text-slate-800">0.0%</span>
+            </div>
+            <div class="stat-card border-blue-500">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Acierto (%)</span>
+                <span id="statWinRate" class="text-xl font-black text-slate-800">0.0%</span>
+            </div>
+            <div class="stat-card border-slate-800">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Apuestas (Finalizadas)</span>
+                <span id="statCount" class="text-xl font-black text-slate-800">0</span>
+            </div>
+        </div>
 
         <div id="loading" class="text-center py-10 text-slate-400 italic">Cargando datos...</div>
         
@@ -55,7 +79,7 @@
                     </tr>
                 </thead>
                 <tbody id="pronosticosList">
-                    </tbody>
+                </tbody>
             </table>
         </div>
     </div>
@@ -68,6 +92,8 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
             auth: { persistSession: true }
         });
+
+        let localPronosticos = [];
 
         async function loadPronosticos() {
             const { data: { session } } = await _supabase.auth.getSession();
@@ -90,17 +116,15 @@
                 return;
             }
 
+            localPronosticos = data;
             table.classList.remove('hidden');
             container.innerHTML = '';
 
             data.forEach(p => {
                 const prob = parseFloat(p.score);
                 const cuotaJusta = (100 / prob).toFixed(2);
-                
-                // Determinamos color de la probabilidad
                 const colorProb = prob >= 70 ? 'text-emerald-600' : (prob >= 55 ? 'text-amber-600' : 'text-rose-600');
 
-                // Lógica para clase de estado inicial
                 let claseEstado = "status-pending";
                 if(p.estado === "ganada") claseEstado = "status-win";
                 if(p.estado === "perdida") claseEstado = "status-loss";
@@ -137,12 +161,52 @@
                 `;
                 container.appendChild(row);
 
-                // Ejecutar cálculo inicial si ya tiene cuota guardada
                 if(p.cuota_bookie) {
                     const fakeInput = { value: p.cuota_bookie };
                     calcularValor(fakeInput, prob, p.id);
                 }
             });
+
+            calculateGlobalStats();
+        }
+
+        function calculateGlobalStats() {
+            const bankInit = parseFloat(document.getElementById('bankInicial').value) || 0;
+            let profit = 0;
+            let apostadoTotal = 0;
+            let ganadas = 0;
+            let perdidas = 0;
+
+            localPronosticos.forEach(p => {
+                const cuota = parseFloat(p.cuota_bookie);
+                if (p.estado !== 'pendiente' && cuota > 0) {
+                    const stake = 1; // Stake plano de 1 unidad
+                    apostadoTotal += stake;
+                    if (p.estado === 'ganada') {
+                        profit += (stake * cuota) - stake;
+                        ganadas++;
+                    } else if (p.estado === 'perdida') {
+                        profit -= stake;
+                        perdidas++;
+                    }
+                }
+            });
+
+            const totalFinalizadas = ganadas + perdidas;
+            const yieldVal = apostadoTotal > 0 ? (profit / apostadoTotal) * 100 : 0;
+            const winRate = totalFinalizadas > 0 ? (ganadas / totalFinalizadas) * 100 : 0;
+
+            document.getElementById('statProfit').innerText = profit.toFixed(2);
+            document.getElementById('statProfit').className = `text-xl font-black ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+            document.getElementById('statYield').innerText = yieldVal.toFixed(1) + "%";
+            document.getElementById('statYield').className = `text-xl font-black ${yieldVal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+            document.getElementById('statWinRate').innerText = winRate.toFixed(1) + "%";
+            document.getElementById('statCount').innerText = totalFinalizadas;
+        }
+
+        function updateStatsLocal() {
+            localStorage.setItem('bank_inicial_guru', document.getElementById('bankInicial').value);
+            calculateGlobalStats();
         }
 
         function calcularValor(input, prob, id) {
@@ -157,14 +221,8 @@
 
             const ev = ((prob / 100) * cuotaBookie) - 1;
             const porcentajeValor = (ev * 100).toFixed(1);
-
             celdaValor.innerText = porcentajeValor + "%";
-            
-            if (ev > 0) {
-                celdaValor.className = "font-black text-emerald-500";
-            } else {
-                celdaValor.className = "font-black text-rose-400";
-            }
+            celdaValor.className = `font-black ${ev > 0 ? 'text-emerald-500' : 'text-rose-400'}`;
             return porcentajeValor;
         }
 
@@ -172,30 +230,30 @@
             const cuota = parseFloat(valor) || 0;
             const evCalc = cuota > 0 ? (((prob / 100) * cuota) - 1) * 100 : 0;
             
-            const { error } = await _supabase
-                .from('pronosticos')
-                .update({ 
-                    cuota_bookie: cuota,
-                    valor_ev: parseFloat(evCalc.toFixed(2))
-                })
-                .eq('id', id);
+            await _supabase.from('pronosticos').update({ 
+                cuota_bookie: cuota,
+                valor_ev: parseFloat(evCalc.toFixed(2))
+            }).eq('id', id);
 
-            if (error) console.error("Error al guardar cuota:", error.message);
+            // Actualizar localmente y recalcular stats
+            const p = localPronosticos.find(item => item.id === id);
+            if(p) p.cuota_bookie = cuota;
+            calculateGlobalStats();
         }
 
         async function actualizarEstado(select, id) {
             const val = select.value;
-            select.className = ""; // Limpiar
+            select.className = "";
             if (val === "ganada") select.classList.add("status-win");
             else if (val === "perdida") select.classList.add("status-loss");
             else select.classList.add("status-pending");
 
-            const { error } = await _supabase
-                .from('pronosticos')
-                .update({ estado: val })
-                .eq('id', id);
+            await _supabase.from('pronosticos').update({ estado: val }).eq('id', id);
 
-            if (error) console.error("Error al actualizar estado:", error.message);
+            // Actualizar localmente y recalcular stats
+            const p = localPronosticos.find(item => item.id === id);
+            if(p) p.estado = val;
+            calculateGlobalStats();
         }
 
         async function eliminarPronostico(id) {
@@ -203,6 +261,10 @@
             const { error } = await _supabase.from('pronosticos').delete().eq('id', id);
             if (!error) location.reload();
         }
+
+        // Cargar Bank desde LocalStorage al iniciar
+        const savedBank = localStorage.getItem('bank_inicial_guru');
+        if(savedBank) document.getElementById('bankInicial').value = savedBank;
 
         loadPronosticos();
     </script>
