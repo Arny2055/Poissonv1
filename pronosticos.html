@@ -39,18 +39,26 @@
         // ===== ODDS API =====
         const ODDS_API_KEY = '9b56bb17d3d31c5bd08a3c3f7a78383191556d3042b3318b05ac40fa576f57fc';
 
-        // Diccionario para mapear tus ligas a los keys de Odds API
+        // Diccionario optimizado para mapear ligas de Supabase a Odds API
         const LIGA_MAP = {
             'mexico': 'soccer_mexico_mx',
             'spain': 'soccer_spain_la_liga',
+            'espana': 'soccer_spain_la_liga',
             'england': 'soccer_epl',
+            'inglaterra': 'soccer_epl',
+            'premier': 'soccer_epl',
             'germany': 'soccer_germany_bundesliga',
+            'alemania': 'soccer_germany_bundesliga',
             'italy': 'soccer_italy_serie_a',
+            'italia': 'soccer_italy_serie_a',
             'france': 'soccer_france_ligue_1',
+            'francia': 'soccer_france_ligue_1',
             'champions': 'soccer_uefa_champions_league',
             'netherlands': 'soccer_netherlands_eredivisie',
+            'holanda': 'soccer_netherlands_eredivisie',
             'portugal': 'soccer_portugal_primeira_liga',
-            'brazil': 'soccer_brazil_campeonato'
+            'brazil': 'soccer_brazil_campeonato',
+            'brasil': 'soccer_brazil_campeonato'
         };
 
         function limpiarTexto(texto) {
@@ -62,7 +70,6 @@
 
         async function obtenerOdds(partido, ligaOriginal) {
             try {
-                // Identificar la liga para un request más preciso
                 let sportKey = 'soccer';
                 const ligaBusqueda = limpiarTexto(ligaOriginal || "");
                 
@@ -73,7 +80,6 @@
                     }
                 }
 
-                // Si no encuentra liga específica, usa 'soccer' (general)
                 const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?regions=eu&markets=totals&apiKey=${ODDS_API_KEY}`;
                 const res = await fetch(url);
                 const data = await res.json();
@@ -81,6 +87,7 @@
                 if (!Array.isArray(data)) return null;
 
                 const nombreLimpio = limpiarTexto(partido);
+                // Dividir partido en palabras para buscar coincidencias parciales
                 const palabrasClave = nombreLimpio.split(" ").filter(p => p.length > 2 && p !== "vs");
 
                 const match = data.find(m => {
@@ -91,12 +98,14 @@
 
                 if (!match) return null;
 
+                // Seleccionar la mejor casa de apuestas disponible
                 const bookmaker = match.bookmakers?.[0];
                 if (!bookmaker) return null;
 
                 const market = bookmaker.markets?.find(m => m.key === "totals");
                 if (!market) return null;
 
+                // Buscar Over 2.5 (también contempla 2.0 por si la línea se mueve)
                 const over = market.outcomes.find(o => o.name === "Over" && (o.point === 2.5 || o.point === 2));
 
                 return over ? { cuota: over.price, casa: bookmaker.title } : null;
@@ -173,6 +182,7 @@
                 container.appendChild(card);
             });
 
+            // Escaneo automático a los 3 segundos de cargar
             setTimeout(() => {
                 escanearValorAutomatico();
             }, 3000);
@@ -183,7 +193,7 @@
             const contenedor = document.getElementById(`valor-${id}`);
 
             if (!dataOdds) {
-                contenedor.innerHTML = "❌ Cuota no disponible en este momento";
+                contenedor.innerHTML = "❌ Cuota no encontrada (Liga no activa o mercado cerrado)";
                 contenedor.className = "text-slate-400 text-[10px] mt-2 font-bold italic";
                 return;
             }
