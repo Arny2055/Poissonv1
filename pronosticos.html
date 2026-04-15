@@ -33,10 +33,8 @@
 
     <script>
         const SUPABASE_URL = 'https://idugbbdlyirhzgczpbhu.supabase.co'; 
-        // Corregido: Limpieza de caracteres extra en la clave
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk'; 
         
-        // Añadida persistencia de sesión para evitar el mensaje de "Debes iniciar sesión"
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
             auth: { persistSession: true }
         });
@@ -84,7 +82,8 @@
                     }
                 }
 
-                const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?regions=eu&markets=totals&apiKey=${ODDS_API_KEY}`;
+                // Mejora: Se solicitan explícitamente los mercados de totales para extraer las cuotas correctamente
+                const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?regions=eu&markets=totals&oddsFormat=decimal&apiKey=${ODDS_API_KEY}`;
                 const res = await fetch(url);
                 const data = await res.json();
 
@@ -106,17 +105,17 @@
                 const puntoObjetivo = 2.5;
                 const tolerancia = 0.01;
 
+                // Lógica mejorada para navegar por bookmakers y extraer cuotas de Over 2.5
                 for (const bookmaker of match.bookmakers || []) {
                     const market = bookmaker.markets?.find(m => m.key === "totals");
-                    if (!market) continue;
+                    if (!market || !market.outcomes) continue;
 
-                    if (market.outcomes) {
-                        for (const o of market.outcomes) {
-                            if (o.name === "Over" && Math.abs(parseFloat(o.point) - puntoObjetivo) < tolerancia) {
-                                if (!mejorCuota || o.price > mejorCuota) {
-                                    mejorCuota = o.price;
-                                    mejorCasa = bookmaker.title;
-                                }
+                    for (const o of market.outcomes) {
+                        // Verificamos que sea "Over" y que el punto sea 2.5 exactamente
+                        if (o.name.toLowerCase().includes("over") && Math.abs(parseFloat(o.point) - puntoObjetivo) < tolerancia) {
+                            if (!mejorCuota || o.price > mejorCuota) {
+                                mejorCuota = o.price;
+                                mejorCasa = bookmaker.title;
                             }
                         }
                     }
@@ -130,11 +129,11 @@
 
         function calcularEV(probabilidad, cuota) {
             const prob = probabilidad / 100;
+            // Ecuación matemática: (Probabilidad * Cuota) - 1
             return (prob * cuota) - 1;
         }
 
         async function loadPronosticos() {
-            // Se usa getSession para asegurar que la sesión esté cargada antes de validar
             const { data: { session } } = await _supabase.auth.getSession();
             const user = session?.user;
 
@@ -207,7 +206,7 @@
                     ev: ev,
                     fecha: new Date()
                 }
-            ], { onConflict: 'partido,user_id' }); // Evita duplicados si tienes una restricción única
+            ], { onConflict: 'partido,user_id' });
         }
 
         async function escanearValorAutomatico() {
