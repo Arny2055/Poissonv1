@@ -665,15 +665,17 @@
                 let mercadoTexto = "";
                 const maxProb = Math.max(currentFTProbs.win, currentFTProbs.draw, currentFTProbs.loss);
                 
+                // Aplicación de la lógica de etiquetas solicitada
                 if (maxProb === currentFTProbs.win) {
                     mercadoTexto = "Gana Local";
                 } else if (maxProb === currentFTProbs.loss) {
-                    mercadoTexto = "Gana Visita";
+                    mercadoTexto = "Gana Vista";
                 } else {
                     mercadoTexto = "Empate";
                 }
 
-                partidoLabel = `${home} vs ${away} (1X2 FT: ${mercadoTexto} - L:${currentFTProbs.win.toFixed(1)}% E:${currentFTProbs.draw.toFixed(1)}% V:${currentFTProbs.loss.toFixed(1)}%)`;
+                // Formato final: Al Raed vs Al Orubah (1X2 FT: Gana Local)
+                partidoLabel = `${home} vs ${away} (1X2 FT: ${mercadoTexto})`;
                 scoreVal = parseFloat(maxProb.toFixed(2));
             }
 
