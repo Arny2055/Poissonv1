@@ -660,11 +660,9 @@
             if (tipo === 'SUPER') {
                 partidoLabel = `${home} vs ${away} (SUPER ANALIZADOR 1X2 - ${currentSuperVerdict})`;
                 scoreVal = parseFloat(currentSuperScore.toFixed(2));
-            } else {
-                // Para 1X2 FT enviamos el que tenga mayor prob o el específico clickeado
-                // En este caso, enviamos el resumen de probabilidades FT
+            } else if (tipo === 'FT') {
                 partidoLabel = `${home} vs ${away} (1X2 FT: L:${currentFTProbs.win.toFixed(1)}% E:${currentFTProbs.draw.toFixed(1)}% V:${currentFTProbs.loss.toFixed(1)}%)`;
-                scoreVal = parseFloat(Math.max(currentFTProbs.win, currentFTProbs.loss).toFixed(2));
+                scoreVal = parseFloat(Math.max(currentFTProbs.win, currentFTProbs.draw, currentFTProbs.loss).toFixed(2));
             }
 
             const { error } = await _supabase
@@ -708,23 +706,46 @@
             const homeClass = res.probAnotarLocal >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
             const awayClass = res.probAnotarAway >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
 
-            // Botón de envío integrado en la tabla 1X2 FT
-            const sendBtnHTML = prefix === 'ft' ? `
-                <div class="mt-3 pt-2 border-t border-gray-100">
-                    <button onclick="enviarPronosticoSupabase('FT')" class="w-full bg-blue-50 text-blue-600 py-1.5 rounded-md text-[10px] font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
-                        ENVIAR TABLA 1X2 A TRACKER
-                    </button>
-                </div>
-            ` : '';
+            // Lógica para el botón de envío en la probabilidad más alta (Solo FT)
+            let sendBtnHTML = '';
+            if (prefix === 'ft') {
+                const maxProb = Math.max(res.win, res.draw, res.loss);
+                const btnContent = `
+                    <div class="mt-3 pt-2 border-t border-gray-100">
+                        <button onclick="enviarPronosticoSupabase('FT')" class="w-full bg-blue-600 text-white py-2 rounded-md text-[10px] font-bold hover:bg-blue-700 shadow-md transition flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                            </svg>
+                            ENVIAR PICK RECOMENDADO (${maxProb.toFixed(1)}%)
+                        </button>
+                    </div>`;
 
-            c1x2.innerHTML = `
-                <div class="flex justify-between text-sm p-2 ${homeClass} border rounded transition-colors"><span>Local</span><span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span></div>
-                <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Empate</span><span class="font-bold text-gray-500">${res.draw.toFixed(1)}%</span></div>
-                <div class="flex justify-between text-sm p-2 ${awayClass} border rounded transition-colors"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>
-                ${sendBtnHTML}`;
+                c1x2.innerHTML = `
+                    <div class="flex flex-col gap-1">
+                        <div class="flex justify-between text-sm p-2 ${homeClass} border rounded transition-colors">
+                            <span>Local</span>
+                            <span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span>
+                        </div>
+                        ${res.win === maxProb ? btnContent : ''}
+                        
+                        <div class="flex justify-between text-sm p-2 bg-gray-50 rounded">
+                            <span>Empate</span>
+                            <span class="font-bold text-gray-500">${res.draw.toFixed(1)}%</span>
+                        </div>
+                        ${res.draw === maxProb ? btnContent : ''}
+                        
+                        <div class="flex justify-between text-sm p-2 ${awayClass} border rounded transition-colors">
+                            <span>Visita</span>
+                            <span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span>
+                        </div>
+                        ${res.loss === maxProb ? btnContent : ''}
+                    </div>`;
+            } else {
+                c1x2.innerHTML = `
+                    <div class="flex justify-between text-sm p-2 ${homeClass} border rounded transition-colors"><span>Local</span><span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span></div>
+                    <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Empate</span><span class="font-bold text-gray-500">${res.draw.toFixed(1)}%</span></div>
+                    <div class="flex justify-between text-sm p-2 ${awayClass} border rounded transition-colors"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>`;
+            }
             
             cDC.innerHTML = `
                 <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>1X</span><span class="font-bold">${(res.win + res.draw).toFixed(1)}%</span></div>
