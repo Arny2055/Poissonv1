@@ -32,12 +32,16 @@
     </div>
 
     <script>
-        // CORRECCIÓN: Se cerró la comilla faltante en SUPABASE_KEY
         const SUPABASE_URL = 'https://idugbbdlyirhzgczpbhu.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWgiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk'; 
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Corregido: Limpieza de caracteres extra en la clave
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk'; 
+        
+        // Añadida persistencia de sesión para evitar el mensaje de "Debes iniciar sesión"
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: { persistSession: true }
+        });
 
-        const ODDS_API_KEY = '9b56bb17...'; // Asegúrate de que esta sea tu clave real
+        const ODDS_API_KEY = '9b56bb17...'; // Tu clave de Odds API
 
         const LIGA_MAP = {
             'mexico': 'soccer_mexico_mx',
@@ -130,9 +134,16 @@
         }
 
         async function loadPronosticos() {
-            const { data: { user } } = await _supabase.auth.getUser();
+            // Se usa getSession para asegurar que la sesión esté cargada antes de validar
+            const { data: { session } } = await _supabase.auth.getSession();
+            const user = session?.user;
+
             if (!user) {
-                document.getElementById('loading').textContent = "Debes iniciar sesión.";
+                document.getElementById('loading').innerHTML = `
+                    <div class="text-rose-500 font-bold p-4 border border-rose-200 bg-rose-50 rounded-lg">
+                        ⚠️ Debes iniciar sesión para ver tus pronósticos.
+                    </div>
+                `;
                 return;
             }
 
@@ -178,7 +189,6 @@
                 container.appendChild(card);
             });
 
-            // Auto-escaneo tras carga inicial
             setTimeout(() => {
                 escanearValorAutomatico();
             }, 2000);
@@ -188,7 +198,7 @@
             const { data: { user } } = await _supabase.auth.getUser();
             if (!user) return;
 
-            await _supabase.from('value_bets').insert([
+            await _supabase.from('value_bets').upsert([
                 {
                     user_id: user.id,
                     partido: partido,
@@ -197,7 +207,7 @@
                     ev: ev,
                     fecha: new Date()
                 }
-            ]);
+            ], { onConflict: 'partido,user_id' }); // Evita duplicados si tienes una restricción única
         }
 
         async function escanearValorAutomatico() {
@@ -250,7 +260,6 @@
             else alert("Error al eliminar");
         }
 
-        // Iniciar carga al abrir
         loadPronosticos();
     </script>
 </body>
