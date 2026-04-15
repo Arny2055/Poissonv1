@@ -21,7 +21,6 @@
             <a href="goles.html" class="bg-white border border-slate-200 p-2 rounded-lg shadow-sm text-xs font-bold">⬅ Volver</a>
         </header>
 
-        <!-- BOTÓN AUTOMÁTICO -->
         <button onclick="escanearValorAutomatico()"
         class="mb-4 w-full bg-emerald-600 text-white py-2 rounded-lg font-bold text-sm">
         🔥 Escanear Valor Automático
@@ -52,12 +51,15 @@
 
                 if (!match) return null;
 
-                const market = match.bookmakers?.[0]?.markets?.find(m => m.key === "totals");
+                const bookmaker = match.bookmakers?.[0];
+                if (!bookmaker) return null;
+
+                const market = bookmaker.markets?.find(m => m.key === "totals");
                 if (!market) return null;
 
                 const over = market.outcomes.find(o => o.name === "Over" && o.point === 2.5);
 
-                return over ? over.price : null;
+                return over ? { cuota: over.price, casa: bookmaker.title } : null;
 
             } catch (e) {
                 console.error("Error odds:", e);
@@ -119,7 +121,6 @@
                         ${p.diagnostico}
                     </div>
 
-                    <!-- BOTÓN VALUE -->
                     <button onclick="buscarValor('${p.partido}', ${p.score}, ${p.id})"
                     class="mt-3 w-full bg-indigo-600 text-white text-xs font-bold py-2 rounded-lg">
                     Buscar Valor
@@ -139,22 +140,24 @@
         }
 
         async function buscarValor(partido, score, id) {
-            const cuota = await obtenerOdds(partido);
+            const dataOdds = await obtenerOdds(partido);
             const contenedor = document.getElementById(`valor-${id}`);
 
-            if (!cuota) {
-                contenedor.innerHTML = "❌ Sin cuota";
+            if (!dataOdds) {
+                contenedor.innerHTML = "❌ Cuota no encontrada para este evento";
+                contenedor.className = "text-slate-400 text-[10px] mt-2 font-bold italic";
                 return;
             }
 
+            const { cuota, casa } = dataOdds;
             const ev = calcularEV(score, cuota);
 
             if (ev > 0) {
-                contenedor.innerHTML = `✅ VALUE BET | Cuota: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
+                contenedor.innerHTML = `✅ VALUE BET | ${casa}: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
                 contenedor.className = "text-emerald-600 text-xs mt-2 font-bold";
                 await guardarValueBet(partido, score, cuota, ev);
             } else {
-                contenedor.innerHTML = `❌ Sin valor | Cuota: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
+                contenedor.innerHTML = `❌ Sin valor | ${casa}: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
                 contenedor.className = "text-rose-600 text-xs mt-2 font-bold";
             }
         }
@@ -185,9 +188,10 @@
                 .eq('user_id', user.id);
 
             for (const p of pronosticos) {
-                const cuota = await obtenerOdds(p.partido);
-                if (!cuota) continue;
+                const dataOdds = await obtenerOdds(p.partido);
+                if (!dataOdds) continue;
 
+                const { cuota, casa } = dataOdds;
                 const ev = calcularEV(p.score, cuota);
 
                 if (ev > 0) {
@@ -195,8 +199,14 @@
 
                     const contenedor = document.getElementById(`valor-${p.id}`);
                     if (contenedor) {
-                        contenedor.innerHTML = `🔥 AUTO VALUE | Cuota: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
+                        contenedor.innerHTML = `🔥 AUTO VALUE | ${casa}: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
                         contenedor.className = "text-emerald-600 text-xs mt-2 font-bold";
+                    }
+                } else {
+                    const contenedor = document.getElementById(`valor-${p.id}`);
+                    if (contenedor) {
+                        contenedor.innerHTML = `📊 Analizado | ${casa}: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
+                        contenedor.className = "text-slate-500 text-[10px] mt-2 font-bold";
                     }
                 }
             }
