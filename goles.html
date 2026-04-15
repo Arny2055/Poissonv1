@@ -103,7 +103,7 @@
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Full Time (90 min)</h3>
                     <div id="ftXgDisplay" class="mb-4 text-sm font-medium text-slate-600"></div>
                     <div class="overflow-hidden rounded-lg border border-gray-200">
-                        <div class="grid grid-cols-3 grid-header p-2 text-center"><div>Mercado</div><div>Over</div><div>Under</div></div>
+                        <div class="grid grid-cols-4 grid-header p-2 text-center"><div>Mercado</div><div>Over</div><div>Under</div><div>Acción</div></div>
                         <div id="ftOuTable" class="divide-y divide-gray-100"></div>
                     </div>
                 </div>
@@ -436,11 +436,50 @@
                 let overColorClass = "text-green-600";
                 if (prefix === 'ft' && line === 2.5 && probOver >= 55) overColorClass = "text-emerald-600";
                 if (prefix === 'ht' && line === 0.5 && probOver >= 70) overColorClass = "text-emerald-600";
+                
                 const row = document.createElement('div');
-                row.className = `grid grid-cols-3 p-3 text-center text-sm items-center`;
-                row.innerHTML = `<div class="font-bold text-slate-700">${line}</div><div class="${overColorClass} font-bold">${probOver.toFixed(1)}%</div><div class="text-red-600 font-semibold">${(100 - probOver).toFixed(1)}%</div>`;
+                
+                if (prefix === 'ft') {
+                    row.className = `grid grid-cols-4 p-3 text-center text-sm items-center`;
+                    let actionButton = '';
+                    if (line === 2.5) {
+                        actionButton = `<button onclick="enviarMercadoDirecto('Over 2.5', ${probOver.toFixed(1)})" class="bg-indigo-600 text-white text-[10px] px-2 py-1 rounded hover:bg-indigo-700 transition font-bold uppercase">Enviar</button>`;
+                    }
+                    row.innerHTML = `<div class="font-bold text-slate-700">${line}</div><div class="${overColorClass} font-bold">${probOver.toFixed(1)}%</div><div class="text-red-600 font-semibold">${(100 - probOver).toFixed(1)}%</div><div>${actionButton}</div>`;
+                } else {
+                    row.className = `grid grid-cols-3 p-3 text-center text-sm items-center`;
+                    row.innerHTML = `<div class="font-bold text-slate-700">${line}</div><div class="${overColorClass} font-bold">${probOver.toFixed(1)}%</div><div class="text-red-600 font-semibold">${(100 - probOver).toFixed(1)}%</div>`;
+                }
                 container.appendChild(row);
             });
+        }
+
+        async function enviarMercadoDirecto(mercado, prob) {
+            const liga = document.getElementById('selectLeague').value;
+            const home = document.getElementById('homeTeam').value;
+            const away = document.getElementById('awayTeam').value;
+            
+            if (!liga || !home || !away) return;
+
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (!session) { alert("Inicia sesión para guardar"); return; }
+
+            const { error } = await _supabase
+                .from('pronosticos')
+                .insert([{
+                    user_id: session.user.id,
+                    liga: liga,
+                    partido: `${home} vs ${away} (${mercado})`,
+                    score: parseFloat(prob), 
+                    estado: 'pendiente',
+                    fecha: new Date().toISOString()
+                }]);
+
+            if (error) {
+                alert("Error al guardar: " + error.message);
+            } else {
+                alert(`✅ ${mercado} enviado a Pronósticos`);
+            }
         }
 
         function analizarEstrategiaOver() {
@@ -482,11 +521,10 @@
                 circleColor = "text-rose-600";
             }
 
-            // Guardamos los datos sincronizados con la estructura SQL de pronosticos.html
             currentAnalysis = {
                 liga, 
-                match: `${home} vs ${away}`, 
-                score: successScore.toFixed(1) // El % de éxito se envía como 'score'
+                match: `${home} vs ${away} (Analizador Over 2.5)`, 
+                score: successScore.toFixed(1) 
             };
 
             const analyzerDiv = document.getElementById('advancedAnalyzerResult');
@@ -516,14 +554,13 @@
             const { data: { session } } = await _supabase.auth.getSession();
             if (!session) { alert("Inicia sesión para guardar"); return; }
 
-            // Sincronizado con la tabla SQL de pronosticos.html: id, user_id, fecha, liga, partido, score, cuota_bookie, valor_ev, estado
             const { error } = await _supabase
                 .from('pronosticos')
                 .insert([{
                     user_id: session.user.id,
                     liga: currentAnalysis.liga,
                     partido: currentAnalysis.match,
-                    score: parseFloat(currentAnalysis.score), // Se guarda en la columna score
+                    score: parseFloat(currentAnalysis.score), 
                     estado: 'pendiente',
                     fecha: new Date().toISOString()
                 }]);
