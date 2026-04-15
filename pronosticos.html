@@ -39,15 +39,29 @@
         // ===== ODDS API =====
         const ODDS_API_KEY = '9b56bb17d3d31c5bd08a3c3f7a78383191556d3042b3318b05ac40fa576f57fc';
 
+        // Función para limpiar texto (quitar acentos y caracteres especiales)
+        function limpiarTexto(texto) {
+            return texto.toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^a-z0-9 ]/g, "");
+        }
+
         async function obtenerOdds(partido) {
             try {
                 const res = await fetch(`https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=totals&apiKey=${ODDS_API_KEY}`);
                 const data = await res.json();
 
-                const match = data.find(m => 
-                    partido.toLowerCase().includes(m.home_team.toLowerCase()) || 
-                    partido.toLowerCase().includes(m.away_team.toLowerCase())
-                );
+                const nombreLimpio = limpiarTexto(partido);
+                // Dividir en palabras y filtrar conectores comunes
+                const palabrasClave = nombreLimpio.split(" ").filter(p => p.length > 2 && p !== "vs");
+
+                const match = data.find(m => {
+                    const home = limpiarTexto(m.home_team);
+                    const away = limpiarTexto(m.away_team);
+                    // Buscar si alguna palabra clave del partido guardado coincide con los equipos de la API
+                    return palabrasClave.some(palabra => home.includes(palabra) || away.includes(palabra));
+                });
 
                 if (!match) return null;
 
@@ -57,7 +71,7 @@
                 const market = bookmaker.markets?.find(m => m.key === "totals");
                 if (!market) return null;
 
-                const over = market.outcomes.find(o => o.name === "Over" && o.point === 2.5);
+                const over = market.outcomes.find(o => o.name === "Over" && (o.point === 2.5 || o.point === 2));
 
                 return over ? { cuota: over.price, casa: bookmaker.title } : null;
 
@@ -144,7 +158,7 @@
             const contenedor = document.getElementById(`valor-${id}`);
 
             if (!dataOdds) {
-                contenedor.innerHTML = "❌ Cuota no encontrada para este evento";
+                contenedor.innerHTML = "❌ Cuota no disponible en este momento";
                 contenedor.className = "text-slate-400 text-[10px] mt-2 font-bold italic";
                 return;
             }
@@ -194,16 +208,14 @@
                 const { cuota, casa } = dataOdds;
                 const ev = calcularEV(p.score, cuota);
 
+                const contenedor = document.getElementById(`valor-${p.id}`);
                 if (ev > 0) {
                     await guardarValueBet(p.partido, p.score, cuota, ev);
-
-                    const contenedor = document.getElementById(`valor-${p.id}`);
                     if (contenedor) {
                         contenedor.innerHTML = `🔥 AUTO VALUE | ${casa}: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
                         contenedor.className = "text-emerald-600 text-xs mt-2 font-bold";
                     }
                 } else {
-                    const contenedor = document.getElementById(`valor-${p.id}`);
                     if (contenedor) {
                         contenedor.innerHTML = `📊 Analizado | ${casa}: ${cuota} | EV: ${(ev*100).toFixed(2)}%`;
                         contenedor.className = "text-slate-500 text-[10px] mt-2 font-bold";
