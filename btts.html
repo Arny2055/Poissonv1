@@ -14,6 +14,12 @@
         .btts-no { color: #dc2626; }
         .cond-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; text-align: center; font-size: 0.85rem; }
         .first-goal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+        /* Animación para el feedback de guardado */
+        @keyframes fadeSuccess {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .success-msg { animation: fadeSuccess 0.3s ease-out; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -82,11 +88,21 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="card p-6 border-b-4 border-emerald-500">
+                <div class="card p-6 border-b-4 border-emerald-500 relative">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 text-center">Full Time (FT)</h3>
                     <div id="ftXg" class="text-center text-xs text-slate-400 mb-4"></div>
                     <div class="space-y-4">
-                        <div id="ftYesBox" class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span id="ftYesLabel" class="font-bold text-slate-600">BTTS SÍ</span><span id="ftYes" class="text-2xl font-black btts-yes">0%</span></div>
+                        <div id="ftYesBox" class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg">
+                            <span id="ftYesLabel" class="font-bold text-slate-600">BTTS SÍ</span>
+                            <div class="flex items-center gap-3">
+                                <span id="ftYes" class="text-2xl font-black btts-yes">0%</span>
+                                <button id="btnSendFT" onclick="enviarPronosticoSupabase('FT')" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-md shadow-sm transition">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
                         <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-100 rounded-lg"><span class="font-bold text-slate-600">BTTS NO</span><span id="ftNo" class="text-2xl font-black btts-no">0%</span></div>
                     </div>
                 </div>
@@ -138,11 +154,12 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let footballData = []; 
+        let currentCalculatedProb = 0; // Para almacenar prob de FT
+        let currentSuperProb = 0;      // Para almacenar prob de Super Analizador
 
         const getData = () => footballData;
 
         async function loadFromSupabase() {
-            // Obtenemos el usuario actual
             const { data: { user } } = await _supabase.auth.getUser();
             
             if (!user) {
@@ -150,7 +167,6 @@
                 return;
             }
 
-            // MEJORA: Solo mostrar ligas del ID con el que se inició sesión
             const { data, error } = await _supabase
                 .from('football_data')
                 .select('*')
@@ -194,7 +210,6 @@
         function init() {
             const leagueSelect = document.getElementById('selectLeague');
             leagueSelect.innerHTML = '<option value="">Seleccionar Liga</option>';
-            // MEJORA: Orden alfabético de ligas
             const ligas = [...new Set(footballData.map(item => item.liga))].sort((a, b) => a.localeCompare(b));
             ligas.forEach(l => {
                 const opt = document.createElement('option');
@@ -215,12 +230,10 @@
             const tAway = getData().find(t => t.liga === liga && t.tipo === 'Away');
             
             if(tHome) {
-                // MEJORA: Orden alfabético de equipos locales
                 const sortedHome = [...tHome.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
                 sortedHome.forEach(t => hSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
             }
             if(tAway) {
-                // MEJORA: Orden alfabético de equipos visitantes
                 const sortedAway = [...tAway.tabla].sort((a, b) => a.equipo.localeCompare(b.equipo));
                 sortedAway.forEach(t => aSel.innerHTML += `<option value="${t.equipo}">${t.equipo}</option>`);
             }
@@ -273,6 +286,9 @@
             const pAway0 = poisson(0, lambdas.a);
             const probBothScore = (1 - pHome0) * (1 - pAway0);
             const percentage = probBothScore * 100;
+
+            // Guardamos la prob para el envío
+            if(prefix === 'ft') currentCalculatedProb = percentage;
 
             yesEl.innerText = `${percentage.toFixed(2)}%`;
             noEl.innerText = `${(100 - percentage).toFixed(2)}%`;
@@ -362,6 +378,8 @@
             // Score de éxito BTTS: 50% Poisson FT + 30% Poisson HT + 20% Volumen xG
             let successScore = (probBothFT * 0.5) + (probBothHT * 0.3) + ((xGTotal / 2.5) * 20);
             if (successScore > 99) successScore = 99.2;
+            
+            currentSuperProb = successScore; // Guardamos para envío
 
             let diagnostico = "";
             let puntosFuertes = [];
@@ -394,6 +412,12 @@
             const analyzerDiv = document.getElementById('advancedAnalyzerResult');
             analyzerDiv.innerHTML = `
                 <div class="p-5 rounded-xl border-2 ${colorClase} shadow-md relative">
+                    <button onclick="enviarPronosticoSupabase('SUPER')" class="absolute top-4 right-4 bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-full shadow-lg transition transform hover:scale-110 active:scale-95 flex items-center gap-2 px-4 py-2 text-xs font-bold">
+                        <span>ENVIAR ANALIZADOR</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
                     <div class="flex justify-between items-start mb-4">
                         <div>
                             <h4 class="font-black uppercase text-xs mb-1 flex items-center gap-2 text-slate-500">
@@ -421,6 +445,56 @@
             `;
             analyzerDiv.classList.remove('hidden');
             analyzerDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // --- LÓGICA DE ENVÍO A SUPABASE ---
+        async function enviarPronosticoSupabase(tipo) {
+            const liga = document.getElementById('selectLeague').value;
+            const home = document.getElementById('homeTeam').value;
+            const away = document.getElementById('awayTeam').value;
+
+            if (!home || !away) return;
+
+            const { data: { session } } = await _supabase.auth.getSession();
+            if (!session) {
+                alert("Debes iniciar sesión para guardar pronósticos");
+                return;
+            }
+
+            let mercadoNombre = "";
+            let probabilidad = 0;
+
+            if (tipo === 'FT') {
+                mercadoNombre = `${home} vs ${away} (BTTS SÍ FT)`;
+                probabilidad = currentCalculatedProb;
+            } else {
+                mercadoNombre = `${home} vs ${away} (SÚPER BTTS)`;
+                probabilidad = currentSuperProb;
+            }
+
+            const { error } = await _supabase
+                .from('pronosticos')
+                .insert([{
+                    user_id: session.user.id,
+                    liga: liga,
+                    partido: mercadoNombre,
+                    score: parseFloat(probabilidad.toFixed(2)),
+                    estado: 'pendiente'
+                }]);
+
+            if (error) {
+                alert("Error al guardar: " + error.message);
+            } else {
+                showFloatingSuccess();
+            }
+        }
+
+        function showFloatingSuccess() {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-5 right-5 bg-emerald-600 text-white px-6 py-3 rounded-lg shadow-2xl font-bold success-msg z-50";
+            toast.innerText = "✅ ¡Pronóstico enviado al Tracker!";
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
         }
 
         loadFromSupabase();
