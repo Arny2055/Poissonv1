@@ -39,7 +39,6 @@
         // ===== ODDS API =====
         const ODDS_API_KEY = '9b56bb17d3d31c5bd08a3c3f7a78383191556d3042b3318b05ac40fa576f57fc';
 
-        // Diccionario optimizado para mapear ligas de Supabase a Odds API
         const LIGA_MAP = {
             'mexico': 'soccer_mexico_mx',
             'spain': 'soccer_spain_la_liga',
@@ -87,7 +86,6 @@
                 if (!Array.isArray(data)) return null;
 
                 const nombreLimpio = limpiarTexto(partido);
-                // Dividir partido en palabras para buscar coincidencias parciales
                 const palabrasClave = nombreLimpio.split(" ").filter(p => p.length > 2 && p !== "vs");
 
                 const match = data.find(m => {
@@ -98,17 +96,27 @@
 
                 if (!match) return null;
 
-                // Seleccionar la mejor casa de apuestas disponible
+                // LÓGICA ROBUSTA PARA ESTRUCTURA DE BOOKMAKERS
                 const bookmaker = match.bookmakers?.[0];
                 if (!bookmaker) return null;
 
-                const market = bookmaker.markets?.find(m => m.key === "totals");
+                const market = bookmaker.markets?.find(m => m.key === "totals" || m.name === "Over/Under");
                 if (!market) return null;
 
-                // Buscar Over 2.5 (también contempla 2.0 por si la línea se mueve)
-                const over = market.outcomes.find(o => o.name === "Over" && (o.point === 2.5 || o.point === 2));
+                // Buscamos en 'outcomes' (estándar API) o en 'odds' (tu ejemplo JSON)
+                let cuotaOver = null;
+                const puntoObjetivo = 2.5;
 
-                return over ? { cuota: over.price, casa: bookmaker.title } : null;
+                if (market.outcomes) {
+                    const outcome = market.outcomes.find(o => o.name === "Over" && o.point === puntoObjetivo);
+                    if (outcome) cuotaOver = outcome.price;
+                } else if (market.odds) {
+                    // Soporte para el formato de tu ejemplo JSON
+                    const oddEntry = market.odds.find(o => o.max === puntoObjetivo);
+                    if (oddEntry) cuotaOver = parseFloat(oddEntry.over);
+                }
+
+                return cuotaOver ? { cuota: cuotaOver, casa: bookmaker.title || "Bookmaker" } : null;
 
             } catch (e) {
                 console.error("Error odds:", e);
@@ -182,7 +190,6 @@
                 container.appendChild(card);
             });
 
-            // Escaneo automático a los 3 segundos de cargar
             setTimeout(() => {
                 escanearValorAutomatico();
             }, 3000);
@@ -235,6 +242,8 @@
                 .from('pronosticos')
                 .select('*')
                 .eq('user_id', user.id);
+
+            if (!pronosticos) return;
 
             for (const p of pronosticos) {
                 const dataOdds = await obtenerOdds(p.partido, p.liga);
