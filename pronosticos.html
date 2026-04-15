@@ -94,6 +94,11 @@
                 // Determinamos color de la probabilidad
                 const colorProb = prob >= 70 ? 'text-emerald-600' : (prob >= 55 ? 'text-amber-600' : 'text-rose-600');
 
+                // Lógica para clase de estado inicial
+                let claseEstado = "status-pending";
+                if(p.estado === "ganada") claseEstado = "status-win";
+                if(p.estado === "perdida") claseEstado = "status-loss";
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
                     <td class="whitespace-nowrap font-medium text-slate-500">${new Date(p.fecha).toLocaleDateString()}</td>
@@ -103,15 +108,17 @@
                     <td class="font-bold text-slate-600">${cuotaJusta}</td>
                     <td>
                         <input type="number" step="0.01" placeholder="0.00" 
+                            value="${p.cuota_bookie || ''}"
+                            onchange="guardarCuota('${p.id}', this.value, ${prob})"
                             oninput="calcularValor(this, ${prob}, '${p.id}')"
                             class="focus:ring-2 focus:ring-emerald-500 outline-none">
                     </td>
                     <td id="valor-${p.id}" class="font-black text-slate-300">---</td>
                     <td>
-                        <select onchange="actualizarEstado(this)" class="status-pending">
-                            <option value="pendiente" class="bg-white text-slate-800">Pendiente</option>
-                            <option value="ganada" class="bg-white text-slate-800">Ganada</option>
-                            <option value="perdida" class="bg-white text-slate-800">Perdida</option>
+                        <select onchange="actualizarEstado(this, '${p.id}')" class="${claseEstado}">
+                            <option value="pendiente" ${p.estado === 'pendiente' ? 'selected' : ''} class="bg-white text-slate-800">Pendiente</option>
+                            <option value="ganada" ${p.estado === 'ganada' ? 'selected' : ''} class="bg-white text-slate-800">Ganada</option>
+                            <option value="perdida" ${p.estado === 'perdida' ? 'selected' : ''} class="bg-white text-slate-800">Perdida</option>
                         </select>
                     </td>
                     <td>
@@ -123,6 +130,12 @@
                     </td>
                 `;
                 container.appendChild(row);
+
+                // Ejecutar cálculo inicial si ya tiene cuota guardada
+                if(p.cuota_bookie) {
+                    const fakeInput = { value: p.cuota_bookie };
+                    calcularValor(fakeInput, prob, p.id);
+                }
             });
         }
 
@@ -146,14 +159,37 @@
             } else {
                 celdaValor.className = "font-black text-rose-400";
             }
+            return porcentajeValor;
         }
 
-        function actualizarEstado(select) {
+        async function guardarCuota(id, valor, prob) {
+            const cuota = parseFloat(valor) || 0;
+            const ev = (((prob / 100) * cuota) - 1) * 100;
+            
+            const { error } = await _supabase
+                .from('pronosticos')
+                .update({ 
+                    cuota_bookie: cuota,
+                    valor_ev: parseFloat(ev.toFixed(2))
+                })
+                .eq('id', id);
+
+            if (error) console.error("Error al guardar cuota:", error.message);
+        }
+
+        async function actualizarEstado(select, id) {
             const val = select.value;
             select.className = ""; // Limpiar
             if (val === "ganada") select.classList.add("status-win");
             else if (val === "perdida") select.classList.add("status-loss");
             else select.classList.add("status-pending");
+
+            const { error } = await _supabase
+                .from('pronosticos')
+                .update({ estado: val })
+                .eq('id', id);
+
+            if (error) console.error("Error al actualizar estado:", error.message);
         }
 
         async function eliminarPronostico(id) {
