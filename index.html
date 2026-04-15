@@ -661,8 +661,20 @@
                 partidoLabel = `${home} vs ${away} (SUPER ANALIZADOR 1X2 - ${currentSuperVerdict})`;
                 scoreVal = parseFloat(currentSuperScore.toFixed(2));
             } else if (tipo === 'FT') {
-                partidoLabel = `${home} vs ${away} (1X2 FT: L:${currentFTProbs.win.toFixed(1)}% E:${currentFTProbs.draw.toFixed(1)}% V:${currentFTProbs.loss.toFixed(1)}%)`;
-                scoreVal = parseFloat(Math.max(currentFTProbs.win, currentFTProbs.draw, currentFTProbs.loss).toFixed(2));
+                // Identificar el mercado con mayor probabilidad
+                let mercadoTexto = "";
+                const maxProb = Math.max(currentFTProbs.win, currentFTProbs.draw, currentFTProbs.loss);
+                
+                if (maxProb === currentFTProbs.win) {
+                    mercadoTexto = "Gana Local";
+                } else if (maxProb === currentFTProbs.loss) {
+                    mercadoTexto = "Gana Visita";
+                } else {
+                    mercadoTexto = "Empate";
+                }
+
+                partidoLabel = `${home} vs ${away} (1X2 FT: ${mercadoTexto} - L:${currentFTProbs.win.toFixed(1)}% E:${currentFTProbs.draw.toFixed(1)}% V:${currentFTProbs.loss.toFixed(1)}%)`;
+                scoreVal = parseFloat(maxProb.toFixed(2));
             }
 
             const { error } = await _supabase
