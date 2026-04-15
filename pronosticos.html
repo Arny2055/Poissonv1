@@ -41,7 +41,7 @@
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             <div class="stat-card border-indigo-500">
                 <span class="text-[10px] font-bold text-slate-400 uppercase block">Bank Inicial</span>
-                <input type="number" id="bankInicial" onchange="updateStatsLocal()" class="text-xl font-black text-slate-800 w-full bg-transparent outline-none" value="1000">
+                <input type="number" id="bankInicial" onchange="guardarBankSupabase(this.value)" class="text-xl font-black text-slate-800 w-full bg-transparent outline-none" value="1000">
             </div>
             <div class="stat-card border-emerald-500">
                 <span class="text-[10px] font-bold text-slate-400 uppercase block">Profit Total</span>
@@ -94,6 +94,7 @@
         });
 
         let localPronosticos = [];
+        let currentUserId = null;
 
         async function loadPronosticos() {
             const { data: { session } } = await _supabase.auth.getSession();
@@ -103,6 +104,11 @@
                 document.getElementById('loading').innerHTML = `<div class="p-4 bg-rose-50 text-rose-600 rounded-lg font-bold">⚠️ Sesión no iniciada</div>`;
                 return;
             }
+
+            currentUserId = user.id;
+
+            // Cargar Bank Inicial desde Supabase primero
+            await cargarBankSupabase();
 
             const { data, error } = await _supabase.from('pronosticos').select('*').eq('user_id', user.id).order('fecha', { ascending: false });
             
@@ -170,6 +176,38 @@
             calculateGlobalStats();
         }
 
+        // --- LÓGICA DE SINCRONIZACIÓN DE BANK ---
+        async function cargarBankSupabase() {
+            if (!currentUserId) return;
+            const { data, error } = await _supabase
+                .from('perfiles')
+                .select('bank_inicial')
+                .eq('user_id', currentUserId)
+                .single();
+
+            if (data) {
+                document.getElementById('bankInicial').value = data.bank_inicial;
+            } else if (error && error.code === 'PGRST116') {
+                // Si no existe el registro, lo creamos con el valor por defecto
+                await _supabase.from('perfiles').insert([{ user_id: currentUserId, bank_inicial: 1000 }]);
+            }
+        }
+
+        async function guardarBankSupabase(valor) {
+            if (!currentUserId) return;
+            const bank = parseFloat(valor) || 0;
+            
+            const { error } = await _supabase
+                .from('perfiles')
+                .upsert({ user_id: currentUserId, bank_inicial: bank });
+
+            if (!error) {
+                calculateGlobalStats();
+            } else {
+                console.error("Error guardando bank:", error.message);
+            }
+        }
+
         function calculateGlobalStats() {
             const bankInit = parseFloat(document.getElementById('bankInicial').value) || 0;
             let profit = 0;
@@ -180,7 +218,7 @@
             localPronosticos.forEach(p => {
                 const cuota = parseFloat(p.cuota_bookie);
                 if (p.estado !== 'pendiente' && cuota > 0) {
-                    const stake = 1; // Stake plano de 1 unidad
+                    const stake = 1; 
                     apostadoTotal += stake;
                     if (p.estado === 'ganada') {
                         profit += (stake * cuota) - stake;
@@ -202,11 +240,6 @@
             document.getElementById('statYield').className = `text-xl font-black ${yieldVal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
             document.getElementById('statWinRate').innerText = winRate.toFixed(1) + "%";
             document.getElementById('statCount').innerText = totalFinalizadas;
-        }
-
-        function updateStatsLocal() {
-            localStorage.setItem('bank_inicial_guru', document.getElementById('bankInicial').value);
-            calculateGlobalStats();
         }
 
         function calcularValor(input, prob, id) {
@@ -235,7 +268,6 @@
                 valor_ev: parseFloat(evCalc.toFixed(2))
             }).eq('id', id);
 
-            // Actualizar localmente y recalcular stats
             const p = localPronosticos.find(item => item.id === id);
             if(p) p.cuota_bookie = cuota;
             calculateGlobalStats();
@@ -250,7 +282,6 @@
 
             await _supabase.from('pronosticos').update({ estado: val }).eq('id', id);
 
-            // Actualizar localmente y recalcular stats
             const p = localPronosticos.find(item => item.id === id);
             if(p) p.estado = val;
             calculateGlobalStats();
@@ -261,10 +292,6 @@
             const { error } = await _supabase.from('pronosticos').delete().eq('id', id);
             if (!error) location.reload();
         }
-
-        // Cargar Bank desde LocalStorage al iniciar
-        const savedBank = localStorage.getItem('bank_inicial_guru');
-        if(savedBank) document.getElementById('bankInicial').value = savedBank;
 
         loadPronosticos();
     </script>
