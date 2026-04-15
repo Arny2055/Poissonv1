@@ -48,6 +48,13 @@
         /* Bloqueo de contenido si no está logeado */
         .blur-content { filter: blur(20px); pointer-events: none; user-select: none; }
         #mainAppContent { transition: filter 0.5s ease; }
+
+        /* Feedback Animation */
+        @keyframes fadeSuccess {
+            0% { opacity: 0; transform: translateY(10px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .success-msg { animation: fadeSuccess 0.3s ease-out; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -118,6 +125,7 @@
                 <a href="pickstracker.html" class="bg-white text-slate-700 border border-slate-200 py-2 px-4 rounded-md hover:bg-slate-50 transition text-sm font-medium shadow-sm">
                     📊 Picks Tracker
                 </a>
+                <a href="pronosticos.html" class="bg-amber-50 text-amber-700 border border-amber-200 py-2 px-4 rounded-md hover:bg-amber-100 transition text-sm font-bold shadow-sm">📋 Ver Pronósticos</a>
             </div>
         </header>
 
@@ -240,6 +248,9 @@
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let footballData = []; 
+        let currentFTProbs = null; // Almacenará {win, draw, loss} de la tabla
+        let currentSuperScore = 0;  // Almacenará score del super analizador
+        let currentSuperVerdict = ""; // Almacenará veredicto
 
         // 1. LÓGICA DE AUTENTICACIÓN
         function openLogin() { 
@@ -530,6 +541,10 @@
             const htRes = getProbabilities(calculateXG(liga, home, away, true));
 
             if (!ftRes) return;
+            
+            // Guardar actuales para envío
+            currentFTProbs = { win: ftRes.win, draw: ftRes.draw, loss: ftRes.loss };
+
             document.getElementById('noDataMessage').classList.add('hidden');
             document.getElementById('tabNavigation').classList.remove('hidden');
             document.getElementById('resultsContainer').classList.remove('hidden');
@@ -578,10 +593,20 @@
             }
 
             if (confianzaScore > 99) confianzaScore = 98.9;
+            
+            // Guardar para envío
+            currentSuperScore = confianzaScore;
+            currentSuperVerdict = veredicto;
 
             const resultDiv = document.getElementById('superAnalizadorResult');
             resultDiv.innerHTML = `
-                <div class="p-5 rounded-xl border-2 ${colorClase} shadow-inner">
+                <div class="p-5 rounded-xl border-2 ${colorClase} shadow-inner relative">
+                    <button onclick="enviarPronosticoSupabase('SUPER')" class="absolute top-4 right-4 bg-slate-900 text-white p-2 rounded-lg shadow-lg hover:scale-105 active:scale-95 transition flex items-center gap-2 px-3 py-1.5 text-[10px] font-bold">
+                        <span>ENVIAR ANALIZADOR</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-black text-sm uppercase tracking-tighter italic">Analista BetAGS Pro</h3>
                         <div class="bg-white/50 px-2 py-1 rounded text-[10px] font-bold">V 2.0</div>
@@ -612,6 +637,61 @@
             resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        // --- LÓGICA DE ENVÍO A SUPABASE ---
+        async function enviarPronosticoSupabase(tipo) {
+            const liga = document.getElementById('selectLeague').value;
+            const home = document.getElementById('homeTeam').value;
+            const away = document.getElementById('awayTeam').value;
+
+            if (!home || !away) return;
+
+            const { data: { session } } = await _supabase.auth.getSession();
+            const uuid = localStorage.getItem('betags_user_uuid');
+
+            if (!session || !uuid) {
+                alert("Debes iniciar sesión con tu UUID para guardar pronósticos");
+                openLogin();
+                return;
+            }
+
+            let partidoLabel = "";
+            let scoreVal = 0;
+
+            if (tipo === 'SUPER') {
+                partidoLabel = `${home} vs ${away} (SUPER ANALIZADOR 1X2 - ${currentSuperVerdict})`;
+                scoreVal = parseFloat(currentSuperScore.toFixed(2));
+            } else {
+                // Para 1X2 FT enviamos el que tenga mayor prob o el específico clickeado
+                // En este caso, enviamos el resumen de probabilidades FT
+                partidoLabel = `${home} vs ${away} (1X2 FT: L:${currentFTProbs.win.toFixed(1)}% E:${currentFTProbs.draw.toFixed(1)}% V:${currentFTProbs.loss.toFixed(1)}%)`;
+                scoreVal = parseFloat(Math.max(currentFTProbs.win, currentFTProbs.loss).toFixed(2));
+            }
+
+            const { error } = await _supabase
+                .from('pronosticos')
+                .insert([{
+                    user_id: session.user.id,
+                    liga: liga,
+                    partido: partidoLabel,
+                    score: scoreVal,
+                    estado: 'pendiente'
+                }]);
+
+            if (error) {
+                alert("Error al guardar: " + error.message);
+            } else {
+                showFloatingSuccess();
+            }
+        }
+
+        function showFloatingSuccess() {
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-5 right-5 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-2xl font-bold success-msg z-50";
+            toast.innerText = "✅ ¡Análisis enviado al Tracker!";
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
         function displayResults(prefix, res) {
             const c1x2 = document.getElementById(`${prefix}1x2`);
             const cDC = document.getElementById(`${prefix}DC`);
@@ -628,10 +708,23 @@
             const homeClass = res.probAnotarLocal >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
             const awayClass = res.probAnotarAway >= 60 ? "bg-emerald-100 border-emerald-200" : "bg-gray-50";
 
+            // Botón de envío integrado en la tabla 1X2 FT
+            const sendBtnHTML = prefix === 'ft' ? `
+                <div class="mt-3 pt-2 border-t border-gray-100">
+                    <button onclick="enviarPronosticoSupabase('FT')" class="w-full bg-blue-50 text-blue-600 py-1.5 rounded-md text-[10px] font-bold hover:bg-blue-100 transition flex items-center justify-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                        ENVIAR TABLA 1X2 A TRACKER
+                    </button>
+                </div>
+            ` : '';
+
             c1x2.innerHTML = `
                 <div class="flex justify-between text-sm p-2 ${homeClass} border rounded transition-colors"><span>Local</span><span class="font-bold text-blue-600">${res.win.toFixed(1)}%</span></div>
                 <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>Empate</span><span class="font-bold text-gray-500">${res.draw.toFixed(1)}%</span></div>
-                <div class="flex justify-between text-sm p-2 ${awayClass} border rounded transition-colors"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>`;
+                <div class="flex justify-between text-sm p-2 ${awayClass} border rounded transition-colors"><span>Visita</span><span class="font-bold text-red-600">${res.loss.toFixed(1)}%</span></div>
+                ${sendBtnHTML}`;
             
             cDC.innerHTML = `
                 <div class="flex justify-between text-sm p-2 bg-gray-50 rounded"><span>1X</span><span class="font-bold">${(res.win + res.draw).toFixed(1)}%</span></div>
