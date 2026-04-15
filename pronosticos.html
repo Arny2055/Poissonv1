@@ -39,7 +39,20 @@
         // ===== ODDS API =====
         const ODDS_API_KEY = '9b56bb17d3d31c5bd08a3c3f7a78383191556d3042b3318b05ac40fa576f57fc';
 
-        // Función para limpiar texto (quitar acentos y caracteres especiales)
+        // Diccionario para mapear tus ligas a los keys de Odds API
+        const LIGA_MAP = {
+            'mexico': 'soccer_mexico_mx',
+            'spain': 'soccer_spain_la_liga',
+            'england': 'soccer_epl',
+            'germany': 'soccer_germany_bundesliga',
+            'italy': 'soccer_italy_serie_a',
+            'france': 'soccer_france_ligue_1',
+            'champions': 'soccer_uefa_champions_league',
+            'netherlands': 'soccer_netherlands_eredivisie',
+            'portugal': 'soccer_portugal_primeira_liga',
+            'brazil': 'soccer_brazil_campeonato'
+        };
+
         function limpiarTexto(texto) {
             return texto.toLowerCase()
                 .normalize("NFD")
@@ -47,19 +60,32 @@
                 .replace(/[^a-z0-9 ]/g, "");
         }
 
-        async function obtenerOdds(partido) {
+        async function obtenerOdds(partido, ligaOriginal) {
             try {
-                const res = await fetch(`https://api.the-odds-api.com/v4/sports/soccer/odds/?regions=eu&markets=totals&apiKey=${ODDS_API_KEY}`);
+                // Identificar la liga para un request más preciso
+                let sportKey = 'soccer';
+                const ligaBusqueda = limpiarTexto(ligaOriginal || "");
+                
+                for (const [key, value] of Object.entries(LIGA_MAP)) {
+                    if (ligaBusqueda.includes(key)) {
+                        sportKey = value;
+                        break;
+                    }
+                }
+
+                // Si no encuentra liga específica, usa 'soccer' (general)
+                const url = `https://api.the-odds-api.com/v4/sports/${sportKey}/odds/?regions=eu&markets=totals&apiKey=${ODDS_API_KEY}`;
+                const res = await fetch(url);
                 const data = await res.json();
 
+                if (!Array.isArray(data)) return null;
+
                 const nombreLimpio = limpiarTexto(partido);
-                // Dividir en palabras y filtrar conectores comunes
                 const palabrasClave = nombreLimpio.split(" ").filter(p => p.length > 2 && p !== "vs");
 
                 const match = data.find(m => {
                     const home = limpiarTexto(m.home_team);
                     const away = limpiarTexto(m.away_team);
-                    // Buscar si alguna palabra clave del partido guardado coincide con los equipos de la API
                     return palabrasClave.some(palabra => home.includes(palabra) || away.includes(palabra));
                 });
 
@@ -135,7 +161,7 @@
                         ${p.diagnostico}
                     </div>
 
-                    <button onclick="buscarValor('${p.partido}', ${p.score}, ${p.id})"
+                    <button onclick="buscarValor('${p.partido}', ${p.score}, ${p.id}, '${p.liga}')"
                     class="mt-3 w-full bg-indigo-600 text-white text-xs font-bold py-2 rounded-lg">
                     Buscar Valor
                     </button>
@@ -147,14 +173,13 @@
                 container.appendChild(card);
             });
 
-            // AUTO SCAN (3s después)
             setTimeout(() => {
                 escanearValorAutomatico();
             }, 3000);
         }
 
-        async function buscarValor(partido, score, id) {
-            const dataOdds = await obtenerOdds(partido);
+        async function buscarValor(partido, score, id, liga) {
+            const dataOdds = await obtenerOdds(partido, liga);
             const contenedor = document.getElementById(`valor-${id}`);
 
             if (!dataOdds) {
@@ -202,7 +227,7 @@
                 .eq('user_id', user.id);
 
             for (const p of pronosticos) {
-                const dataOdds = await obtenerOdds(p.partido);
+                const dataOdds = await obtenerOdds(p.partido, p.liga);
                 if (!dataOdds) continue;
 
                 const { cuota, casa } = dataOdds;
