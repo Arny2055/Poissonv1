@@ -489,42 +489,52 @@
             const away = document.getElementById('awayTeam').value;
             const ftLambdas = getLambdas(liga, home, away, false);
             const htLambdas = getLambdas(liga, home, away, true);
+            
             if (!ftLambdas || !htLambdas) return;
+            
             const probO25 = calculateOverProb(ftLambdas, 2.5);
-            const probO05HT = calculateOverProb(htLambdas, 0.5);
             const xGTotal = ftLambdas.h + ftLambdas.a;
             
-            let successScore = (probO25 * 0.5) + (probO05HT * 0.3) + ((xGTotal / 3) * 20);
-            if (successScore > 100) successScore = 99.9;
-            
-            let diagnostico = "";
-            let puntosFuertes = [];
-            let advertencias = [];
-            let colorClase = "bg-slate-100 border-slate-300 text-slate-700";
-            let circleColor = "text-slate-500";
+            let tipoPartido = "";
+            let recomendacion = "";
+            let diagnosticoTxt = "";
+            let colorClase = "";
+            let confidence = 0;
 
-            if (probO25 >= 58) puntosFuertes.push("Poisson FT Sólido (" + probO25.toFixed(1) + "%)");
-            if (probO05HT >= 70) puntosFuertes.push("Alta probabilidad de gol en HT (" + probO05HT.toFixed(1) + "%)");
-            if (xGTotal > 2.6) puntosFuertes.push("xG proyectado alto (" + xGTotal.toFixed(2) + ")");
-
-            if (probO25 >= 60 && probO05HT > 68) {
-                diagnostico = "✅ ESCENARIO ELITE: Alta probabilidad detectada.";
+            // LÓGICA DE CLASIFICACIÓN
+            if (xGTotal >= 2.6 && probO25 >= 58) {
+                tipoPartido = "TIPO A (ABIERTO)";
+                recomendacion = "Over 2.5 fuerte";
+                diagnosticoTxt = `Volumen ofensivo alto detectado. El xG de ${xGTotal.toFixed(2)} y la probabilidad de Poisson del ${probO25.toFixed(1)}% sugieren un partido con muchas llegadas.`;
                 colorClase = "bg-emerald-100 border-emerald-500 text-emerald-800";
-                circleColor = "text-emerald-600";
-            } else if (probO25 >= 55) {
-                diagnostico = "⚠️ VALOR MODERADO: Interesante para buscar en Live.";
+                confidence = Math.min(probO25 + 10, 99);
+            } 
+            else if (xGTotal >= 2.3 && (ftLambdas.h >= 1.5 || ftLambdas.a >= 1.5)) {
+                tipoPartido = "TIPO B (DESBALANCEADO)";
+                recomendacion = "Over 2.5 moderado / Live";
+                diagnosticoTxt = `Desbalance detectado. Uno de los equipos tiene un xG individual >= 1.50. El valor viene de la superioridad de un bando sobre la defensa rival.`;
                 colorClase = "bg-amber-100 border-amber-500 text-amber-800";
-                circleColor = "text-amber-600";
-            } else {
-                diagnostico = "🛑 RIESGO ALTO: Los datos no apoyan el Over 2.5.";
+                confidence = Math.min(probO25 + 5, 85);
+            } 
+            else if (xGTotal < 2.3 && probO25 < 55) {
+                tipoPartido = "TIPO C (CERRADO)";
+                recomendacion = "No apostar";
+                diagnosticoTxt = `Bajo volumen ofensivo proyectado. Tanto el xG total (${xGTotal.toFixed(2)}) como la probabilidad (${probO25.toFixed(1)}%) son insuficientes para buscar el mercado Over.`;
                 colorClase = "bg-rose-100 border-rose-500 text-rose-800";
-                circleColor = "text-rose-600";
+                confidence = probO25;
+            } 
+            else {
+                tipoPartido = "ESTÁNDAR / NEUTRAL";
+                recomendacion = "Evaluar en Live";
+                diagnosticoTxt = "El partido no encaja en categorías extremas. Analizar comportamiento en los primeros 15 minutos.";
+                colorClase = "bg-slate-100 border-slate-500 text-slate-800";
+                confidence = probO25;
             }
 
             currentAnalysis = {
                 liga, 
-                match: `${home} vs ${away} (Analizador Over 2.5)`, 
-                score: successScore.toFixed(1) 
+                match: `${home} vs ${away} (${tipoPartido})`, 
+                score: confidence.toFixed(1) 
             };
 
             const analyzerDiv = document.getElementById('advancedAnalyzerResult');
@@ -532,12 +542,13 @@
                 <div class="p-5 rounded-xl border-2 ${colorClase} shadow-md relative overflow-hidden">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <h4 class="font-black uppercase text-xs mb-1">🔍 Diagnóstico Avanzado</h4>
-                            <p class="text-lg font-bold leading-tight">${diagnostico}</p>
+                            <h4 class="font-black uppercase text-xs mb-1">🔍 Diagnóstico: ${tipoPartido}</h4>
+                            <p class="text-lg font-bold leading-tight">Recomendación: ${recomendacion}</p>
+                            <p class="text-xs mt-2 opacity-90 font-medium">${diagnosticoTxt}</p>
                         </div>
                         <div class="text-right">
-                            <span class="block text-[10px] font-black uppercase text-slate-500">Confianza</span>
-                            <span class="text-3xl font-black ${circleColor}">${successScore.toFixed(1)}%</span>
+                            <span class="block text-[10px] font-black uppercase opacity-70">Confianza</span>
+                            <span class="text-3xl font-black">${confidence.toFixed(1)}%</span>
                         </div>
                     </div>
                     <button onclick="enviarPronostico()" class="w-full bg-white text-slate-800 border-2 border-slate-300 py-2 rounded font-black uppercase text-xs hover:bg-slate-50 transition">
