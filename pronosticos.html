@@ -146,7 +146,7 @@
             if (!cuotaBookie || cuotaBookie <= 0) {
                 celdaValor.innerText = "---";
                 celdaValor.className = "font-black text-slate-300";
-                return;
+                return null;
             }
 
             const ev = ((prob / 100) * cuotaBookie) - 1;
@@ -164,13 +164,13 @@
 
         async function guardarCuota(id, valor, prob) {
             const cuota = parseFloat(valor) || 0;
-            const ev = (((prob / 100) * cuota) - 1) * 100;
+            const evCalc = cuota > 0 ? (((prob / 100) * cuota) - 1) * 100 : 0;
             
             const { error } = await _supabase
                 .from('pronosticos')
                 .update({ 
                     cuota_bookie: cuota,
-                    valor_ev: parseFloat(ev.toFixed(2))
+                    valor_ev: parseFloat(evCalc.toFixed(2))
                 })
                 .eq('id', id);
 
