@@ -3,221 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner BetAGS - Detección de Oportunidades</title>
+    <title>Scanner Pro - BetAGS</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body {
-            background-color: #0f172a;
-            color: #f8fafc;
-        }
-        .glass-card {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .input-area:focus {
-            border-color: #38bdf8;
-            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
-        }
-        textarea::-webkit-scrollbar { width: 8px; }
-        textarea::-webkit-scrollbar-track { background: #1e293b; }
-        textarea::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
+        .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .neon-border:focus { border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
+<body class="min-h-screen p-4">
 
-    <header class="max-w-6xl mx-auto mb-10 text-center">
-        <h1 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-2">
-            Scanner de Partidos - BetAGS
+    <header class="max-w-6xl mx-auto mb-8 text-center">
+        <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
+            BETAGS ADVANCED SCANNER
         </h1>
-        <p class="text-slate-400 text-lg mb-6">Analizador Inteligente de Texto RAW (SoccerStats / FootyStats)</p>
-        
-        <nav class="flex flex-wrap justify-center gap-3">
-            <a href="data.html" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700 text-sm">
-                <i class="fas fa-database mr-2"></i>Data
-            </a>
-            <a href="goles.html" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700 text-sm">
-                <i class="fas fa-chart-line mr-2"></i>Poisson O/U
-            </a>
-            <a href="btts.html" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition border border-slate-700 text-sm">
-                <i class="fas fa-exchange-alt mr-2"></i>Modelo BTTS
-            </a>
-        </nav>
+        <p class="text-slate-400 mt-2">Parser Inteligente para Datos No Estructurados</p>
     </header>
 
-    <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        <section class="lg:col-span-5 space-y-6">
-            <div class="glass-card p-6 rounded-2xl shadow-xl">
-                <label class="block text-sm font-semibold text-blue-400 uppercase tracking-wider mb-3">
-                    <i class="fas fa-paste mr-2"></i>Pegar Datos RAW (Sin Limpiar)
-                </label>
+        <section class="lg:col-span-5 space-y-4">
+            <div class="glass-card p-5 rounded-3xl shadow-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <label class="text-xs font-bold text-cyan-400 uppercase tracking-widest">Entrada de Datos RAW</label>
+                    <button onclick="document.getElementById('scannerInput').value=''" class="text-slate-500 hover:text-rose-400 text-xs transition">Limpiar</button>
+                </div>
                 <textarea 
                     id="scannerInput" 
-                    class="w-full h-96 bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-xs font-mono text-emerald-100 focus:outline-none input-area transition-all"
-                    placeholder="Pega aquí el contenido copiado de la web..."></textarea>
+                    class="w-full h-[500px] bg-slate-900/80 border border-slate-700 rounded-2xl p-4 text-[11px] font-mono text-cyan-100 focus:outline-none neon-border transition-all"
+                    placeholder="Pega aquí el contenido directamente de la web (no importa el desorden)..."></textarea>
                 
                 <button 
                     onclick="ejecutarScanner()" 
-                    class="w-full mt-6 py-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-xl shadow-lg transform active:scale-95 transition-all">
-                    <i class="fas fa-bolt mr-2"></i>ESCANEAR Y DETECTAR
+                    class="w-full mt-4 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black rounded-2xl shadow-lg transform active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fas fa-bolt"></i> PROCESAR Y ANALIZAR
                 </button>
             </div>
         </section>
 
         <section class="lg:col-span-7">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold text-slate-200">Resultados del Análisis</h2>
-                <span id="matchCount" class="bg-blue-900/40 text-blue-400 px-3 py-1 rounded-full text-xs font-bold border border-blue-800">0 Partidos</span>
+            <div class="flex items-center justify-between mb-4 px-2">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <i class="fas fa-microscope text-cyan-400"></i> Partidos Identificados
+                </h2>
+                <span id="matchCount" class="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full text-xs font-black border border-cyan-500/30">0</span>
             </div>
             
-            <div id="scannerResults" class="grid grid-cols-1 gap-4">
-                <div class="flex flex-col items-center justify-center h-64 text-slate-600 border-2 border-dashed border-slate-800 rounded-2xl">
-                    <i class="fas fa-search text-4xl mb-3"></i>
-                    <p>Esperando datos para analizar...</p>
+            <div id="scannerResults" class="space-y-4 h-[650px] overflow-y-auto pr-2 custom-scrollbar">
+                <div class="flex flex-col items-center justify-center h-full text-slate-600 border-2 border-dashed border-slate-800 rounded-3xl">
+                    <i class="fas fa-terminal text-4xl mb-4"></i>
+                    <p class="text-sm">Listo para parsear datos...</p>
                 </div>
             </div>
         </section>
-
     </main>
 
     <script>
         /**
-         * 1. PARSER INTELIGENTE: Extrae datos de texto sucio
+         * PARSER AVANZADO: Máquina de estados con detección de anclas
          */
         function parseScannerInput(text) {
-            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            const detectedMatches = [];
+            // 1. Tokenización y Limpieza
+            const lines = text.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0 && !/^(Country|scope|GP|PPG|TG|GF|GA|1.5|2.5|3.5)/i.test(line));
+
+            const matches = [];
             const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+            let tempStats = null;
+
+            console.log("--- INICIANDO ESCANEO ---");
 
             for (let i = 0; i < lines.length; i++) {
-                // Detectar patrón: [Equipo A] -> [Hora] -> [Equipo B]
-                if (lines[i+1] && timeRegex.test(lines[i+1]) && lines[i+2]) {
-                    let matchObj = {
-                        match: `${lines[i]} vs ${lines[i+2]}`,
-                        home: null,
-                        away: null
-                    };
+                const line = lines[i];
 
-                    // Buscar datos de "home" y "away" en las siguientes 20 líneas
-                    for (let j = i; j < Math.min(i + 20, lines.length); j++) {
-                        const lineLower = lines[j].toLowerCase();
-                        const numbers = lines[j].match(/\d+(\.\d+)?/g);
+                // DETECCIÓN DE BLOQUE DE STATS (Busca serie de porcentajes o decimales)
+                const numbers = line.match(/\d+(\.\d+)?%?/g);
+                if (numbers && numbers.length >= 4) {
+                    tempStats = extractStatsFromNumbers(numbers);
+                }
 
-                        if (numbers && numbers.length >= 4) {
-                            const data = {
-                                over25: parseFloat(numbers[1]) || 0,
-                                GA: parseFloat(numbers[3]) || 0,
-                                GF: parseFloat(numbers[4]) || 0,
-                                TG: parseFloat(numbers[5]) || 0
-                            };
+                // DETECCIÓN DE ANCLA: HORA (HH:MM)
+                // Usualmente el formato es: [Local] [Hora] [Visitante]
+                if (timeRegex.test(line)) {
+                    let homeName = lines[i-1];
+                    let awayName = lines[i+1];
+                    
+                    if (homeName && awayName) {
+                        let matchData = {
+                            match: `${homeName} vs ${awayName}`,
+                            home: null,
+                            away: null,
+                            isValid: false
+                        };
 
-                            if (lineLower.includes('home')) matchObj.home = data;
-                            if (lineLower.includes('away')) matchObj.away = data;
+                        // Lógica de proximidad para asignar Stats
+                        // Si 'home' aparece cerca del nombre del equipo, asignamos el tempStats previo
+                        if (lines[i-2] && lines[i-2].toLowerCase().includes('home')) {
+                            matchData.home = tempStats;
+                        } else {
+                            // Si no hay palabra clave, buscamos el bloque más cercano anterior
+                            matchData.home = tempStats;
                         }
-                    }
 
-                    if (matchObj.home && matchObj.away) {
-                        detectedMatches.push(matchObj);
-                        console.log("Partido detectado:", matchObj);
-                        i += 2; // Saltar nombres y hora
+                        // Buscar el bloque AWAY (suele estar después del nombre del visitante)
+                        for (let j = i; j < Math.min(i + 15, lines.length); j++) {
+                            const nextNumbers = lines[j].match(/\d+(\.\d+)?%?/g);
+                            if (nextNumbers && nextNumbers.length >= 5 && lines[j] !== line) {
+                                matchData.away = extractStatsFromNumbers(nextNumbers);
+                                break;
+                            }
+                        }
+
+                        // Validación Final del Objeto
+                        if (matchData.home && matchData.away) {
+                            matchData.isValid = true;
+                            matches.push(matchData);
+                            console.log("✅ Partido Detectado:", matchData.match);
+                        }
                     }
                 }
             }
-            return detectedMatches;
+            return matches;
+        }
+
+        function extractStatsFromNumbers(numbers) {
+            // Limpiar % y convertir a float
+            const n = numbers.map(num => parseFloat(num.toString().replace('%', '')));
+            
+            // Mapeo inteligente basado en SoccerStats:
+            // [0]=1.5%, [1]=2.5%, [2]=3.5%, [3]=GA, [4]=GF, [5]=TG, [6]=PPG
+            return {
+                over25: n[1] || 0,
+                GA: n[3] || 0,
+                GF: n[4] || 0,
+                TG: n[5] || 0,
+                ppg: n[6] || 0
+            };
         }
 
         /**
-         * 2. SCORING (Reglas solicitadas)
+         * SCORING ENGINE
          */
         function evaluarPartidoStats(data) {
             let score = 0;
             const avgTG = (data.home.TG + data.away.TG) / 2;
             const avgOver25 = (data.home.over25 + data.away.over25) / 2;
 
+            // Reglas TG
             if (avgTG > 3) score += 3;
             else if (avgTG > 2.7) score += 2;
             else if (avgTG > 2.5) score += 1;
 
+            // Reglas Over 2.5
             if (avgOver25 > 65) score += 2;
             else if (avgOver25 > 55) score += 1;
 
+            // Ataque
             if (data.home.GF > 1.5) score += 1;
             if (data.away.GF > 1.2) score += 1;
+
+            // Defensa
             if (data.home.GA > 1.2) score += 1;
             if (data.away.GA > 1.2) score += 1;
 
             return score;
         }
 
-        function generarSugerenciaScanner(score) {
-            if (score >= 6) return { tipo: "OVER 2.5", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/50", nivel: "ALTO" };
-            if (score >= 5) return { tipo: "BTTS", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/50", nivel: "MEDIO" };
-            return { tipo: "RIESGO", color: "text-slate-400", bg: "bg-slate-500/10", border: "border-slate-500/50", nivel: "BAJO" };
+        function generarSugerencia(score) {
+            if (score >= 6) return { txt: "OVER 2.5 🔥", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/50" };
+            if (score >= 5) return { txt: "BTTS 🔄", color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/50" };
+            return { txt: "REVISAR 🔍", color: "text-slate-400", bg: "bg-slate-500/10", border: "border-slate-500/50" };
         }
 
         /**
-         * 3. FUNCIÓN PRINCIPAL
+         * CONTROLADOR PRINCIPAL
          */
         function ejecutarScanner() {
-            const rawText = document.getElementById('scannerInput').value;
-            if (!rawText.trim()) return;
+            const input = document.getElementById('scannerInput').value;
+            if (!input.trim()) return alert("Pega datos RAW primero");
 
-            const partidos = parseScannerInput(rawText);
-            const resultados = partidos.map(p => {
-                const score = evaluarPartidoStats(p);
-                const sugerencia = generarSugerenciaScanner(score);
-                return { ...p, score, ...sugerencia };
-            });
+            const partidos = parseScannerInput(input);
+            console.log("PARTIDOS DETECTADOS:", partidos);
 
-            renderResultados(resultados);
-        }
-
-        /**
-         * 4. RENDER
-         */
-        function renderResultados(lista) {
             const container = document.getElementById('scannerResults');
             const counter = document.getElementById('matchCount');
             
-            counter.innerText = `${lista.length} Partidos`;
+            counter.innerText = partidos.length;
             container.innerHTML = '';
 
-            if (lista.length === 0) {
-                container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-64 text-slate-600 border-2 border-dashed border-slate-800 rounded-2xl text-center p-4">
-                        <i class="fas fa-exclamation-circle text-4xl mb-3 text-rose-500"></i>
-                        <p>No se detectaron bloques de partidos válidos.</p>
-                        <p class="text-xs mt-1">Pega el bloque completo incluyendo equipos y estadísticas.</p>
-                    </div>`;
-                return;
-            }
-
-            lista.forEach(item => {
+            partidos.forEach(p => {
+                const score = evaluarPartidoStats(p);
+                const sugerencia = generarSugerencia(score);
+                
+                // Generar Estrellas
                 let estrellas = '';
-                const starCount = Math.min(Math.max(Math.floor(item.score / 1.5), 1), 5);
-                for (let i = 0; i < 5; i++) {
-                    estrellas += i < starCount ? '<i class="fas fa-star text-yellow-500 text-[10px]"></i>' : '<i class="far fa-star text-slate-700 text-[10px]"></i>';
+                for(let i=1; i<=5; i++) {
+                    const opacity = i <= (score/1.5) ? 'text-yellow-400' : 'text-slate-700';
+                    estrellas += `<i class="fas fa-star ${opacity} text-[10px]"></i>`;
                 }
 
                 container.innerHTML += `
-                    <div class="glass-card p-5 rounded-2xl border-l-4 ${item.border} flex flex-col md:flex-row items-center justify-between gap-4 transition-all hover:bg-slate-800/80">
-                        <div>
-                            <h3 class="font-bold text-white text-lg">${item.match}</h3>
-                            <div class="flex items-center gap-2 mt-1">
-                                <div class="flex gap-0.5">${estrellas}</div>
-                                <span class="text-[10px] font-bold text-slate-500 uppercase ml-2 tracking-widest">Score: ${item.score}</span>
+                    <div class="glass-card p-5 rounded-2xl border-l-4 ${sugerencia.border} hover:scale-[1.01] transition-all">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-white mb-1">${p.match}</h3>
+                                <div class="flex items-center gap-3">
+                                    <div class="flex gap-0.5">${estrellas}</div>
+                                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Score: ${score}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="flex flex-col items-center md:items-end">
+                                <span class="px-4 py-1.5 ${sugerencia.bg} ${sugerencia.color} border ${sugerencia.border} rounded-lg font-black text-xs tracking-tighter">
+                                    ${sugerencia.txt}
+                                </span>
                             </div>
                         </div>
-                        <div class="text-center md:text-right">
-                            <div class="px-5 py-2 ${item.bg} ${item.color} rounded-lg border ${item.border} font-black text-xs tracking-widest">
-                                ${item.tipo}
+
+                        <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-700/50">
+                            <div class="text-[10px] space-y-1">
+                                <p class="text-slate-500 font-bold uppercase">Home Stats</p>
+                                <p class="text-slate-300">TG: <span class="text-white">${p.home.TG}</span> | GF: <span class="text-white">${p.home.GF}</span> | O25: <span class="text-white">${p.home.over25}%</span></p>
                             </div>
-                            <span class="text-[9px] font-bold text-slate-500 uppercase mt-1 block">Nivel ${item.nivel}</span>
+                            <div class="text-[10px] space-y-1 text-right">
+                                <p class="text-slate-500 font-bold uppercase">Away Stats</p>
+                                <p class="text-slate-300">TG: <span class="text-white">${p.away.TG}</span> | GF: <span class="text-white">${p.away.GF}</span> | O25: <span class="text-white">${p.away.over25}%</span></p>
+                            </div>
                         </div>
                     </div>
-                `;
+                    `;
             });
         }
     </script>
