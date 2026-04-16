@@ -10,7 +10,9 @@
         body { background-color: #0f172a; color: #f8fafc; font-family: 'Inter', sans-serif; }
         .glass-card { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
         .neon-border:focus { border-color: #38bdf8; box-shadow: 0 0 15px rgba(56, 189, 248, 0.3); }
-        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 10px; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body class="min-h-screen p-4">
@@ -19,7 +21,7 @@
         <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-emerald-400">
             BETAGS ADVANCED SCANNER
         </h1>
-        <p class="text-slate-400 mt-2">Parser Inteligente para Datos No Estructurados</p>
+        <p class="text-slate-400 mt-2">Parser Inteligente con Filtros PRO (Over 2.5 / BTTS)</p>
     </header>
 
     <main class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -33,12 +35,12 @@
                 <textarea 
                     id="scannerInput" 
                     class="w-full h-[500px] bg-slate-900/80 border border-slate-700 rounded-2xl p-4 text-[11px] font-mono text-cyan-100 focus:outline-none neon-border transition-all"
-                    placeholder="Pega aquí el contenido directamente de la web (no importa el desorden)..."></textarea>
+                    placeholder="Pega aquí el contenido directamente de la web..."></textarea>
                 
                 <button 
                     onclick="ejecutarScanner()" 
                     class="w-full mt-4 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-black rounded-2xl shadow-lg transform active:scale-95 transition-all flex items-center justify-center gap-2">
-                    <i class="fas fa-bolt"></i> PROCESAR Y ANALIZAR
+                    <i class="fas fa-bolt"></i> PROCESAR Y FILTRAR
                 </button>
             </div>
         </section>
@@ -46,7 +48,7 @@
         <section class="lg:col-span-7">
             <div class="flex items-center justify-between mb-4 px-2">
                 <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                    <i class="fas fa-microscope text-cyan-400"></i> Partidos Identificados
+                    <i class="fas fa-microscope text-cyan-400"></i> Oportunidades Filtradas
                 </h2>
                 <span id="matchCount" class="bg-cyan-500/20 text-cyan-400 px-3 py-1 rounded-full text-xs font-black border border-cyan-500/30">0</span>
             </div>
@@ -54,89 +56,19 @@
             <div id="scannerResults" class="space-y-4 h-[650px] overflow-y-auto pr-2 custom-scrollbar">
                 <div class="flex flex-col items-center justify-center h-full text-slate-600 border-2 border-dashed border-slate-800 rounded-3xl">
                     <i class="fas fa-terminal text-4xl mb-4"></i>
-                    <p class="text-sm">Listo para parsear datos...</p>
+                    <p class="text-sm">Esperando datos para aplicar filtros PRO...</p>
                 </div>
             </div>
         </section>
     </main>
 
     <script>
-        /**
-         * PARSER AVANZADO: Máquina de estados con detección de anclas
-         */
-        function parseScannerInput(text) {
-            // 1. Tokenización y Limpieza
-            const lines = text.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0 && !/^(Country|scope|GP|PPG|TG|GF|GA|1.5|2.5|3.5)/i.test(line));
-
-            const matches = [];
-            const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-            let tempStats = null;
-
-            console.log("--- INICIANDO ESCANEO ---");
-
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-
-                // DETECCIÓN DE BLOQUE DE STATS (Busca serie de porcentajes o decimales)
-                const numbers = line.match(/\d+(\.\d+)?%?/g);
-                if (numbers && numbers.length >= 4) {
-                    tempStats = extractStatsFromNumbers(numbers);
-                }
-
-                // DETECCIÓN DE ANCLA: HORA (HH:MM)
-                // Usualmente el formato es: [Local] [Hora] [Visitante]
-                if (timeRegex.test(line)) {
-                    let homeName = lines[i-1];
-                    let awayName = lines[i+1];
-                    
-                    if (homeName && awayName) {
-                        let matchData = {
-                            match: `${homeName} vs ${awayName}`,
-                            home: null,
-                            away: null,
-                            isValid: false
-                        };
-
-                        // Lógica de proximidad para asignar Stats
-                        // Si 'home' aparece cerca del nombre del equipo, asignamos el tempStats previo
-                        if (lines[i-2] && lines[i-2].toLowerCase().includes('home')) {
-                            matchData.home = tempStats;
-                        } else {
-                            // Si no hay palabra clave, buscamos el bloque más cercano anterior
-                            matchData.home = tempStats;
-                        }
-
-                        // Buscar el bloque AWAY (suele estar después del nombre del visitante)
-                        for (let j = i; j < Math.min(i + 15, lines.length); j++) {
-                            const nextNumbers = lines[j].match(/\d+(\.\d+)?%?/g);
-                            if (nextNumbers && nextNumbers.length >= 5 && lines[j] !== line) {
-                                matchData.away = extractStatsFromNumbers(nextNumbers);
-                                break;
-                            }
-                        }
-
-                        // Validación Final del Objeto
-                        if (matchData.home && matchData.away) {
-                            matchData.isValid = true;
-                            matches.push(matchData);
-                            console.log("✅ Partido Detectado:", matchData.match);
-                        }
-                    }
-                }
-            }
-            return matches;
-        }
-
         function extractStatsFromNumbers(numbers) {
-            // Limpiar % y convertir a float
             const n = numbers.map(num => parseFloat(num.toString().replace('%', '')));
-            
-            // Mapeo inteligente basado en SoccerStats:
-            // [0]=1.5%, [1]=2.5%, [2]=3.5%, [3]=GA, [4]=GF, [5]=TG, [6]=PPG
             return {
+                over15: n[0] || 0,
                 over25: n[1] || 0,
+                over35: n[2] || 0,
                 GA: n[3] || 0,
                 GF: n[4] || 0,
                 TG: n[5] || 0,
@@ -144,98 +76,115 @@
             };
         }
 
+        function parseScannerInput(text) {
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0 && !/^(Country|scope|GP|PPG|TG|GF|GA|1.5|2.5|3.5)/i.test(line));
+            const matches = [];
+            const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+            let tempStats = null;
+
+            for (let i = 0; i < lines.length; i++) {
+                const numbers = lines[i].match(/\d+(\.\d+)?%?/g);
+                if (numbers && numbers.length >= 4) {
+                    tempStats = extractStatsFromNumbers(numbers);
+                }
+
+                if (timeRegex.test(lines[i])) {
+                    let homeName = lines[i-1];
+                    let awayName = lines[i+1];
+                    
+                    if (homeName && awayName) {
+                        let matchData = { match: `${homeName} vs ${awayName}`, home: tempStats, away: null };
+                        for (let j = i; j < Math.min(i + 15, lines.length); j++) {
+                            const nextNumbers = lines[j].match(/\d+(\.\d+)?%?/g);
+                            if (nextNumbers && nextNumbers.length >= 5 && lines[j] !== lines[i]) {
+                                matchData.away = extractStatsFromNumbers(nextNumbers);
+                                break;
+                            }
+                        }
+                        if (matchData.home && matchData.away) matches.push(matchData);
+                    }
+                }
+            }
+            return matches;
+        }
+
         /**
-         * SCORING ENGINE
+         * FILTROS PRO (Over 2.5 y BTTS)
          */
-        function evaluarPartidoStats(data) {
-            let score = 0;
+        function aplicarFiltrosPro(data) {
             const avgTG = (data.home.TG + data.away.TG) / 2;
-            const avgOver25 = (data.home.over25 + data.away.over25) / 2;
+            const diffPPG = Math.abs(data.home.ppg - data.away.ppg);
+            let picks = [];
 
-            // Reglas TG
-            if (avgTG > 3) score += 3;
-            else if (avgTG > 2.7) score += 2;
-            else if (avgTG > 2.5) score += 1;
+            // --- FILTRO PRO (Over 2.5) ---
+            const condOver = 
+                avgTG >= 2.8 &&
+                data.home.over25 >= 55 && data.away.over25 >= 55 &&
+                (data.home.GF >= 1.5 || data.away.GF >= 1.5) &&
+                (data.home.GA >= 1.2 || data.away.GA >= 1.2);
 
-            // Reglas Over 2.5
-            if (avgOver25 > 65) score += 2;
-            else if (avgOver25 > 55) score += 1;
+            const evitarOver = 
+                data.home.TG < 2.3 || data.away.TG < 2.3 ||
+                data.home.over25 < 45 || data.away.over25 < 45;
 
-            // Ataque
-            if (data.home.GF > 1.5) score += 1;
-            if (data.away.GF > 1.2) score += 1;
+            if (condOver && !evitarOver) picks.push({ type: "OVER 2.5", color: "emerald" });
 
-            // Defensa
-            if (data.home.GA > 1.2) score += 1;
-            if (data.away.GA > 1.2) score += 1;
+            // --- FILTRO PRO (BTTS) ---
+            const condBTTS = 
+                data.home.GF >= 1.2 && data.away.GF >= 1.2 &&
+                data.home.GA >= 1.0 && data.away.GA >= 1.0 &&
+                data.home.over15 >= 75 && data.away.over15 >= 75 &&
+                avgTG >= 2.6 &&
+                diffPPG <= 0.8;
 
-            return score;
+            if (condBTTS) picks.push({ type: "BTTS", color: "cyan" });
+
+            return picks;
         }
 
-        function generarSugerencia(score) {
-            if (score >= 6) return { txt: "OVER 2.5 🔥", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/50" };
-            if (score >= 5) return { txt: "BTTS 🔄", color: "text-cyan-400", bg: "bg-cyan-500/10", border: "border-cyan-500/50" };
-            return { txt: "REVISAR 🔍", color: "text-slate-400", bg: "bg-slate-500/10", border: "border-slate-500/50" };
-        }
-
-        /**
-         * CONTROLADOR PRINCIPAL
-         */
         function ejecutarScanner() {
             const input = document.getElementById('scannerInput').value;
             if (!input.trim()) return alert("Pega datos RAW primero");
 
             const partidos = parseScannerInput(input);
-            console.log("PARTIDOS DETECTADOS:", partidos);
-
             const container = document.getElementById('scannerResults');
             const counter = document.getElementById('matchCount');
             
-            counter.innerText = partidos.length;
             container.innerHTML = '';
+            let validMatches = 0;
 
             partidos.forEach(p => {
-                const score = evaluarPartidoStats(p);
-                const sugerencia = generarSugerencia(score);
+                const sugerencias = aplicarFiltrosPro(p);
                 
-                // Generar Estrellas
-                let estrellas = '';
-                for(let i=1; i<=5; i++) {
-                    const opacity = i <= (score/1.5) ? 'text-yellow-400' : 'text-slate-700';
-                    estrellas += `<i class="fas fa-star ${opacity} text-[10px]"></i>`;
-                }
-
-                container.innerHTML += `
-                    <div class="glass-card p-5 rounded-2xl border-l-4 ${sugerencia.border} hover:scale-[1.01] transition-all">
-                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                            <div>
-                                <h3 class="text-lg font-bold text-white mb-1">${p.match}</h3>
-                                <div class="flex items-center gap-3">
-                                    <div class="flex gap-0.5">${estrellas}</div>
-                                    <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Score: ${score}</span>
+                if (sugerencias.length > 0) {
+                    validMatches++;
+                    sugerencias.forEach(sug => {
+                        container.innerHTML += `
+                            <div class="glass-card p-5 rounded-2xl border-l-4 border-${sug.color}-500 hover:scale-[1.01] transition-all">
+                                <div class="flex justify-between items-center gap-4">
+                                    <div>
+                                        <h3 class="text-lg font-bold text-white mb-1">${p.match}</h3>
+                                        <div class="flex gap-4 text-[10px] text-slate-400 font-mono">
+                                            <span>H: TG ${p.home.TG} | GF ${p.home.GF} | PPG ${p.home.ppg}</span>
+                                            <span>A: TG ${p.away.TG} | GF ${p.away.GF} | PPG ${p.away.ppg}</span>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="px-4 py-2 bg-${sug.color}-500/10 text-${sug.color}-400 border border-${sug.color}-500/50 rounded-lg font-black text-xs tracking-widest">
+                                            ${sug.type} ${sug.type === 'OVER 2.5' ? '🔥' : '🔄'}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <div class="flex flex-col items-center md:items-end">
-                                <span class="px-4 py-1.5 ${sugerencia.bg} ${sugerencia.color} border ${sugerencia.border} rounded-lg font-black text-xs tracking-tighter">
-                                    ${sugerencia.txt}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-700/50">
-                            <div class="text-[10px] space-y-1">
-                                <p class="text-slate-500 font-bold uppercase">Home Stats</p>
-                                <p class="text-slate-300">TG: <span class="text-white">${p.home.TG}</span> | GF: <span class="text-white">${p.home.GF}</span> | O25: <span class="text-white">${p.home.over25}%</span></p>
-                            </div>
-                            <div class="text-[10px] space-y-1 text-right">
-                                <p class="text-slate-500 font-bold uppercase">Away Stats</p>
-                                <p class="text-slate-300">TG: <span class="text-white">${p.away.TG}</span> | GF: <span class="text-white">${p.away.GF}</span> | O25: <span class="text-white">${p.away.over25}%</span></p>
-                            </div>
-                        </div>
-                    </div>
-                    `;
+                        `;
+                    });
+                }
             });
+
+            if (validMatches === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 mt-10">No hay partidos que cumplan los filtros PRO hoy.</div>`;
+            }
+            counter.innerText = validMatches;
         }
     </script>
 </body>
