@@ -38,10 +38,14 @@
             </div>
         </header>
 
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
             <div class="stat-card border-indigo-500">
                 <span class="text-[10px] font-bold text-slate-400 uppercase block">Bank Inicial</span>
                 <input type="number" id="bankInicial" onchange="guardarBankSupabase(this.value)" class="text-xl font-black text-slate-800 w-full bg-transparent outline-none" value="1000">
+            </div>
+            <div class="stat-card border-green-700">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Bank Final</span>
+                <span id="statBankFinal" class="text-xl font-black text-slate-800">0.00</span>
             </div>
             <div class="stat-card border-emerald-500">
                 <span class="text-[10px] font-bold text-slate-400 uppercase block">Profit Total</span>
@@ -56,7 +60,7 @@
                 <span id="statWinRate" class="text-xl font-black text-slate-800">0.0%</span>
             </div>
             <div class="stat-card border-slate-800">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">Apuestas (Finalizadas)</span>
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Apuestas</span>
                 <span id="statCount" class="text-xl font-black text-slate-800">0</span>
             </div>
         </div>
@@ -188,7 +192,6 @@
             if (data) {
                 document.getElementById('bankInicial').value = data.bank_inicial;
             } else if (error && error.code === 'PGRST116') {
-                // Si no existe el registro, lo creamos con el valor por defecto
                 await _supabase.from('perfiles').insert([{ user_id: currentUserId, bank_inicial: 1000 }]);
             }
         }
@@ -210,23 +213,33 @@
 
         function calculateGlobalStats() {
             const bankInit = parseFloat(document.getElementById('bankInicial').value) || 0;
+            let bankActual = bankInit;
             let profit = 0;
             let apostadoTotal = 0;
             let ganadas = 0;
             let perdidas = 0;
 
-            localPronosticos.forEach(p => {
+            // Ordenar apuestas cronológicamente para el cálculo de interés compuesto
+            const apuestasOrdenadas = [...localPronosticos]
+                .filter(p => p.estado !== 'pendiente' && parseFloat(p.cuota_bookie) > 0)
+                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+            apuestasOrdenadas.forEach(p => {
                 const cuota = parseFloat(p.cuota_bookie);
-                if (p.estado !== 'pendiente' && cuota > 0) {
-                    const stake = 1; 
-                    apostadoTotal += stake;
-                    if (p.estado === 'ganada') {
-                        profit += (stake * cuota) - stake;
-                        ganadas++;
-                    } else if (p.estado === 'perdida') {
-                        profit -= stake;
-                        perdidas++;
-                    }
+                
+                // Stake dinámico = 1% del bank actual en el momento de la apuesta
+                const stake = bankActual * 0.01;
+                apostadoTotal += stake;
+
+                if (p.estado === 'ganada') {
+                    const ganancia = (stake * cuota) - stake;
+                    profit += ganancia;
+                    bankActual += ganancia;
+                    ganadas++;
+                } else if (p.estado === 'perdida') {
+                    profit -= stake;
+                    bankActual -= stake;
+                    perdidas++;
                 }
             });
 
@@ -234,6 +247,8 @@
             const yieldVal = apostadoTotal > 0 ? (profit / apostadoTotal) * 100 : 0;
             const winRate = totalFinalizadas > 0 ? (ganadas / totalFinalizadas) * 100 : 0;
 
+            // Actualización de UI
+            document.getElementById('statBankFinal').innerText = bankActual.toFixed(2);
             document.getElementById('statProfit').innerText = profit.toFixed(2);
             document.getElementById('statProfit').className = `text-xl font-black ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
             document.getElementById('statYield').innerText = yieldVal.toFixed(1) + "%";
