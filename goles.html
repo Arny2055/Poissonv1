@@ -66,6 +66,8 @@
             </button>
         </div>
 
+        <div id="decisionLayerResult" class="hidden mb-6"></div>
+
         <div id="advancedAnalyzerResult" class="hidden mb-6"></div>
 
         <div id="resultsWrapper" class="hidden space-y-6">
@@ -388,6 +390,48 @@
             return calculateOverProb(adjusted, line);
         }
 
+        // NUEVAS FUNCIONES DE MEJORA OVER 2.5
+        function evaluarOver25Contexto(lambdas, probOver25) {
+            let score = 0;
+            const xgTotal = lambdas.h + lambdas.a;
+            const probHome = 1 - poisson(0, lambdas.h);
+            const probAway = 1 - poisson(0, lambdas.a);
+
+            // Volumen ofensivo real
+            if (xgTotal > 2.7) score += 25;
+            else if (xgTotal > 2.4) score += 15;
+
+            // Ambos equipos generan peligro
+            if (probHome > 0.7 && probAway > 0.7) score += 25;
+
+            // Probabilidad pura
+            if (probOver25 > 60) score += 25;
+            else if (probOver25 > 55) score += 15;
+
+            // Penalización (partidos engañosos)
+            if (probHome < 0.6 || probAway < 0.6) score -= 25;
+
+            return Math.max(0, Math.min(100, score));
+        }
+
+        function clasificarOver25(score) {
+            if (score >= 75) return {
+                tipo: "🔥 ELITE OVER",
+                accion: "ENTRAR PREMATCH",
+                color: "emerald"
+            };
+            if (score >= 60) return {
+                tipo: "⚡ BUEN OVER",
+                accion: "ENTRAR / LIVE",
+                color: "amber"
+            };
+            return {
+                tipo: "❌ EVITAR OVER",
+                accion: "NO APOSTAR",
+                color: "rose"
+            };
+        }
+
         function mainCalculation() {
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
@@ -417,6 +461,36 @@
 
                 document.getElementById('probIfHomeScores').textContent = calculateOverIfGoal(ftLambdas, 'home', 2.5).toFixed(1) + '%';
                 document.getElementById('probIfAwayScores').textContent = calculateOverIfGoal(ftLambdas, 'away', 2.5).toFixed(1) + '%';
+
+                // INTEGRACIÓN CAPA AVANZADA
+                const contextoOver = evaluarOver25Contexto(ftLambdas, probOver25FT);
+                const clasificacion = clasificarOver25(contextoOver);
+                
+                const decisionDiv = document.getElementById('decisionLayerResult');
+                decisionDiv.innerHTML = `
+                    <div class="card p-6 border-t-4 border-${clasificacion.color}-500 text-center">
+                        <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Decisión Estructural Over 2.5</h4>
+                        <div class="flex flex-col md:flex-row items-center justify-around gap-4">
+                            <div>
+                                <span class="block text-4xl font-black text-slate-800">${contextoOver}%</span>
+                                <span class="text-[10px] font-bold text-slate-500 uppercase">Score de Coherencia</span>
+                            </div>
+                            <div class="px-6 py-2 rounded-full bg-${clasificacion.color}-100 text-${clasificacion.color}-700 font-black text-lg">
+                                ${clasificacion.tipo}
+                            </div>
+                            <div>
+                                <span class="block text-sm font-bold text-slate-700">${clasificacion.accion}</span>
+                                <span class="text-[10px] text-slate-400 uppercase">Sugerencia de Entrada</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                decisionDiv.classList.remove('hidden');
+                
+                // LÓGICA FINAL (CONSIDERAR APUESTA FUERTE)
+                if (contextoOver >= 70 && probOver25FT >= 58) {
+                    console.log("🔥 VALOR ESTRUCTURAL DETECTADO: OVER 2.5 FUERTE");
+                }
             }
 
             if (htLambdas) {
@@ -501,7 +575,7 @@
             let colorClase = "";
             let confidence = 0;
 
-            // LÓGICA DE CLASIFICACIÓN
+            // LÓGICA DE CLASIFICACIÓN PREVIA (Mantenida)
             if (xGTotal >= 2.6 && probO25 >= 58) {
                 tipoPartido = "TIPO A (ABIERTO)";
                 recomendacion = "Over 2.5 fuerte";
