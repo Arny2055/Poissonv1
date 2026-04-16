@@ -67,6 +67,9 @@
             </button>
         </div>
 
+        <div id="bttsAdvancedLayer" class="hidden mb-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+            </div>
+
         <div id="advancedAnalyzerResult" class="hidden mb-6"></div>
 
         <div id="resultsWrapper" class="hidden space-y-6">
@@ -257,6 +260,29 @@
             return { h: (eH.GF/eH.GP)/(lAvgH) * (eA.GA/eA.GP)/(lAvgH) * lAvgH, a: (eA.GF/eA.GP)/(lAvgA) * (eH.GA/eH.GP)/(lAvgA) * lAvgA };
         }
 
+        // --- MEJORA: NUEVAS FUNCIONES LÓGICAS ---
+        function evaluarBTTSContexto(lambdas, probBTTS) {
+            let score = 0;
+            const probHome = 1 - poisson(0, lambdas.h);
+            const probAway = 1 - poisson(0, lambdas.a);
+            const xgTotal = lambdas.h + lambdas.a;
+
+            if (lambdas.h >= 1.2 && lambdas.a >= 1.1) score += 30;
+            if (probHome > 0.7 && probAway > 0.7) score += 25;
+            if (probBTTS > 57) score += 25;
+            else if (probBTTS > 52) score += 15;
+            if (xgTotal > 2.5) score += 10;
+            if (lambdas.h < 0.9 || lambdas.a < 0.9) score -= 30;
+
+            return Math.max(0, Math.min(100, score));
+        }
+
+        function clasificarBTTS(score) {
+            if (score >= 75) return { tipo: "🔥 BTTS PREMIUM", accion: "ENTRAR DIRECTO", color: "emerald" };
+            if (score >= 60) return { tipo: "⚡ BTTS DECENTE", accion: "LIVE / VALOR", color: "amber" };
+            return { tipo: "❌ NO BTTS", accion: "EVITAR", color: "rose" };
+        }
+
         function mainCalculation() {
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
@@ -272,6 +298,38 @@
             calculateConditionalBTTS(ftL, 'condHome', 'condAway');
             if (htL) calculateConditionalBTTS(htL, 'condHomeHT', 'condAwayHT');
             calculateFirstGoal(ftL);
+
+            // INTEGRACIÓN CAPA AVANZADA
+            const probBTTS_Val = ((1 - poisson(0, ftL.h)) * (1 - poisson(0, ftL.a))) * 100;
+            const contextoBTTS = evaluarBTTSContexto(ftL, probBTTS_Val);
+            const clasificacion = clasificarBTTS(contextoBTTS);
+            renderCapaAvanzada(contextoBTTS, clasificacion, ftL, probBTTS_Val);
+        }
+
+        function renderCapaAvanzada(score, clas, lambdas, prob) {
+            const container = document.getElementById('bttsAdvancedLayer');
+            container.classList.remove('hidden');
+            
+            const cumpleReglaFinal = (score >= 70 && prob >= 55 && lambdas.h >= 1.1 && lambdas.a >= 1.0);
+
+            container.innerHTML = `
+                <div class="card p-4 border-l-4 border-${clas.color}-500 bg-${clas.color}-50">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-black text-${clas.color}-700 uppercase">Análisis Simetría</span>
+                        <span class="text-2xl font-black text-${clas.color}-600">${score}%</span>
+                    </div>
+                    <div class="text-lg font-bold text-slate-800">${clas.tipo}</div>
+                    <div class="text-xs font-bold text-${clas.color}-600 uppercase tracking-tighter">${clas.accion}</div>
+                </div>
+                <div class="card p-4 flex flex-col justify-center bg-slate-800 text-white">
+                    <div class="text-[10px] font-bold text-slate-400 uppercase mb-1">Validación Regla Final</div>
+                    <div class="flex items-center gap-2">
+                        <div class="h-3 w-3 rounded-full ${cumpleReglaFinal ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-rose-500'}"></div>
+                        <span class="text-sm font-black">${cumpleReglaFinal ? '✅ APUESTA VALIDADA' : '🚫 CRITERIOS NO CUMPLIDOS'}</span>
+                    </div>
+                    <p class="text-[9px] text-slate-400 mt-2 leading-tight">Score > 70 | Prob > 55% | xG H>1.1 | xG A>1.0</p>
+                </div>
+            `;
         }
 
         function renderBTTS(prefix, lambdas) {
@@ -288,7 +346,6 @@
             const probBothScore = (1 - pHome0) * (1 - pAway0);
             const percentage = probBothScore * 100;
 
-            // Guardamos la prob para el envío
             if(prefix === 'ft') currentCalculatedProb = percentage;
 
             yesEl.innerText = `${percentage.toFixed(2)}%`;
@@ -359,7 +416,6 @@
             `;
         }
 
-        // --- MEJORA: SÚPER ANALIZADOR AVANZADO BTTS (Lógica Clasificación A, B, C) ---
         function analizarEstrategiaBTTS() {
             mainCalculation();
 
@@ -376,7 +432,6 @@
             const probBothHT = ((1 - poisson(0, htL.h)) * (1 - poisson(0, htL.a))) * 100;
             const xGTotal = ftL.h + ftL.a;
 
-            // Score de éxito BTTS: 50% Poisson FT + 30% Poisson HT + 20% Volumen xG
             let successScore = (probBothFT * 0.5) + (probBothHT * 0.3) + ((xGTotal / 2.5) * 20);
             if (successScore > 99) successScore = 99.2;
             
@@ -388,7 +443,6 @@
             let colorClase = "";
             let circleColor = "";
 
-            // --- Lógica de Clasificación Mejorada ---
             if (ftL.h >= 1.3 && ftL.a >= 1.1 && probBothFT >= 55) {
                 tipoPartido = "TIPO A (IDEAL BTTS)";
                 recomendacion = "BTTS SÍ";
@@ -454,7 +508,6 @@
             analyzerDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
-        // --- LÓGICA DE ENVÍO A SUPABASE ---
         async function enviarPronosticoSupabase(tipo) {
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
