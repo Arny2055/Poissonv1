@@ -20,7 +20,6 @@
             border-color: #38bdf8;
             box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
         }
-        /* Custom scrollbar para el textarea */
         textarea::-webkit-scrollbar { width: 8px; }
         textarea::-webkit-scrollbar-track { background: #1e293b; }
         textarea::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -57,7 +56,7 @@
                 <textarea 
                     id="scannerInput" 
                     class="w-full h-96 bg-slate-900/50 border border-slate-700 rounded-xl p-4 text-xs font-mono text-emerald-100 focus:outline-none input-area transition-all"
-                    placeholder="Pega aquí el contenido copiado de la web...&#10;&#10;Ejemplo:&#10;Peterborough&#10;13:45&#10;Port Vale&#10;85% 60% 40% 1.2 2.4 3.6 1.8 home&#10;..."></textarea>
+                    placeholder="Pega aquí el contenido copiado de la web..."></textarea>
                 
                 <button 
                     onclick="ejecutarScanner()" 
@@ -65,22 +64,18 @@
                     <i class="fas fa-bolt mr-2"></i>ESCANEAR Y DETECTAR
                 </button>
             </div>
-
-            <div class="p-4 rounded-xl border border-dashed border-slate-700 text-slate-500 text-[11px] leading-relaxed">
-                <strong>Parser Tolerante:</strong> Detecta automáticamente bloques con formato [Equipo - Hora - Equipo]. No importa si hay anuncios o texto basura en medio.
-            </div>
         </section>
 
         <section class="lg:col-span-7">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-xl font-bold text-slate-200">Oportunidades Detectadas</h2>
+                <h2 class="text-xl font-bold text-slate-200">Resultados del Análisis</h2>
                 <span id="matchCount" class="bg-blue-900/40 text-blue-400 px-3 py-1 rounded-full text-xs font-bold border border-blue-800">0 Partidos</span>
             </div>
             
             <div id="scannerResults" class="grid grid-cols-1 gap-4">
                 <div class="flex flex-col items-center justify-center h-64 text-slate-600 border-2 border-dashed border-slate-800 rounded-2xl">
                     <i class="fas fa-search text-4xl mb-3"></i>
-                    <p>Pega el texto RAW para iniciar el escaneo automático.</p>
+                    <p>Esperando datos para analizar...</p>
                 </div>
             </div>
         </section>
@@ -89,62 +84,44 @@
 
     <script>
         /**
-         * 1. PARSER INTELIGENTE: Detecta partidos en texto no estructurado
+         * 1. PARSER INTELIGENTE: Extrae datos de texto sucio
          */
         function parseScannerInput(text) {
-            console.log("--- Iniciando Parsing Deportivo ---");
-            
-            // Limpieza inicial de caracteres basura pero preservando estructura de líneas
-            const lines = text.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0);
-
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             const detectedMatches = [];
-            
-            // Patrón para detectar horarios (HH:MM)
             const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
 
             for (let i = 0; i < lines.length; i++) {
-                // Buscamos el patrón: [Línea] -> [Hora] -> [Línea]
+                // Detectar patrón: [Equipo A] -> [Hora] -> [Equipo B]
                 if (lines[i+1] && timeRegex.test(lines[i+1]) && lines[i+2]) {
-                    
-                    let homeName = lines[i];
-                    let awayName = lines[i+2];
-                    let statsBlock = { home: null, away: null };
+                    let matchObj = {
+                        match: `${lines[i]} vs ${lines[i+2]}`,
+                        home: null,
+                        away: null
+                    };
 
-                    // Buscar bloques de stats adelante del partido (hasta 15 líneas después)
-                    let searchLimit = Math.min(i + 15, lines.length);
-                    for (let j = i; j < searchLimit; j++) {
-                        const currentLine = lines[j].toLowerCase();
-                        
-                        // Extraer números de la línea
+                    // Buscar datos de "home" y "away" en las siguientes 20 líneas
+                    for (let j = i; j < Math.min(i + 20, lines.length); j++) {
+                        const lineLower = lines[j].toLowerCase();
                         const numbers = lines[j].match(/\d+(\.\d+)?/g);
-                        
+
                         if (numbers && numbers.length >= 4) {
                             const data = {
-                                over15: parseFloat(numbers[0]) || 0,
                                 over25: parseFloat(numbers[1]) || 0,
-                                over35: parseFloat(numbers[2]) || 0,
                                 GA: parseFloat(numbers[3]) || 0,
                                 GF: parseFloat(numbers[4]) || 0,
-                                TG: parseFloat(numbers[5]) || 0,
-                                PPG: parseFloat(numbers[6]) || 0
+                                TG: parseFloat(numbers[5]) || 0
                             };
 
-                            if (currentLine.includes('home')) statsBlock.home = data;
-                            if (currentLine.includes('away')) statsBlock.away = data;
+                            if (lineLower.includes('home')) matchObj.home = data;
+                            if (lineLower.includes('away')) matchObj.away = data;
                         }
                     }
 
-                    // Validación: Solo agregar si tenemos los datos mínimos (TG, GF, GA)
-                    if (statsBlock.home && statsBlock.away && statsBlock.home.TG > 0) {
-                        detectedMatches.push({
-                            match: `${homeName} vs ${awayName}`,
-                            home: statsBlock.home,
-                            away: statsBlock.away
-                        });
-                        console.log(`✅ Detectado: ${homeName} vs ${awayName}`, statsBlock);
-                        i += 2; // Saltar el bloque del partido ya procesado
+                    if (matchObj.home && matchObj.away) {
+                        detectedMatches.push(matchObj);
+                        console.log("Partido detectado:", matchObj);
+                        i += 2; // Saltar nombres y hora
                     }
                 }
             }
@@ -152,36 +129,28 @@
         }
 
         /**
-         * 2. SCORING: Lógica matemática solicitada
+         * 2. SCORING (Reglas solicitadas)
          */
         function evaluarPartidoStats(data) {
             let score = 0;
             const avgTG = (data.home.TG + data.away.TG) / 2;
             const avgOver25 = (data.home.over25 + data.away.over25) / 2;
 
-            // TG Promedio
             if (avgTG > 3) score += 3;
             else if (avgTG > 2.7) score += 2;
             else if (avgTG > 2.5) score += 1;
 
-            // Over 2.5 Promedio
             if (avgOver25 > 65) score += 2;
             else if (avgOver25 > 55) score += 1;
 
-            // Ataque
             if (data.home.GF > 1.5) score += 1;
             if (data.away.GF > 1.2) score += 1;
-
-            // Defensa
             if (data.home.GA > 1.2) score += 1;
             if (data.away.GA > 1.2) score += 1;
 
             return score;
         }
 
-        /**
-         * 3. SUGERENCIAS: Basadas en Score
-         */
         function generarSugerenciaScanner(score) {
             if (score >= 6) return { tipo: "OVER 2.5", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/50", nivel: "ALTO" };
             if (score >= 5) return { tipo: "BTTS", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/50", nivel: "MEDIO" };
@@ -189,74 +158,66 @@
         }
 
         /**
-         * 4. EJECUCIÓN
+         * 3. FUNCIÓN PRINCIPAL
          */
         function ejecutarScanner() {
             const rawText = document.getElementById('scannerInput').value;
-            if (!rawText.trim()) return alert("El área de texto está vacía.");
+            if (!rawText.trim()) return;
 
             const partidos = parseScannerInput(rawText);
-            
-            const procesados = partidos.map(p => {
+            const resultados = partidos.map(p => {
                 const score = evaluarPartidoStats(p);
-                const sug = generarSugerenciaScanner(score);
-                return { ...p, score, ...sug };
+                const sugerencia = generarSugerenciaScanner(score);
+                return { ...p, score, ...sugerencia };
             });
 
-            renderResultados(procesados);
+            renderResultados(resultados);
         }
 
         /**
-         * 5. RENDERIZADO DE CARDS
+         * 4. RENDER
          */
         function renderResultados(lista) {
             const container = document.getElementById('scannerResults');
             const counter = document.getElementById('matchCount');
             
-            counter.innerText = `${lista.length} Partidos Detectados`;
+            counter.innerText = `${lista.length} Partidos`;
             container.innerHTML = '';
 
             if (lista.length === 0) {
                 container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-64 text-slate-600 border-2 border-dashed border-slate-800 rounded-2xl">
-                        <i class="fas fa-exclamation-triangle text-4xl mb-3 text-rose-500"></i>
+                    <div class="flex flex-col items-center justify-center h-64 text-slate-600 border-2 border-dashed border-slate-800 rounded-2xl text-center p-4">
+                        <i class="fas fa-exclamation-circle text-4xl mb-3 text-rose-500"></i>
                         <p>No se detectaron bloques de partidos válidos.</p>
-                        <p class="text-[10px] mt-1">Asegúrate de copiar el bloque de equipo/hora/stats.</p>
+                        <p class="text-xs mt-1">Pega el bloque completo incluyendo equipos y estadísticas.</p>
                     </div>`;
                 return;
             }
 
             lista.forEach(item => {
-                // Estrellas basadas en score
                 let estrellas = '';
                 const starCount = Math.min(Math.max(Math.floor(item.score / 1.5), 1), 5);
                 for (let i = 0; i < 5; i++) {
                     estrellas += i < starCount ? '<i class="fas fa-star text-yellow-500 text-[10px]"></i>' : '<i class="far fa-star text-slate-700 text-[10px]"></i>';
                 }
 
-                const card = `
-                    <div class="glass-card p-5 rounded-2xl border-l-4 ${item.border} flex flex-col md:flex-row items-center justify-between gap-4 hover:bg-slate-800/80 transition-all shadow-xl group">
-                        <div class="text-center md:text-left">
-                            <h3 class="font-bold text-white group-hover:text-blue-400 transition-colors">${item.match}</h3>
-                            <div class="flex items-center gap-2 mt-1 justify-center md:justify-start">
+                container.innerHTML += `
+                    <div class="glass-card p-5 rounded-2xl border-l-4 ${item.border} flex flex-col md:flex-row items-center justify-between gap-4 transition-all hover:bg-slate-800/80">
+                        <div>
+                            <h3 class="font-bold text-white text-lg">${item.match}</h3>
+                            <div class="flex items-center gap-2 mt-1">
                                 <div class="flex gap-0.5">${estrellas}</div>
-                                <span class="text-[10px] font-black text-slate-500 uppercase tracking-tighter ml-2">Score: ${item.score}</span>
-                            </div>
-                            <div class="flex gap-4 mt-2 text-[10px] text-slate-400 font-mono">
-                                <span>H: GF ${item.home.GF} | GA ${item.home.GA}</span>
-                                <span>A: GF ${item.away.GF} | GA ${item.away.GA}</span>
+                                <span class="text-[10px] font-bold text-slate-500 uppercase ml-2 tracking-widest">Score: ${item.score}</span>
                             </div>
                         </div>
-
-                        <div class="flex flex-col items-center md:items-end gap-1">
+                        <div class="text-center md:text-right">
                             <div class="px-5 py-2 ${item.bg} ${item.color} rounded-lg border ${item.border} font-black text-xs tracking-widest">
                                 ${item.tipo}
                             </div>
-                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Confianza ${item.nivel}</span>
+                            <span class="text-[9px] font-bold text-slate-500 uppercase mt-1 block">Nivel ${item.nivel}</span>
                         </div>
                     </div>
-                    `;
-                container.innerHTML += card;
+                `;
             });
         }
     </script>
