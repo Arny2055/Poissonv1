@@ -14,21 +14,21 @@
 
     <div class="max-w-6xl mx-auto">
         <header class="mb-8 text-center">
-            <h1 class="text-4xl font-bold text-emerald-400 mb-2 italic tracking-tighter">⚽ SCANNER PRO</h1>
-            <p class="text-slate-400 text-sm uppercase tracking-widest font-bold">Match de Ligas & Análisis Avanzado</p>
+            <h1 class="text-4xl font-bold text-emerald-400 mb-2">⚽ SCANNER PRO</h1>
+            <p class="text-slate-400 text-sm uppercase tracking-widest font-bold">Base de Datos de Ligas Integrada</p>
         </header>
 
         <div class="bg-slate-800 rounded-xl p-6 shadow-2xl mb-8 border border-slate-700">
-            <label class="block text-sm font-medium mb-2 text-emerald-300">Pegar datos RAW (Formato Evento/Hora):</label>
+            <label class="block text-sm font-medium mb-2 text-emerald-300">Pegar datos RAW de SoccerStats:</label>
             <textarea 
                 id="rawData" 
                 class="w-full h-64 bg-slate-700 border border-slate-600 rounded-lg p-4 text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none text-slate-200"
-                placeholder="Evento	Hora	Country	3.5+	2.5+	1.5+	GA	GF	TG	PPG	GP..."></textarea>
+                placeholder="Country | 3.5+ | 2.5+ | 1.5+ | GA | GF | TG | PPG | GP..."></textarea>
             
             <button 
                 onclick="processData()"
-                class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors shadow-lg uppercase tracking-wider active:scale-95">
-                Procesar y Analizar Partidos
+                class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors shadow-lg uppercase tracking-wider">
+                Procesar y Match de Ligas
             </button>
         </div>
 
@@ -158,72 +158,82 @@
             if (!rawText.trim()) return;
 
             const rows = rawText.split('\n').filter(row => row.trim() !== '');
-            let matches = [];
+            let filteredMatches = [];
 
-            // El formato viene en parejas: Fila 1 (Local), Fila 2 (Visita)
-            for (let i = 0; i < rows.length; i += 2) {
-                const homeCols = rows[i].split('\t').map(c => c.trim());
-                const awayCols = rows[i+1] ? rows[i+1].split('\t').map(c => c.trim()) : null;
-                
-                if (!awayCols || homeCols[0].toLowerCase().includes('evento')) continue;
+            rows.forEach(row => {
+                const cols = row.split('\t').map(c => c.trim());
+                if (cols.length < 20 || cols[0].toLowerCase().includes('country')) return;
 
                 try {
+                    let exactLeague = getExactLeagueName(cols[0]);
                     const matchObj = {
-                        league: getExactLeagueName(homeCols[2]), 
-                        homeName: homeCols[0],
-                        awayName: awayCols[0],
-                        time: homeCols[1] || "TBD",
+                        league: exactLeague, 
+                        homeName: cols[10],
+                        awayName: cols[12],
+                        time: cols[11] || "23:59",
                         home: {
-                            over35: parseFloat(homeCols[3]) || 0,
-                            over25: parseFloat(homeCols[4]) || 0,
-                            over15: parseFloat(homeCols[5]) || 0,
-                            GA: parseFloat(homeCols[6]) || 0,
-                            GF: parseFloat(homeCols[7]) || 0,
-                            TG: parseFloat(homeCols[8]) || 0,
-                            ppg: parseFloat(homeCols[9]) || 0
+                            over35: parseFloat(cols[1]) || 0,
+                            over25: parseFloat(cols[2]) || 0,
+                            over15: parseFloat(cols[3]) || 0,
+                            GA: parseFloat(cols[4]) || 0,
+                            GF: parseFloat(cols[5]) || 0,
+                            TG: parseFloat(cols[6]) || 0,
+                            ppg: parseFloat(cols[7]) || 0
                         },
                         away: {
-                            over35: parseFloat(awayCols[3]) || 0,
-                            over25: parseFloat(awayCols[4]) || 0,
-                            over15: parseFloat(awayCols[5]) || 0,
-                            GA: parseFloat(awayCols[6]) || 0,
-                            GF: parseFloat(awayCols[7]) || 0,
-                            TG: parseFloat(awayCols[8]) || 0,
-                            ppg: parseFloat(awayCols[9]) || 0
+                            GA: parseFloat(cols[18]) || 0,
+                            GF: parseFloat(cols[17]) || 0, 
+                            TG: parseFloat(cols[16]) || 0,
+                            over15: parseFloat(cols[19]) || 0,
+                            over25: parseFloat(cols[20]) || 0,
+                            over35: parseFloat(cols[21]) || 0,
+                            ppg: parseFloat(cols[15]) || 0
                         }
                     };
 
-                    matchObj.tips = applyFilters(matchObj);
-                    if (matchObj.tips.length > 0) {
-                        matches.push(matchObj);
+                    if (matchObj.homeName && matchObj.awayName) {
+                        matchObj.tips = applyFilters(matchObj);
+                        if (matchObj.tips.length > 0) {
+                            filteredMatches.push(matchObj);
+                        }
                     }
-                } catch (e) {
-                    console.error("Error en bloque:", e);
-                }
-            }
+                } catch (e) { console.error(e); }
+            });
 
-            matches.sort((a, b) => a.time.localeCompare(b.time));
-            renderMatches(matches);
+            filteredMatches.sort((a, b) => a.time.localeCompare(b.time));
+            renderMatches(filteredMatches);
         }
 
+        /**
+         * LÓGICA DE FILTRADO EXACTA
+         */
         function applyFilters(m) {
             const tips = [];
             const avgTG = (m.home.TG + m.away.TG) / 2;
             
-            // --- LÓGICA OVER 2.5 PRO ---
+            // --- FILTRO OVER 2.5 GOLES ---
+            // 1. Promedio de Goles Totales (TG) de ambos >= 2.8
+            // 2. Ambos equipos tienen > 55% de sus partidos con Over 2.5
+            // 3. Al menos uno de los dos promedia 1.5 goles anotados (GF)
+            // 4. Ambos promedian al menos 1.2 goles recibidos (GA) para asegurar fragilidad defensiva
             const condOver25 = 
                 avgTG >= 2.8 &&
                 m.home.over25 >= 55 && m.away.over25 >= 55 &&
                 (m.home.GF >= 1.5 || m.away.GF >= 1.5) &&
-                (m.home.GA >= 1.2 || m.away.GA >= 1.2);
+                (m.home.GA >= 1.2 && m.away.GA >= 1.2);
 
-            const avoidOver25 = m.home.TG < 2.3 || m.away.TG < 2.3 || m.home.over25 < 45 || m.away.over25 < 45;
+            // Filtro de Seguridad (Evitar si los promedios individuales son muy bajos)
+            const avoidOver25 = m.home.TG < 2.3 || m.away.TG < 2.3;
 
             if (condOver25 && !avoidOver25) {
                 tips.push({ type: "OVER 2.5", color: "emerald" });
             }
 
-            // --- LÓGICA BTTS PRO ---
+            // --- FILTRO BTTS (AMBOS MARCAN) ---
+            // 1. Ambos marcan (GF) >= 1.2 y ambos reciben (GA) >= 1.0
+            // 2. Frecuencia de Over 1.5 alta (>= 75%)
+            // 3. Promedio TG >= 2.6
+            // 4. Los equipos están parejos en puntos (Diferencia PPG <= 0.8) para evitar goleadas de un solo lado
             const diffPPG = Math.abs(m.home.ppg - m.away.ppg);
             const condBTTS = 
                 m.home.GF >= 1.2 && m.away.GF >= 1.2 &&
@@ -242,7 +252,7 @@
         function renderMatches(matches) {
             const container = document.getElementById('results');
             if (matches.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center text-slate-500 italic py-10">Sin partidos PRO en este lote.</p>';
+                container.innerHTML = '<p class="col-span-full text-center text-slate-500 italic py-10">No hay partidos filtrados con criterios PRO.</p>';
                 return;
             }
 
