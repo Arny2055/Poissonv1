@@ -32,6 +32,19 @@
             </button>
         </div>
 
+        <div id="exportSection" class="mb-8 hidden">
+            <div class="bg-slate-800 border border-emerald-500/30 rounded-xl p-4">
+                <h2 class="text-emerald-400 text-xs font-bold uppercase mb-3 flex items-center">
+                    <span class="mr-2">📋</span> Lista de partidos filtrados (Formato Texto):
+                </h2>
+                <textarea 
+                    id="exportText" 
+                    readonly
+                    class="w-full h-32 bg-slate-900 border border-slate-700 rounded p-3 text-[10px] font-mono text-emerald-200 focus:outline-none"
+                ></textarea>
+            </div>
+        </div>
+
         <div id="results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         </div>
     </div>
@@ -153,12 +166,20 @@
         function processData() {
             const rawText = document.getElementById('rawData').value;
             const resultsContainer = document.getElementById('results');
+            const exportSection = document.getElementById('exportSection');
+            const exportText = document.getElementById('exportText');
+            
             resultsContainer.innerHTML = '';
+            exportText.value = '';
 
-            if (!rawText.trim()) return;
+            if (!rawText.trim()) {
+                exportSection.classList.add('hidden');
+                return;
+            }
 
             const rows = rawText.split('\n').filter(row => row.trim() !== '');
             let filteredMatches = [];
+            let exportLines = [];
 
             rows.forEach(row => {
                 const cols = row.split('\t').map(c => c.trim());
@@ -167,6 +188,7 @@
                 try {
                     let exactLeague = getExactLeagueName(cols[0]);
                     const matchObj = {
+                        rawCols: cols, // Guardamos columnas originales para exportar
                         league: exactLeague, 
                         homeName: cols[10],
                         awayName: cols[12],
@@ -197,12 +219,22 @@
                         matchObj.tips = applyFilters(matchObj);
                         if (matchObj.tips.length > 0) {
                             filteredMatches.push(matchObj);
+                            // Generar la línea de texto plano pedida
+                            exportLines.push(cols.join('\t'));
                         }
                     }
                 } catch (e) { console.error(e); }
             });
 
             filteredMatches.sort((a, b) => a.time.localeCompare(b.time));
+            
+            if (filteredMatches.length > 0) {
+                exportSection.classList.remove('hidden');
+                exportText.value = exportLines.join('\n');
+            } else {
+                exportSection.classList.add('hidden');
+            }
+
             renderMatches(filteredMatches);
         }
 
