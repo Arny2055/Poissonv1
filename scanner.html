@@ -41,7 +41,7 @@
         .excel-table td {
             padding: 8px 15px;
             border: 1px solid #334155;
-            user-select: text; /* Permite selección fácil */
+            user-select: text;
         }
         .excel-table tr:hover {
             background-color: rgba(16, 185, 129, 0.05);
@@ -49,6 +49,17 @@
         .excel-table tr:nth-child(even) {
             background-color: rgba(255, 255, 255, 0.02);
         }
+
+        /* Colores de etiquetas en tabla */
+        .badge-table {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 10px;
+            text-transform: uppercase;
+        }
+        .badge-over { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.5); }
+        .badge-btts { background: rgba(6, 182, 212, 0.2); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.5); }
     </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4 md:p-8">
@@ -78,12 +89,19 @@
 
         <div id="tableContainer" class="excel-table-container hidden">
             <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
-                <h2 class="text-emerald-400 font-bold uppercase text-sm tracking-widest">Vista de Datos (Estilo Excel)</h2>
+                <div class="flex items-center gap-4">
+                    <h2 class="text-emerald-400 font-bold uppercase text-sm tracking-widest">Vista de Datos (Estilo Excel)</h2>
+                    <div class="flex gap-2">
+                        <span class="badge-table badge-over">Over 2.5</span>
+                        <span class="badge-table badge-btts">BTTS</span>
+                    </div>
+                </div>
                 <span class="text-[10px] text-slate-400 italic">Selecciona y copia directamente</span>
             </div>
             <table class="excel-table" id="excelTable">
                 <thead>
                     <tr>
+                        <th style="color: #f8fafc; background: #1e293b;">TIP</th>
                         <th>Country</th><th>3.5+</th><th>2.5+</th><th>1.5+</th><th>GA</th><th>GF</th><th>TG</th><th>PPG</th><th>GP</th><th>scope</th><th>Team Home</th><th>Time</th><th>Team Away</th><th>scope</th><th>GP</th><th>PPG</th><th>TG</th><th>GF</th><th>GA</th><th>1.5+</th><th>2.5+</th><th>3.5+</th>
                     </tr>
                 </thead>
@@ -142,7 +160,7 @@
             "FINLAND": "Finland - Veikkausliiga",
             "FRANCE": "France - Ligue 1",
             "FRANCE-L2": "France - Ligue 2",
-            "FRANCE-L3": "France - National",
+            "FRANCE-L3": " France - National",
             "GERMANY": "Germany - Bundesliga",
             "GERMANY2": "Germany - 2. Bundesliga",
             "GERMANY3": "Germany - 3. Liga",
@@ -231,7 +249,7 @@
                     let exactLeague = getExactLeagueName(cols[0]);
                     const matchObj = {
                         league: exactLeague,
-                        rawCols: cols, // Guardamos los valores originales para la tabla
+                        rawCols: cols,
                         homeName: cols[10],
                         awayName: cols[12],
                         time: cols[11] || "23:59",
@@ -295,7 +313,7 @@
             const avoidOver25 = m.home.TG < 2.3 || m.away.TG < 2.3 || m.home.over25 < 45 || m.away.over25 < 45;
 
             if (condOver25 && !avoidOver25) {
-                tips.push({ type: "OVER 2.5", color: "emerald" });
+                tips.push({ type: "OVER 2.5", color: "emerald", class: "badge-over" });
             }
 
             const condBTTS = 
@@ -306,7 +324,7 @@
                 diffPPG <= 0.8;
 
             if (condBTTS) {
-                tips.push({ type: "BTTS", color: "cyan" });
+                tips.push({ type: "BTTS", color: "cyan", class: "badge-btts" });
             }
 
             return tips;
@@ -366,12 +384,21 @@
             matches.forEach(m => {
                 const tr = document.createElement('tr');
                 
-                // Iteramos por las columnas requeridas del objeto original
-                // El formato usa los 22 campos del RAW
+                // --- COLUMNA DE DIFERENCIACIÓN (TIP) ---
+                const tdTip = document.createElement('td');
+                tdTip.className = "flex flex-wrap gap-1 min-w-[100px]";
+                m.tips.forEach(t => {
+                    const span = document.createElement('span');
+                    span.className = `badge-table ${t.class}`;
+                    span.textContent = t.type;
+                    tdTip.appendChild(span);
+                });
+                tr.appendChild(tdTip);
+
+                // --- RESTO DE COLUMNAS RAW ---
                 m.rawCols.forEach((val, index) => {
                     const td = document.createElement('td');
                     td.textContent = val;
-                    // Resaltar equipos y tiempo
                     if(index === 10 || index === 12) td.style.color = "#10b981";
                     if(index === 11) td.style.fontWeight = "bold";
                     tr.appendChild(td);
