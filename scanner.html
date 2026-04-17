@@ -8,6 +8,47 @@
     <style>
         .result-card { transition: all 0.3s ease; }
         .result-card:hover { transform: translateY(-2px); }
+        
+        /* Estilos para la tabla tipo Excel */
+        .excel-table-container {
+            background: #1e293b;
+            border-radius: 0.75rem;
+            border: 1px solid #334155;
+            overflow-x: auto;
+            margin-top: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .excel-table {
+            border-collapse: collapse;
+            width: 100%;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: #e2e8f0;
+            white-space: nowrap;
+        }
+        .excel-table th {
+            background-color: #0f172a;
+            color: #10b981;
+            font-weight: bold;
+            text-align: left;
+            padding: 10px 15px;
+            border: 1px solid #334155;
+            position: sticky;
+            top: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .excel-table td {
+            padding: 8px 15px;
+            border: 1px solid #334155;
+            user-select: text; /* Permite selección fácil */
+        }
+        .excel-table tr:hover {
+            background-color: rgba(16, 185, 129, 0.05);
+        }
+        .excel-table tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
     </style>
 </head>
 <body class="bg-slate-900 text-white min-h-screen p-4 md:p-8">
@@ -32,20 +73,22 @@
             </button>
         </div>
 
-        <div id="exportSection" class="mb-8 hidden">
-            <div class="bg-slate-800 border border-emerald-500/30 rounded-xl p-4">
-                <h2 class="text-emerald-400 text-xs font-bold uppercase mb-3 flex items-center">
-                    <span class="mr-2">📋</span> Lista de partidos filtrados (Formato Texto):
-                </h2>
-                <textarea 
-                    id="exportText" 
-                    readonly
-                    class="w-full h-32 bg-slate-900 border border-slate-700 rounded p-3 text-[10px] font-mono text-emerald-200 focus:outline-none"
-                ></textarea>
-            </div>
+        <div id="results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         </div>
 
-        <div id="results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div id="tableContainer" class="excel-table-container hidden">
+            <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
+                <h2 class="text-emerald-400 font-bold uppercase text-sm tracking-widest">Vista de Datos (Estilo Excel)</h2>
+                <span class="text-[10px] text-slate-400 italic">Selecciona y copia directamente</span>
+            </div>
+            <table class="excel-table" id="excelTable">
+                <thead>
+                    <tr>
+                        <th>Country</th><th>3.5+</th><th>2.5+</th><th>1.5+</th><th>GA</th><th>GF</th><th>TG</th><th>PPG</th><th>GP</th><th>scope</th><th>Team Home</th><th>Time</th><th>Team Away</th><th>scope</th><th>GP</th><th>PPG</th><th>TG</th><th>GF</th><th>GA</th><th>1.5+</th><th>2.5+</th><th>3.5+</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
         </div>
     </div>
 
@@ -166,30 +209,29 @@
         function processData() {
             const rawText = document.getElementById('rawData').value;
             const resultsContainer = document.getElementById('results');
-            const exportSection = document.getElementById('exportSection');
-            const exportText = document.getElementById('exportText');
+            const tableBody = document.getElementById('tableBody');
+            const tableContainer = document.getElementById('tableContainer');
             
             resultsContainer.innerHTML = '';
-            exportText.value = '';
+            tableBody.innerHTML = '';
 
             if (!rawText.trim()) {
-                exportSection.classList.add('hidden');
+                tableContainer.classList.add('hidden');
                 return;
             }
 
             const rows = rawText.split('\n').filter(row => row.trim() !== '');
             let filteredMatches = [];
-            let exportLines = [];
 
             rows.forEach(row => {
                 const cols = row.split('\t').map(c => c.trim());
-                if (cols.length < 20 || cols[0].toLowerCase().includes('country')) return;
+                if (cols.length < 22 || cols[0].toLowerCase().includes('country')) return;
 
                 try {
                     let exactLeague = getExactLeagueName(cols[0]);
                     const matchObj = {
-                        rawCols: cols, // Guardamos columnas originales para exportar
-                        league: exactLeague, 
+                        league: exactLeague,
+                        rawCols: cols, // Guardamos los valores originales para la tabla
                         homeName: cols[10],
                         awayName: cols[12],
                         time: cols[11] || "23:59",
@@ -219,8 +261,6 @@
                         matchObj.tips = applyFilters(matchObj);
                         if (matchObj.tips.length > 0) {
                             filteredMatches.push(matchObj);
-                            // Generar la línea de texto plano pedida
-                            exportLines.push(cols.join('\t'));
                         }
                     }
                 } catch (e) { console.error(e); }
@@ -229,27 +269,22 @@
             filteredMatches.sort((a, b) => a.time.localeCompare(b.time));
             
             if (filteredMatches.length > 0) {
-                exportSection.classList.remove('hidden');
-                exportText.value = exportLines.join('\n');
+                renderMatches(filteredMatches);
+                renderExcelTable(filteredMatches);
+                tableContainer.classList.remove('hidden');
             } else {
-                exportSection.classList.add('hidden');
+                resultsContainer.innerHTML = '<p class="col-span-full text-center text-slate-500 italic py-10">No hay partidos filtrados con criterios PRO (GP >= 8).</p>';
+                tableContainer.classList.add('hidden');
             }
-
-            renderMatches(filteredMatches);
         }
 
-        /**
-         * LÓGICA DE FILTRADO EXACTA
-         */
         function applyFilters(m) {
             const tips = [];
             const avgTG = (m.home.TG + m.away.TG) / 2;
             const diffPPG = Math.abs(m.home.ppg - m.away.ppg);
 
-            // --- REGLA DE ORO: MÍNIMO 8 PARTIDOS JUGADOS ---
             if (m.home.gp < 8 || m.away.gp < 8) return [];
 
-            // --- FILTRO PRO (OVER 2.5) ---
             const condOver25 = 
                 avgTG >= 2.8 &&
                 m.home.over25 >= 55 && m.away.over25 >= 55 &&
@@ -257,14 +292,12 @@
                 (m.home.GA >= 1.2 || m.away.GA >= 1.2) &&
                 m.home.ppg >= 1.5 && m.away.ppg >= 1.5;
 
-            // Restricción: EVITAR si TG < 2.3 o Over 2.5 < 45%
             const avoidOver25 = m.home.TG < 2.3 || m.away.TG < 2.3 || m.home.over25 < 45 || m.away.over25 < 45;
 
             if (condOver25 && !avoidOver25) {
                 tips.push({ type: "OVER 2.5", color: "emerald" });
             }
 
-            // --- FILTRO PRO (BTTS) ---
             const condBTTS = 
                 m.home.GF >= 1.2 && m.away.GF >= 1.2 &&
                 m.home.GA >= 1.0 && m.away.GA >= 1.0 &&
@@ -281,11 +314,6 @@
 
         function renderMatches(matches) {
             const container = document.getElementById('results');
-            if (matches.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center text-slate-500 italic py-10">No hay partidos filtrados con criterios PRO (GP >= 8).</p>';
-                return;
-            }
-
             matches.forEach(m => {
                 const card = document.createElement('div');
                 card.className = 'result-card bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg flex flex-col';
@@ -330,6 +358,26 @@
                     </div>
                 `;
                 container.appendChild(card);
+            });
+        }
+
+        function renderExcelTable(matches) {
+            const tableBody = document.getElementById('tableBody');
+            matches.forEach(m => {
+                const tr = document.createElement('tr');
+                
+                // Iteramos por las columnas requeridas del objeto original
+                // El formato usa los 22 campos del RAW
+                m.rawCols.forEach((val, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = val;
+                    // Resaltar equipos y tiempo
+                    if(index === 10 || index === 12) td.style.color = "#10b981";
+                    if(index === 11) td.style.fontWeight = "bold";
+                    tr.appendChild(td);
+                });
+                
+                tableBody.appendChild(tr);
             });
         }
     </script>
