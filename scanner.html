@@ -69,8 +69,6 @@
             font-size: 0.85rem;
             resize: vertical;
             box-sizing: border-box;
-            white-space: pre;
-            overflow-x: auto;
         }
 
         .controls {
@@ -96,7 +94,6 @@
         button:hover {
             opacity: 0.9;
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.2);
         }
 
         button.secondary {
@@ -121,17 +118,10 @@
             border-top: 4px solid var(--accent);
         }
 
-        .summary-card span {
-            display: block;
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-
         .summary-card b {
             font-size: 1.8rem;
             color: var(--text-main);
+            display: block;
         }
 
         .table-container {
@@ -140,7 +130,6 @@
             background: var(--card-bg);
             border-radius: 12px;
             border: 1px solid var(--border);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
         table {
@@ -157,8 +146,6 @@
             color: var(--text-dim);
             text-transform: uppercase;
             border-bottom: 2px solid var(--border);
-            position: sticky;
-            top: 0;
         }
 
         td {
@@ -167,70 +154,44 @@
             font-size: 0.9rem;
         }
 
-        tr:hover {
-            background-color: rgba(255, 255, 255, 0.02);
-        }
-
         .badge {
             padding: 5px 10px;
             border-radius: 4px;
             font-weight: 800;
             font-size: 0.7rem;
             display: inline-block;
-            text-align: center;
-            width: 90px;
         }
 
         .high { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
         .medium { background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid #eab308; }
         .low { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
-
-        .row-high { background-color: rgba(34, 197, 94, 0.08) !important; }
-        
-        .xg-cell { font-weight: bold; color: var(--accent); }
-        .final-cell { font-weight: 900; font-size: 1.1rem; }
-
-        @media (max-width: 768px) {
-            body { padding: 10px; }
-            .controls { flex-direction: column; }
-            button { width: 100%; }
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>BetAGS Statistical Model</h1>
-    <p class="subtitle">Análisis Avanzado Poisson & Histórico Over 2.5</p>
+    <p class="subtitle">Mapeo Corregido: England & Mexico Style</p>
 
     <div class="input-section">
-        <textarea id="rawData" placeholder="Pega aquí los datos de Excel (ej: Country, Over%, GA, GF...)"></textarea>
+        <textarea id="rawData" placeholder="Pega los datos aquí..."></textarea>
         <div class="controls">
             <button onclick="processData()">📊 Analizar Partidos</button>
-            <button class="secondary" onclick="sortData('finalProb')">🔝 Ordenar por Probabilidad</button>
-            <button class="secondary" onclick="sortData('totalXG')">⚽ Ordenar por xG</button>
+            <button class="secondary" onclick="sortData('finalProb')">🔝 Ordenar Prob</button>
+            <button class="secondary" onclick="sortData('totalXG')">⚽ Ordenar xG</button>
             <button class="secondary" onclick="toggleHighValue()" id="btnFilter">🔥 Solo High Value</button>
             <button class="secondary" onclick="clearData()" style="color: #f87171;">🗑️ Limpiar</button>
         </div>
     </div>
 
     <div id="summary" class="summary-grid" style="display: none;">
-        <div class="summary-card">
-            <span>Partidos Procesados</span>
-            <b id="countPicks">0</b>
-        </div>
-        <div class="summary-card" style="border-top-color: var(--high);">
-            <span>Pronósticos HIGH VALUE</span>
-            <b id="countHigh" style="color: var(--high);">0</b>
-        </div>
-        <div class="summary-card" style="border-top-color: var(--medium);">
-            <span>Promedio Probabilidad</span>
-            <b id="avgProb">0%</b>
-        </div>
+        <div class="summary-card"><span>Partidos</span><b id="countPicks">0</b></div>
+        <div class="summary-card"><span>High Value</span><b id="countHigh" style="color: var(--high);">0</b></div>
+        <div class="summary-card"><span>Promedio</span><b id="avgProb">0%</b></div>
     </div>
 
     <div class="table-container">
-        <table id="resultTable">
+        <table>
             <thead>
                 <tr>
                     <th>País</th>
@@ -246,8 +207,7 @@
                     <th>Clasificación</th>
                 </tr>
             </thead>
-            <tbody id="tableBody">
-                </tbody>
+            <tbody id="tableBody"></tbody>
         </table>
     </div>
 </div>
@@ -256,29 +216,13 @@
     let matchesData = [];
     let showOnlyHigh = false;
 
-    // Constante matemática para Poisson
-    function factorial(n) {
-        if (n <= 1) return 1;
-        let res = 1;
-        for (let i = 2; i <= n; i++) res *= i;
-        return res;
-    }
-
-    function getPoisson(lambda, k) {
-        return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);
-    }
+    function factorial(n) { return (n <= 1) ? 1 : n * factorial(n - 1); }
+    function getPoisson(lambda, k) { return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k); }
 
     function calculatePoissonOver25(lH, lA) {
         let probUnder3 = 0;
-        // Goles totales 0: (0,0)
-        // Goles totales 1: (1,0), (0,1)
-        // Goles totales 2: (2,0), (0,2), (1,1)
         const scenarios = [[0,0], [1,0], [0,1], [2,0], [0,2], [1,1]];
-
-        scenarios.forEach(([h, a]) => {
-            probUnder3 += (getPoisson(lH, h) * getPoisson(lA, a));
-        });
-
+        scenarios.forEach(([h, a]) => { probUnder3 += (getPoisson(lH, h) * getPoisson(lA, a)); });
         return (1 - probUnder3) * 100;
     }
 
@@ -289,45 +233,36 @@
         const lines = text.split('\n');
         const results = [];
 
-        // Limpiar filas vacías o de encabezado extra
-        const dataLines = lines.filter(line => 
-            line.includes('\t') && 
-            !line.toLowerCase().includes('country') && 
-            !line.toLowerCase().includes('scope')
-        );
-
-        dataLines.forEach(line => {
-            const cols = line.split('\t');
+        lines.forEach(line => {
+            if (!line.includes('\t') || line.toLowerCase().includes('country')) return;
             
-            // Mapeo dinámico según el formato pegado:
-            // [0] Country | [2] 2.5+ H | [3] GA H | [4] GF H | [9] Team H | [10] Time | [11] Team A | [15] GF A | [16] GA A | [20] 2.5+ A
+            const cols = line.split('\t').map(c => c.trim());
+            if (cols.length < 15) return;
+
             try {
-                const country = cols[0]?.trim() || "UNK";
+                // MAPEO CORREGIDO BASADO EN TU ESTRUCTURA:
+                // [0] Country | [2] Over2.5 Home | [3] GA Home | [4] GF Home
+                // [9] Home Team | [10] Time | [11] Away Team
+                // [15] GF Away | [16] GA Away | [20] Over2.5 Away
+
+                const country = cols[0];
                 const over25H = parseFloat(cols[2]) || 0;
                 const gaH = parseFloat(cols[3]) || 0;
                 const gfH = parseFloat(cols[4]) || 0;
-                const teamH = cols[9]?.trim() || "Home";
-                const time = cols[10]?.trim() || "--:--";
-                const teamA = cols[11]?.trim() || "Away";
+                const teamH = cols[9];
+                const time = cols[10];
+                const teamA = cols[11];
                 const gfA = parseFloat(cols[15]) || 0;
                 const gaA = parseFloat(cols[16]) || 0;
                 const over25A = parseFloat(cols[20]) || 0;
 
-                // 1. Cálculo de Lambdas
                 const lambdaH = (gfH + gaA) / 2;
                 const lambdaA = (gfA + gaH) / 2;
                 const totalXG = lambdaH + lambdaA;
 
-                // 2. Poisson Over 2.5
                 const poissonProb = calculatePoissonOver25(lambdaH, lambdaA);
-
-                // 3. Promedio Histórico Over 2.5
                 const historicalAvg = (over25H + over25A) / 2;
-
-                // 4. Fórmula Final (70% Poisson + 30% Histórico)
                 const finalProb = (poissonProb * 0.7) + (historicalAvg * 0.3);
-                
-                // 5. Edge (Diferencia)
                 const edge = finalProb - historicalAvg;
 
                 let rank = 'LOW';
@@ -336,14 +271,10 @@
                 else if (finalProb >= 55) { rank = '⚡ MEDIUM'; rankClass = 'medium'; }
 
                 results.push({
-                    country, time, teamH, teamA,
-                    lambdaH, lambdaA, totalXG,
-                    poissonProb, historicalAvg, finalProb,
-                    edge, rank, rankClass
+                    country, time, teamH, teamA, lambdaH, lambdaA, totalXG,
+                    poissonProb, historicalAvg, finalProb, edge, rank, rankClass
                 });
-            } catch (err) {
-                console.warn("Error procesando línea", err);
-            }
+            } catch (err) { console.warn(err); }
         });
 
         matchesData = results;
@@ -354,26 +285,21 @@
     function renderTable() {
         const body = document.getElementById('tableBody');
         body.innerHTML = '';
+        const data = showOnlyHigh ? matchesData.filter(m => m.finalProb >= 65) : matchesData;
 
-        const displayData = showOnlyHigh 
-            ? matchesData.filter(m => m.finalProb >= 65) 
-            : matchesData;
-
-        displayData.forEach(m => {
+        data.forEach(m => {
             const tr = document.createElement('tr');
-            if (m.finalProb >= 65) tr.className = 'row-high';
-
             tr.innerHTML = `
                 <td>${m.country}</td>
-                <td style="color:var(--text-dim)">${m.time}</td>
-                <td><b>${m.teamH}</b> <span style="color:var(--accent)">vs</span> <b>${m.teamA}</b></td>
+                <td>${m.time}</td>
+                <td><b>${m.teamH} vs ${m.teamA}</b></td>
                 <td>${m.lambdaH.toFixed(2)}</td>
                 <td>${m.lambdaA.toFixed(2)}</td>
-                <td class="xg-cell">${m.totalXG.toFixed(2)}</td>
+                <td style="color:var(--accent); font-weight:bold;">${m.totalXG.toFixed(2)}</td>
                 <td>${m.poissonProb.toFixed(1)}%</td>
                 <td>${m.historicalAvg.toFixed(1)}%</td>
-                <td class="final-cell" style="color:${m.finalProb >= 65 ? '#4ade80' : 'inherit'}">${m.finalProb.toFixed(1)}%</td>
-                <td style="color:${m.edge >= 0 ? '#4ade80' : '#f87171'}">${m.edge >= 0 ? '+' : ''}${m.edge.toFixed(1)}%</td>
+                <td style="font-weight:900;">${m.finalProb.toFixed(1)}%</td>
+                <td style="color:${m.edge >= 0 ? '#4ade80' : '#f87171'}">${m.edge.toFixed(1)}%</td>
                 <td><span class="badge ${m.rankClass}">${m.rank}</span></td>
             `;
             body.appendChild(tr);
@@ -381,37 +307,16 @@
     }
 
     function updateSummary() {
-        if (matchesData.length === 0) return;
         document.getElementById('summary').style.display = 'grid';
-        
-        const count = matchesData.length;
-        const highs = matchesData.filter(m => m.finalProb >= 65).length;
-        const avg = matchesData.reduce((acc, curr) => acc + curr.finalProb, 0) / count;
-
-        document.getElementById('countPicks').innerText = count;
-        document.getElementById('countHigh').innerText = highs;
+        document.getElementById('countPicks').innerText = matchesData.length;
+        document.getElementById('countHigh').innerText = matchesData.filter(m => m.finalProb >= 65).length;
+        const avg = matchesData.reduce((acc, curr) => acc + curr.finalProb, 0) / (matchesData.length || 1);
         document.getElementById('avgProb').innerText = avg.toFixed(1) + '%';
     }
 
-    function sortData(key) {
-        matchesData.sort((a, b) => b[key] - a[key]);
-        renderTable();
-    }
-
-    function toggleHighValue() {
-        showOnlyHigh = !showOnlyHigh;
-        const btn = document.getElementById('btnFilter');
-        btn.innerText = showOnlyHigh ? "👁️ Mostrar Todos" : "🔥 Solo High Value";
-        renderTable();
-    }
-
-    function clearData() {
-        document.getElementById('rawData').value = '';
-        document.getElementById('tableBody').innerHTML = '';
-        document.getElementById('summary').style.display = 'none';
-        matchesData = [];
-    }
+    function sortData(key) { matchesData.sort((a, b) => b[key] - a[key]); renderTable(); }
+    function toggleHighValue() { showOnlyHigh = !showOnlyHigh; renderTable(); }
+    function clearData() { location.reload(); }
 </script>
-
 </body>
 </html>
