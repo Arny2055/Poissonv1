@@ -15,7 +15,7 @@
     <div class="max-w-6xl mx-auto">
         <header class="mb-8 text-center">
             <h1 class="text-4xl font-bold text-emerald-400 mb-2">⚽ SCANNER PRO</h1>
-            <p class="text-slate-400">Análisis Avanzado de Goles y BTTS</p>
+            <p class="text-slate-400 text-sm uppercase tracking-widest font-bold">Base de Datos de Ligas Integrada</p>
         </header>
 
         <div class="bg-slate-800 rounded-xl p-6 shadow-2xl mb-8 border border-slate-700">
@@ -28,7 +28,7 @@
             <button 
                 onclick="processData()"
                 class="mt-4 w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition-colors shadow-lg uppercase tracking-wider">
-                Procesar y Filtrar Partidos
+                Procesar y Match de Ligas
             </button>
         </div>
 
@@ -37,6 +37,126 @@
     </div>
 
     <script>
+        // BASE DE DATOS DE LIGAS SOCCERSTATS
+        const LEAGUE_DATABASE = {
+            "ALBANIA": "Albania - Abissnet Superiore",
+            "ANDORRA": "Andorra - Primera Divisio",
+            "ARGENTINA": "Argentina - Liga Profesional - Apertura",
+            "ARGENTINA2": "Argentina - Liga Profesional - Clausura",
+            "ARGENTINA3": "Argentina - Primera Nacional",
+            "ARGENTINA4": "Argentina - Primera B",
+            "ARGENTINA5": "Argentina - Primera B - Clausura",
+            "ARMENIA": "Armenia - Premier League",
+            "AUSTRALIA": "Australia - A-League",
+            "AUSTRALIA2": "Australia - A-League Women",
+            "AUSTRIA": "Austria - Bundesliga",
+            "AUSTRIA2": "Austria - 2. Liga",
+            "AZERBAIJAN": "Azerbaijan - Premier League",
+            "BAHRAIN": "Bahrain - Premier League",
+            "BANGLADESH": "Bangladesh - Premier League",
+            "BELARUS": "Belarus - Vysshaya Liga",
+            "BELGIUM": "Belgium - Pro League",
+            "BELGIUM2": "Belgium - Challenger Pro League",
+            "BOLIVIA": "Bolivia - Division Profesional",
+            "BRAZIL": "Brazil - Serie A",
+            "BRAZIL2": "Brazil - Serie B",
+            "BRAZIL3": "Brazil - Serie C",
+            "BULGARIA": "Bulgaria - Parva Liga",
+            "CANADA": "Canada - Premier League",
+            "CHILE": "Chile - Liga de Primera",
+            "CHILE2": "Chile - Liga de Ascenso",
+            "CHINA": "China - Super League",
+            "COLOMBIA": "Colombia - Primera A - Apertura",
+            "COLOMBIA2": "Colombia - Primera A - Clausura",
+            "COSTARICA": "Costa Rica - Primera Div. - Apertura",
+            "COSTARICA2": "Costa Rica - Primera Div. - Clausura",
+            "CROATIA": "Croatia - 1. HNL",
+            "CYPRUS": "Cyprus - Cyprus League",
+            "CZECHREP.": "Czech Republic - 1. Liga",
+            "DENMARK": "Denmark - Superligaen",
+            "DENMARK2": "Denmark - 1st Division",
+            "ECUADOR": "Ecuador - Liga Pro",
+            "EGYPT": "Egypt - Premier League",
+            "ENGLAND": "England - Premier League",
+            "ENGLAND2": "England - Championship",
+            "ENGLAND3": "England - League One",
+            "ENGLAND4": "England - League Two",
+            "ENGLAND5": "England - National League",
+            "ENGLAND17": "England - Women Super League",
+            "ESTONIA": "Estonia - Meistriliiga",
+            "FINLAND": "Finland - Veikkausliiga",
+            "FRANCE": "France - Ligue 1",
+            "FRANCE-L2": "France - Ligue 2",
+            "FRANCE-L3": "France - National",
+            "GERMANY": "Germany - Bundesliga",
+            "GERMANY2": "Germany - 2. Bundesliga",
+            "GERMANY3": "Germany - 3. Liga",
+            "GREECE": "Greece - Super League",
+            "GUATEMALA": "Guatemala - Liga Nacional",
+            "HUNGARY": "Hungary - NB I",
+            "ICELAND": "Iceland - Besta deild",
+            "INDIA": "India - Super League",
+            "INDONESIA": "Indonesia - Liga 1",
+            "IRAN": "Iran - Pro League",
+            "IRELAND": "Ireland - Premier Division",
+            "ISRAEL": "Israel - Ligat HaAl",
+            "ITALY": "Italy - Serie A",
+            "ITALY2": "Italy - Serie B",
+            "ITALY3": "Italy - Serie C",
+            "JAPAN": "Japan - J1 League",
+            "JAPAN2": "Japan - J2 League",
+            "LATVIA": "Latvia - Virsliga",
+            "LITHUANIA": "Lithuania - A Lyga",
+            "MEXICO": "Mexico - Liga MX - Apertura",
+            "MEXICO2": "Mexico - Liga MX - Clausura",
+            "MOROCCO": "Morocco - Botola Pro",
+            "NETHERLANDS": "Netherlands - Eredivisie",
+            "NETHERLANDS2": "Netherlands - Eerste Divisie",
+            "NORWAY": "Norway - Eliteserien",
+            "PARAGUAY": "Paraguay - Primera Div. - Apertura",
+            "PERU": "Peru - Liga 1",
+            "POLAND": "Poland - Ekstraklasa",
+            "PORTUGAL": "Portugal - Liga Portugal",
+            "PORTUGAL2": "Portugal - Liga Portugal 2",
+            "ROMANIA": "Romania - Liga 1",
+            "RUSSIA": "Russia - Premier League",
+            "SAUDIARABIA": "Saudi Arabia - Professional League",
+            "SCOTLAND": "Scotland - Premiership",
+            "SERBIA": "Serbia - Super Liga",
+            "SLOVAKIA": "Slovakia - 1. Liga",
+            "SLOVENIA": "Slovenia - Prva Liga",
+            "SOUTHAFRICA": "South Africa - Premier Division",
+            "SOUTHKOREA": "South Korea - K League 1",
+            "SPAIN": "Spain - LaLiga",
+            "SPAIN2": "Spain - LaLiga2",
+            "SWEDEN": "Sweden - Allsvenskan",
+            "SWEDEN2": "Sweden - Superettan",
+            "SWITZERLAND": "Switzerland - Super League",
+            "TURKEY": "Turkiye - Super Lig",
+            "UAE": "UAE - Pro League",
+            "UKRAINE": "Ukraine - Premier League",
+            "URUGUAY": "Uruguay - Liga AUF",
+            "USA": "USA - MLS",
+            "USA2": "USA - USL Championship",
+            "VENEZUELA": "Venezuela - Liga FUTVE",
+            "WALES": "Wales - Cymru Premier"
+        };
+
+        function getExactLeagueName(rawText) {
+            if (!rawText) return "Unknown League";
+            // Limpiamos el texto de entrada
+            let cleanInput = rawText.toUpperCase().replace(/\s+/g, '').trim();
+            
+            // Buscamos coincidencia exacta en las llaves del diccionario
+            for (let key in LEAGUE_DATABASE) {
+                if (cleanInput.includes(key)) {
+                    return LEAGUE_DATABASE[key];
+                }
+            }
+            // Si no hay match, devolvemos el texto original limpio
+            return rawText.replace(/[\n\r]/g, ' ').trim();
+        }
+
         function processData() {
             const rawText = document.getElementById('rawData').value;
             const resultsContainer = document.getElementById('results');
@@ -53,12 +173,11 @@
                 if (cols.length < 20 || cols[0].toLowerCase().includes('country')) return;
 
                 try {
-                    // MEJORA: Limpieza del dato de Liga/País extraído del hipervínculo
-                    let rawLeague = cols[0];
-                    let leagueName = rawLeague.replace(/[\n\r]/g, ' ').replace(/\s+/g, ' ');
+                    // Match con la base de datos de ligas
+                    let exactLeague = getExactLeagueName(cols[0]);
 
                     const matchObj = {
-                        league: leagueName, 
+                        league: exactLeague, 
                         homeName: cols[10],
                         awayName: cols[12],
                         time: cols[11] || "23:59",
@@ -84,7 +203,6 @@
 
                     if (matchObj.homeName && matchObj.awayName) {
                         matchObj.tips = applyFilters(matchObj);
-                        
                         if (matchObj.tips.length > 0) {
                             filteredMatches.push(matchObj);
                         }
@@ -94,26 +212,22 @@
                 }
             });
 
-            // Ordenar por horario (HH:mm)
             filteredMatches.sort((a, b) => a.time.localeCompare(b.time));
-
             renderMatches(filteredMatches);
         }
 
         function applyFilters(m) {
             const tips = [];
+            const avgTG = (m.home.TG + m.away.TG) / 2;
             
             // --- LÓGICA OVER 2.5 PRO ---
-            const avgTG = (m.home.TG + m.away.TG) / 2;
             const condOver25 = 
                 avgTG >= 2.8 &&
                 m.home.over25 >= 55 && m.away.over25 >= 55 &&
                 (m.home.GF >= 1.5 || m.away.GF >= 1.5) &&
                 (m.home.GA >= 1.2 || m.away.GA >= 1.2);
 
-            const avoidOver25 = 
-                m.home.TG < 2.3 || m.away.TG < 2.3 ||
-                m.home.over25 < 45 || m.away.over25 < 45;
+            const avoidOver25 = m.home.TG < 2.3 || m.away.TG < 2.3 || m.home.over25 < 45 || m.away.over25 < 45;
 
             if (condOver25 && !avoidOver25) {
                 tips.push({ type: "OVER 2.5", color: "emerald" });
@@ -137,9 +251,8 @@
 
         function renderMatches(matches) {
             const container = document.getElementById('results');
-            
             if (matches.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center text-slate-500 italic">No hay partidos que cumplan los criterios PRO.</p>';
+                container.innerHTML = '<p class="col-span-full text-center text-slate-500 italic py-10">No hay partidos filtrados con criterios PRO.</p>';
                 return;
             }
 
@@ -148,7 +261,7 @@
                 card.className = 'result-card bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg flex flex-col';
                 
                 let tipsHTML = m.tips.map(tip => `
-                    <span class="px-3 py-1 rounded-full text-[10px] font-bold bg-${tip.color}-500/20 text-${tip.color}-400 border border-${tip.color}-500/50">
+                    <span class="px-3 py-1 rounded-full text-[10px] font-black bg-${tip.color}-500/20 text-${tip.color}-400 border border-${tip.color}-500/50 uppercase">
                         ${tip.type}
                     </span>
                 `).join('');
@@ -157,7 +270,7 @@
                     <div class="p-4 border-b border-slate-700 bg-slate-800/50">
                         <div class="flex justify-between items-start mb-2">
                             <div class="flex-1">
-                                <span class="block text-[10px] text-emerald-500 font-black uppercase tracking-widest leading-tight">${m.league}</span>
+                                <span class="block text-[10px] text-emerald-400 font-black uppercase tracking-widest leading-tight">${m.league}</span>
                                 <span class="text-xs text-slate-300 font-mono font-bold bg-slate-900 px-2 py-0.5 rounded inline-block mt-1 border border-slate-700">${m.time}</span>
                             </div>
                             <div class="flex flex-col gap-1 items-end ml-2">${tipsHTML}</div>
@@ -166,18 +279,18 @@
                             ${m.homeName} <span class="text-emerald-500 text-xs italic">vs</span> ${m.awayName}
                         </h3>
                     </div>
-                    <div class="p-4 grid grid-cols-2 gap-4 text-center grow">
+                    <div class="p-4 grid grid-cols-2 gap-4 text-center grow bg-slate-900/20">
                         <div class="bg-slate-900/40 rounded p-2 border border-slate-700/30">
-                            <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Local (TG / PPG)</p>
-                            <p class="text-sm font-mono text-slate-200">${m.home.TG.toFixed(2)} / ${m.home.ppg.toFixed(2)}</p>
-                            <p class="text-[10px] text-slate-500 mt-2 uppercase italic">Over 2.5</p>
-                            <p class="text-sm font-bold ${m.home.over25 >= 60 ? 'text-emerald-400' : 'text-slate-400'}">${m.home.over25}%</p>
+                            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1 tracking-tighter">Local (TG/PPG)</p>
+                            <p class="text-xs font-mono text-slate-200">${m.home.TG.toFixed(2)} / ${m.home.ppg.toFixed(2)}</p>
+                            <p class="text-[9px] text-slate-500 mt-2 uppercase italic">O2.5%</p>
+                            <p class="text-xs font-bold ${m.home.over25 >= 60 ? 'text-emerald-400' : 'text-slate-400'}">${m.home.over25}%</p>
                         </div>
                         <div class="bg-slate-900/40 rounded p-2 border border-slate-700/30">
-                            <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Visita (TG / PPG)</p>
-                            <p class="text-sm font-mono text-slate-200">${m.away.TG.toFixed(2)} / ${m.away.ppg.toFixed(2)}</p>
-                            <p class="text-[10px] text-slate-500 mt-2 uppercase italic">Over 2.5</p>
-                            <p class="text-sm font-bold ${m.away.over25 >= 60 ? 'text-emerald-400' : 'text-slate-400'}">${m.away.over25}%</p>
+                            <p class="text-[9px] text-slate-500 uppercase font-bold mb-1 tracking-tighter">Visita (TG/PPG)</p>
+                            <p class="text-xs font-mono text-slate-200">${m.away.TG.toFixed(2)} / ${m.away.ppg.toFixed(2)}</p>
+                            <p class="text-[9px] text-slate-500 mt-2 uppercase italic">O2.5%</p>
+                            <p class="text-xs font-bold ${m.away.over25 >= 60 ? 'text-emerald-400' : 'text-slate-400'}">${m.away.over25}%</p>
                         </div>
                     </div>
                     <div class="bg-slate-900/90 p-2 text-center border-t border-slate-700/50">
