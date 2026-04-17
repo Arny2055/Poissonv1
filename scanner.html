@@ -33,7 +33,7 @@
         </div>
 
         <div id="results" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            </div>
+        </div>
     </div>
 
     <script>
@@ -45,7 +45,7 @@
             if (!rawText.trim()) return;
 
             const rows = rawText.split('\n').filter(row => row.trim() !== '');
-            const filteredMatches = [];
+            let filteredMatches = [];
 
             rows.forEach(row => {
                 const cols = row.split('\t').map(c => c.trim());
@@ -56,7 +56,7 @@
                     const matchObj = {
                         homeName: cols[10],
                         awayName: cols[12],
-                        time: cols[11],
+                        time: cols[11] || "23:59", // Default para ordenar si no hay hora
                         home: {
                             over35: parseFloat(cols[1]) || 0,
                             over25: parseFloat(cols[2]) || 0,
@@ -80,7 +80,7 @@
                     if (matchObj.homeName && matchObj.awayName) {
                         matchObj.tips = applyFilters(matchObj);
                         
-                        // REGLA CLAVE: Solo agregar si tiene al menos un TIP (cumple un filtro)
+                        // Solo incluimos si cumple algún filtro
                         if (matchObj.tips.length > 0) {
                             filteredMatches.push(matchObj);
                         }
@@ -88,6 +88,11 @@
                 } catch (e) {
                     console.error("Error parseando fila:", e);
                 }
+            });
+
+            // MEJORA: ORDENAR POR HORARIO (HH:mm)
+            filteredMatches.sort((a, b) => {
+                return a.time.localeCompare(b.time);
             });
 
             renderMatches(filteredMatches);
@@ -132,13 +137,13 @@
             const container = document.getElementById('results');
             
             if (matches.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center text-slate-500">Ningún partido cumple con los filtros PRO en esta lista.</p>';
+                container.innerHTML = '<p class="col-span-full text-center text-slate-500 italic">No hay partidos que cumplan los criterios PRO en esta lista.</p>';
                 return;
             }
 
             matches.forEach(m => {
                 const card = document.createElement('div');
-                card.className = 'result-card bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg';
+                card.className = 'result-card bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-lg flex flex-col';
                 
                 let tipsHTML = m.tips.map(tip => `
                     <span class="px-3 py-1 rounded-full text-xs font-bold bg-${tip.color}-500/20 text-${tip.color}-400 border border-${tip.color}-500/50">
@@ -149,30 +154,30 @@
                 card.innerHTML = `
                     <div class="p-4 border-b border-slate-700 bg-slate-800/50">
                         <div class="flex justify-between items-center mb-2">
-                            <span class="text-xs text-slate-400 font-mono">${m.time || '--:--'}</span>
+                            <span class="text-xs text-slate-400 font-mono font-bold bg-slate-900 px-2 py-1 rounded">${m.time}</span>
                             <div class="flex gap-2">${tipsHTML}</div>
                         </div>
                         <h3 class="font-bold text-sm text-center uppercase tracking-tight">
-                            ${m.homeName} <span class="text-emerald-500">vs</span> ${m.awayName}
+                            ${m.homeName} <span class="text-emerald-500 text-xs italic">vs</span> ${m.awayName}
                         </h3>
                     </div>
-                    <div class="p-4 grid grid-cols-2 gap-4 text-center">
-                        <div>
-                            <p class="text-[10px] text-slate-500 uppercase font-bold">Home (TG/PPG)</p>
-                            <p class="text-sm">${m.home.TG.toFixed(2)} / ${m.home.ppg.toFixed(2)}</p>
-                            <p class="text-[10px] text-slate-500 mt-1 uppercase">Over 2.5</p>
-                            <p class="text-sm font-semibold ${m.home.over25 >= 60 ? 'text-emerald-400' : ''}">${m.home.over25}%</p>
+                    <div class="p-4 grid grid-cols-2 gap-4 text-center grow">
+                        <div class="bg-slate-900/30 rounded p-2">
+                            <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Local (TG / PPG)</p>
+                            <p class="text-sm font-mono">${m.home.TG.toFixed(2)} / ${m.home.ppg.toFixed(2)}</p>
+                            <p class="text-[10px] text-slate-500 mt-2 uppercase">Over 2.5</p>
+                            <p class="text-sm font-bold ${m.home.over25 >= 60 ? 'text-emerald-400' : 'text-slate-300'}">${m.home.over25}%</p>
                         </div>
-                        <div>
-                            <p class="text-[10px] text-slate-500 uppercase font-bold">Away (TG/PPG)</p>
-                            <p class="text-sm">${m.away.TG.toFixed(2)} / ${m.away.ppg.toFixed(2)}</p>
-                            <p class="text-[10px] text-slate-500 mt-1 uppercase">Over 2.5</p>
-                            <p class="text-sm font-semibold ${m.away.over25 >= 60 ? 'text-emerald-400' : ''}">${m.away.over25}%</p>
+                        <div class="bg-slate-900/30 rounded p-2">
+                            <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Visita (TG / PPG)</p>
+                            <p class="text-sm font-mono">${m.away.TG.toFixed(2)} / ${m.away.ppg.toFixed(2)}</p>
+                            <p class="text-[10px] text-slate-500 mt-2 uppercase">Over 2.5</p>
+                            <p class="text-sm font-bold ${m.away.over25 >= 60 ? 'text-emerald-400' : 'text-slate-300'}">${m.away.over25}%</p>
                         </div>
                     </div>
-                    <div class="bg-slate-900/50 p-2 text-center border-t border-slate-700/50">
-                         <span class="text-[10px] text-slate-500 font-mono italic">
-                            FILTRADO POR: ${m.tips.map(t => t.type).join(' & ')}
+                    <div class="bg-slate-900/80 p-2 text-center border-t border-slate-700/50">
+                         <span class="text-[10px] text-emerald-500/80 font-mono font-bold tracking-widest uppercase">
+                            Promedio Goles: ${((m.home.TG + m.away.TG) / 2).toFixed(2)}
                          </span>
                     </div>
                 `;
