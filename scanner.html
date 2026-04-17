@@ -212,9 +212,11 @@
         function applyFilters(m) {
             const tips = [];
             
-            // --- REGLA DE ORO: MÍNIMO 8 PARTIDOS JUGADOS ---
-            if (m.home.gp < 8 || m.away.gp < 8) {
-                return []; // Si no cumplen, no se analiza el partido
+            // --- REGLAS DE ORO (GUARDIA) ---
+            // 1. Mínimo 8 partidos jugados (GP)
+            // 2. Mínimo 1.5 puntos por partido (PPG) para asegurar equipos competitivos
+            if (m.home.gp < 8 || m.away.gp < 8 || m.home.ppg < 1.5 || m.away.ppg < 1.5) {
+                return []; 
             }
 
             const avgTG = (m.home.TG + m.away.TG) / 2;
@@ -251,7 +253,7 @@
         function renderMatches(matches) {
             const container = document.getElementById('results');
             if (matches.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center text-slate-500 italic py-10">No hay partidos filtrados con criterios PRO (Min. 8 GP).</p>';
+                container.innerHTML = '<p class="col-span-full text-center text-slate-500 italic py-10">No hay partidos filtrados con criterios PRO (Min. 8 GP & 1.5 PPG).</p>';
                 return;
             }
 
