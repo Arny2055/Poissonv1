@@ -211,31 +211,28 @@
          */
         function applyFilters(m) {
             const tips = [];
-            
-            // --- REGLAS DE ORO (GUARDIA) ---
-            // 1. Mínimo 8 partidos jugados (GP)
-            // 2. Mínimo 1.5 puntos por partido (PPG) para asegurar equipos competitivos
-            if (m.home.gp < 8 || m.away.gp < 8 || m.home.ppg < 1.5 || m.away.ppg < 1.5) {
-                return []; 
-            }
-
             const avgTG = (m.home.TG + m.away.TG) / 2;
-            
-            // --- FILTRO OVER 2.5 GOLES ---
+            const diffPPG = Math.abs(m.home.ppg - m.away.ppg);
+
+            // --- REGLA DE ORO: MÍNIMO 8 PARTIDOS JUGADOS ---
+            if (m.home.gp < 8 || m.away.gp < 8) return [];
+
+            // --- FILTRO PRO (OVER 2.5) ---
             const condOver25 = 
                 avgTG >= 2.8 &&
                 m.home.over25 >= 55 && m.away.over25 >= 55 &&
                 (m.home.GF >= 1.5 || m.away.GF >= 1.5) &&
-                (m.home.GA >= 1.2 && m.away.GA >= 1.2);
+                (m.home.GA >= 1.2 || m.away.GA >= 1.2) &&
+                m.home.ppg >= 1.5 && m.away.ppg >= 1.5;
 
-            const avoidOver25 = m.home.TG < 2.3 || m.away.TG < 2.3;
+            // Restricción: EVITAR si TG < 2.3 o Over 2.5 < 45%
+            const avoidOver25 = m.home.TG < 2.3 || m.away.TG < 2.3 || m.home.over25 < 45 || m.away.over25 < 45;
 
             if (condOver25 && !avoidOver25) {
                 tips.push({ type: "OVER 2.5", color: "emerald" });
             }
 
-            // --- FILTRO BTTS (AMBOS MARCAN) ---
-            const diffPPG = Math.abs(m.home.ppg - m.away.ppg);
+            // --- FILTRO PRO (BTTS) ---
             const condBTTS = 
                 m.home.GF >= 1.2 && m.away.GF >= 1.2 &&
                 m.home.GA >= 1.0 && m.away.GA >= 1.0 &&
@@ -253,7 +250,7 @@
         function renderMatches(matches) {
             const container = document.getElementById('results');
             if (matches.length === 0) {
-                container.innerHTML = '<p class="col-span-full text-center text-slate-500 italic py-10">No hay partidos filtrados con criterios PRO (Min. 8 GP & 1.5 PPG).</p>';
+                container.innerHTML = '<p class="col-span-full text-center text-slate-500 italic py-10">No hay partidos filtrados con criterios PRO (GP >= 8).</p>';
                 return;
             }
 
@@ -283,20 +280,20 @@
                     <div class="p-4 grid grid-cols-2 gap-4 text-center grow bg-slate-900/20">
                         <div class="bg-slate-900/40 rounded p-2 border border-slate-700/30">
                             <p class="text-[9px] text-slate-500 uppercase font-bold mb-1 tracking-tighter">Local (${m.home.gp} GP)</p>
-                            <p class="text-xs font-mono text-slate-200">TG: ${m.home.TG.toFixed(2)} | PPG: ${m.home.ppg.toFixed(2)}</p>
+                            <p class="text-xs font-mono text-slate-200">GF: ${m.home.GF.toFixed(2)} | PPG: ${m.home.ppg.toFixed(2)}</p>
                             <p class="text-[9px] text-slate-500 mt-2 uppercase italic">O2.5%</p>
-                            <p class="text-xs font-bold ${m.home.over25 >= 60 ? 'text-emerald-400' : 'text-slate-400'}">${m.home.over25}%</p>
+                            <p class="text-xs font-bold ${m.home.over25 >= 55 ? 'text-emerald-400' : 'text-slate-400'}">${m.home.over25}%</p>
                         </div>
                         <div class="bg-slate-900/40 rounded p-2 border border-slate-700/30">
                             <p class="text-[9px] text-slate-500 uppercase font-bold mb-1 tracking-tighter">Visita (${m.away.gp} GP)</p>
-                            <p class="text-xs font-mono text-slate-200">TG: ${m.away.TG.toFixed(2)} | PPG: ${m.away.ppg.toFixed(2)}</p>
+                            <p class="text-xs font-mono text-slate-200">GF: ${m.away.GF.toFixed(2)} | PPG: ${m.away.ppg.toFixed(2)}</p>
                             <p class="text-[9px] text-slate-500 mt-2 uppercase italic">O2.5%</p>
-                            <p class="text-xs font-bold ${m.away.over25 >= 60 ? 'text-emerald-400' : 'text-slate-400'}">${m.away.over25}%</p>
+                            <p class="text-xs font-bold ${m.away.over25 >= 55 ? 'text-emerald-400' : 'text-slate-400'}">${m.away.over25}%</p>
                         </div>
                     </div>
                     <div class="bg-slate-900/90 p-2 text-center border-t border-slate-700/50">
                          <span class="text-[10px] text-emerald-500 font-mono font-bold tracking-widest uppercase">
-                            Promedio Goles: ${((m.home.TG + m.away.TG) / 2).toFixed(2)}
+                            AVG TG: ${((m.home.TG + m.away.TG) / 2).toFixed(2)} | DIFF PPG: ${Math.abs(m.home.ppg - m.away.ppg).toFixed(2)}
                          </span>
                     </div>
                 `;
