@@ -18,12 +18,12 @@
             <p class="text-slate-400">Análisis Avanzado de Goles y BTTS</p>
         </header>
 
-        <div class="bg-slate-800 rounded-xl p-6 shadow-2xl mb-8">
+        <div class="bg-slate-800 rounded-xl p-6 shadow-2xl mb-8 border border-slate-700">
             <label class="block text-sm font-medium mb-2 text-emerald-300">Pegar datos RAW de SoccerStats:</label>
             <textarea 
                 id="rawData" 
-                class="w-full h-64 bg-slate-700 border border-slate-600 rounded-lg p-4 text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                placeholder="Country | 3.5+ | 2.5+ | 1.5+ | GA | GF | TG | PPG | GP | scope | equipo | hora | rival..."></textarea>
+                class="w-full h-64 bg-slate-700 border border-slate-600 rounded-lg p-4 text-xs font-mono focus:ring-2 focus:ring-emerald-500 focus:outline-none text-slate-200"
+                placeholder="Country | 3.5+ | 2.5+ | 1.5+ | GA | GF | TG | PPG | GP..."></textarea>
             
             <button 
                 onclick="processData()"
@@ -53,8 +53,12 @@
                 if (cols.length < 20 || cols[0].toLowerCase().includes('country')) return;
 
                 try {
+                    // MEJORA: Limpieza del dato de Liga/País extraído del hipervínculo
+                    let rawLeague = cols[0];
+                    let leagueName = rawLeague.replace(/[\n\r]/g, ' ').replace(/\s+/g, ' ');
+
                     const matchObj = {
-                        league: cols[0], // Extrae el País/Liga del inicio de la fila
+                        league: leagueName, 
                         homeName: cols[10],
                         awayName: cols[12],
                         time: cols[11] || "23:59",
@@ -152,32 +156,32 @@
                 card.innerHTML = `
                     <div class="p-4 border-b border-slate-700 bg-slate-800/50">
                         <div class="flex justify-between items-start mb-2">
-                            <div>
-                                <span class="block text-[10px] text-emerald-500 font-bold uppercase tracking-wider">${m.league}</span>
-                                <span class="text-xs text-slate-400 font-mono font-bold bg-slate-900 px-2 py-1 rounded inline-block mt-1">${m.time}</span>
+                            <div class="flex-1">
+                                <span class="block text-[10px] text-emerald-500 font-black uppercase tracking-widest leading-tight">${m.league}</span>
+                                <span class="text-xs text-slate-300 font-mono font-bold bg-slate-900 px-2 py-0.5 rounded inline-block mt-1 border border-slate-700">${m.time}</span>
                             </div>
-                            <div class="flex flex-col gap-1 items-end">${tipsHTML}</div>
+                            <div class="flex flex-col gap-1 items-end ml-2">${tipsHTML}</div>
                         </div>
-                        <h3 class="font-bold text-sm text-center uppercase tracking-tight">
+                        <h3 class="font-bold text-sm text-center uppercase tracking-tight mt-2">
                             ${m.homeName} <span class="text-emerald-500 text-xs italic">vs</span> ${m.awayName}
                         </h3>
                     </div>
                     <div class="p-4 grid grid-cols-2 gap-4 text-center grow">
-                        <div class="bg-slate-900/30 rounded p-2">
+                        <div class="bg-slate-900/40 rounded p-2 border border-slate-700/30">
                             <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Local (TG / PPG)</p>
-                            <p class="text-sm font-mono">${m.home.TG.toFixed(2)} / ${m.home.ppg.toFixed(2)}</p>
+                            <p class="text-sm font-mono text-slate-200">${m.home.TG.toFixed(2)} / ${m.home.ppg.toFixed(2)}</p>
                             <p class="text-[10px] text-slate-500 mt-2 uppercase italic">Over 2.5</p>
-                            <p class="text-sm font-bold ${m.home.over25 >= 60 ? 'text-emerald-400' : 'text-slate-300'}">${m.home.over25}%</p>
+                            <p class="text-sm font-bold ${m.home.over25 >= 60 ? 'text-emerald-400' : 'text-slate-400'}">${m.home.over25}%</p>
                         </div>
-                        <div class="bg-slate-900/30 rounded p-2">
+                        <div class="bg-slate-900/40 rounded p-2 border border-slate-700/30">
                             <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Visita (TG / PPG)</p>
-                            <p class="text-sm font-mono">${m.away.TG.toFixed(2)} / ${m.away.ppg.toFixed(2)}</p>
+                            <p class="text-sm font-mono text-slate-200">${m.away.TG.toFixed(2)} / ${m.away.ppg.toFixed(2)}</p>
                             <p class="text-[10px] text-slate-500 mt-2 uppercase italic">Over 2.5</p>
-                            <p class="text-sm font-bold ${m.away.over25 >= 60 ? 'text-emerald-400' : 'text-slate-300'}">${m.away.over25}%</p>
+                            <p class="text-sm font-bold ${m.away.over25 >= 60 ? 'text-emerald-400' : 'text-slate-400'}">${m.away.over25}%</p>
                         </div>
                     </div>
-                    <div class="bg-slate-900/80 p-2 text-center border-t border-slate-700/50">
-                         <span class="text-[10px] text-emerald-500/80 font-mono font-bold tracking-widest uppercase">
+                    <div class="bg-slate-900/90 p-2 text-center border-t border-slate-700/50">
+                         <span class="text-[10px] text-emerald-500 font-mono font-bold tracking-widest uppercase">
                             Promedio Goles: ${((m.home.TG + m.away.TG) / 2).toFixed(2)}
                          </span>
                     </div>
