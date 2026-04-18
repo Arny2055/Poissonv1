@@ -33,8 +33,9 @@ textarea {
 .controls {
     margin: 15px 0;
     display: flex;
-    gap: 10px;
+    gap: 15px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 button {
@@ -50,6 +51,9 @@ input {
     padding: 8px;
     border-radius: 6px;
     border: none;
+    background: #1f2937;
+    color: white;
+    border: 1px solid #374151;
 }
 
 .stats {
@@ -91,8 +95,16 @@ th {
 
 <div class="controls">
     <button onclick="procesar()">Calcular Poisson</button>
-    <label>Filtro Over %:</label>
-    <input type="number" id="filtro" value="0">
+    
+    <div>
+        <label>Mínimo Over %:</label>
+        <input type="number" id="filtro" value="0" style="width: 60px;">
+    </div>
+
+    <div>
+        <label>Filtrar Hora (desde):</label>
+        <input type="time" id="filtroHora" value="00:00">
+    </div>
 </div>
 
 <div class="stats">
@@ -156,7 +168,8 @@ function procesar(){
     const input = document.getElementById("inputData").value.trim();
     const filas = input.split("\n");
     const tbody = document.querySelector("#tabla tbody");
-    const filtro = parseFloat(document.getElementById("filtro").value) || 0;
+    const filtroProb = parseFloat(document.getElementById("filtro").value) || 0;
+    const filtroHora = document.getElementById("filtroHora").value;
 
     tbody.innerHTML = "";
 
@@ -172,10 +185,14 @@ function procesar(){
         try{
 
             let pais = cols[0];
-
             let local = cols[10];
             let hora = cols[11];
             let visitante = cols[12];
+
+            // Filtro de Horario (si la hora del partido es menor a la del filtro, saltar)
+            if (filtroHora !== "00:00") {
+                if (hora < filtroHora) continue;
+            }
 
             // índices fijos según tu estructura
             let GA_local = parseFloat(cols[4]);
@@ -189,7 +206,7 @@ function procesar(){
             let lambda_local = (GF_local + GA_visit) / 2;
             let lambda_visitante = (GF_visit + GA_local) / 2;
 
-            // --- Mejora de Filtros ---
+            // --- Mejora de Filtros Matemáticos ---
             const xgTotal = lambda_local + lambda_visitante;
             const diff = Math.abs(lambda_local - lambda_visitante);
 
@@ -201,7 +218,7 @@ function procesar(){
 
             let over = probOver25(lambda_local, lambda_visitante) * 100;
 
-            if(over < filtro) continue;
+            if(over < filtroProb) continue;
 
             totalPartidos++;
             sumaProb += over;
