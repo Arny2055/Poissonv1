@@ -33,9 +33,8 @@ textarea {
 .controls {
     margin: 15px 0;
     display: flex;
-    gap: 15px;
+    gap: 10px;
     flex-wrap: wrap;
-    align-items: center;
 }
 
 button {
@@ -51,9 +50,6 @@ input {
     padding: 8px;
     border-radius: 6px;
     border: none;
-    background: #1f2937;
-    color: white;
-    border: 1px solid #374151;
 }
 
 .stats {
@@ -95,16 +91,8 @@ th {
 
 <div class="controls">
     <button onclick="procesar()">Calcular Poisson</button>
-    
-    <div>
-        <label>Mínimo Over %:</label>
-        <input type="number" id="filtro" value="0" style="width: 60px;">
-    </div>
-
-    <div>
-        <label>Filtrar Hora (desde):</label>
-        <input type="time" id="filtroHora" value="00:00">
-    </div>
+    <label>Filtro Over %:</label>
+    <input type="number" id="filtro" value="0">
 </div>
 
 <div class="stats">
@@ -168,13 +156,13 @@ function procesar(){
     const input = document.getElementById("inputData").value.trim();
     const filas = input.split("\n");
     const tbody = document.querySelector("#tabla tbody");
-    const filtroProb = parseFloat(document.getElementById("filtro").value) || 0;
-    const filtroHora = document.getElementById("filtroHora").value;
+    const filtro = parseFloat(document.getElementById("filtro").value) || 0;
 
     tbody.innerHTML = "";
 
     let totalPartidos = 0;
     let sumaProb = 0;
+    let resultados = [];
 
     for(let fila of filas){
 
@@ -185,14 +173,10 @@ function procesar(){
         try{
 
             let pais = cols[0];
+
             let local = cols[10];
             let hora = cols[11];
             let visitante = cols[12];
-
-            // Filtro de Horario (si la hora del partido es menor a la del filtro, saltar)
-            if (filtroHora !== "00:00") {
-                if (hora < filtroHora) continue;
-            }
 
             // índices fijos según tu estructura
             let GA_local = parseFloat(cols[4]);
@@ -206,7 +190,7 @@ function procesar(){
             let lambda_local = (GF_local + GA_visit) / 2;
             let lambda_visitante = (GF_visit + GA_local) / 2;
 
-            // --- Mejora de Filtros Matemáticos ---
+            // --- Mejora de Filtros ---
             const xgTotal = lambda_local + lambda_visitante;
             const diff = Math.abs(lambda_local - lambda_visitante);
 
@@ -218,32 +202,50 @@ function procesar(){
 
             let over = probOver25(lambda_local, lambda_visitante) * 100;
 
-            if(over < filtroProb) continue;
+            if(over < filtro) continue;
+
+            // Guardamos en un array para poder ordenar por hora antes de imprimir
+            resultados.push({
+                pais,
+                hora,
+                local,
+                visitante,
+                lambda_local,
+                lambda_visitante,
+                over
+            });
 
             totalPartidos++;
             sumaProb += over;
 
-            let clase = "red";
-            if(over > 60) clase = "green";
-            else if(over >= 50) clase = "yellow";
-
-            let row = `
-                <tr class="${clase}">
-                    <td>${pais}</td>
-                    <td>${hora}</td>
-                    <td>${local}</td>
-                    <td>${visitante}</td>
-                    <td>${lambda_local.toFixed(2)}</td>
-                    <td>${lambda_visitante.toFixed(2)}</td>
-                    <td>${over.toFixed(2)}%</td>
-                </tr>
-            `;
-
-            tbody.innerHTML += row;
-
         }catch(e){
             continue;
         }
+    }
+
+    // --- Lógica de Ordenamiento por Horario (0:00 a 23:59) ---
+    resultados.sort((a, b) => {
+        return a.hora.localeCompare(b.hora);
+    });
+
+    // Renderizar filas ordenadas
+    for(let res of resultados) {
+        let clase = "red";
+        if(res.over > 60) clase = "green";
+        else if(res.over >= 50) clase = "yellow";
+
+        let row = `
+            <tr class="${clase}">
+                <td>${res.pais}</td>
+                <td>${res.hora}</td>
+                <td>${res.local}</td>
+                <td>${res.visitante}</td>
+                <td>${res.lambda_local.toFixed(2)}</td>
+                <td>${res.lambda_visitante.toFixed(2)}</td>
+                <td>${res.over.toFixed(2)}%</td>
+            </tr>
+        `;
+        tbody.innerHTML += row;
     }
 
     document.getElementById("total").innerText = "Partidos: " + totalPartidos;
