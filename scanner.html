@@ -1,340 +1,228 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Poisson Over 2.5 - Multi Partidos</title>
-    <style>
-        :root {
-            --bg-dark: #121212;
-            --card-bg: #1e1e1e;
-            --accent: #00e676;
-            --text-main: #e0e0e0;
-            --text-dim: #b0b0b0;
-            --border: #333;
-            --red: #ff5252;
-            --yellow: #ffd740;
-            --green: #69f0ae;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora Poisson Over 2.5 - Multi Partidos</title>
 
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-dark);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: #e5e7eb;
+    margin: 0;
+    padding: 20px;
+}
 
-        .container {
-            width: 100%;
-            max-width: 1200px;
-        }
+h1 {
+    text-align: center;
+    margin-bottom: 10px;
+}
 
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
+textarea {
+    width: 100%;
+    height: 200px;
+    background: #111827;
+    color: #e5e7eb;
+    border: 1px solid #374151;
+    padding: 10px;
+    border-radius: 6px;
+    resize: vertical;
+}
 
-        h1 { color: var(--accent); margin-bottom: 10px; }
+.controls {
+    margin: 15px 0;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
 
-        .input-section {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            margin-bottom: 20px;
-        }
+button {
+    padding: 10px 15px;
+    border: none;
+    background: #2563eb;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
 
-        textarea {
-            width: 100%;
-            height: 150px;
-            background: #252525;
-            color: var(--accent);
-            border: 1px solid var(--border);
-            border-radius: 4px;
-            padding: 10px;
-            font-family: monospace;
-            resize: vertical;
-            box-sizing: border-box;
-        }
+input {
+    padding: 8px;
+    border-radius: 6px;
+    border: none;
+}
 
-        .controls {
-            display: flex;
-            gap: 15px;
-            margin-top: 15px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
+.stats {
+    margin: 10px 0;
+}
 
-        button {
-            background: var(--accent);
-            color: black;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
+.table-container {
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #374151;
+}
 
-        button:hover { opacity: 0.9; }
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
-        .stats-bar {
-            display: flex;
-            gap: 20px;
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 4px solid var(--accent);
-        }
+th, td {
+    padding: 8px;
+    text-align: center;
+    border-bottom: 1px solid #374151;
+}
 
-        .stat-item { flex: 1; text-align: center; }
-        .stat-val { display: block; font-size: 1.2rem; font-weight: bold; color: var(--accent); }
-        .stat-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; }
+th {
+    background: #1f2937;
+}
 
-        .filter-section {
-            margin-bottom: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        input[type="number"] {
-            background: #252525;
-            border: 1px solid var(--border);
-            color: white;
-            padding: 5px;
-            width: 60px;
-            border-radius: 4px;
-        }
-
-        .table-container {
-            background: var(--card-bg);
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            overflow-x: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-        }
-
-        th {
-            background: #2c2c2c;
-            padding: 12px;
-            font-size: 0.85rem;
-            color: var(--text-dim);
-            border-bottom: 2px solid var(--border);
-        }
-
-        td {
-            padding: 10px 12px;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.9rem;
-        }
-
-        .prob-cell { font-weight: bold; }
-        .low { color: var(--red); }
-        .med { color: var(--yellow); }
-        .high { color: var(--green); }
-
-        tr:hover { background: #252525; }
-
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #1a1a1a; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
-    </style>
+.green { background-color: rgba(34,197,94,0.2); }
+.yellow { background-color: rgba(234,179,8,0.2); }
+.red { background-color: rgba(239,68,68,0.2); }
+</style>
 </head>
+
 <body>
 
-<div class="container">
-    <header>
-        <h1>Calculadora Poisson Over 2.5</h1>
-        <p style="color: var(--text-dim)">Pega los datos directamente desde tu Excel para analizar múltiples partidos</p>
-    </header>
+<h1>⚽ Calculadora Poisson Over 2.5</h1>
 
-    <div class="input-section">
-        <textarea id="rawData" placeholder="Pega aquí los datos (Country... GF... GA...)"></textarea>
-        <div class="controls">
-            <button onclick="processData()">CALCULAR POISSON</button>
-            <div class="filter-section">
-                <span>Filtrar Over 2.5 ></span>
-                <input type="number" id="minProb" value="0" min="0" max="100"> <span>%</span>
-            </div>
-        </div>
-    </div>
+<textarea id="inputData" placeholder="Pega aquí tus partidos..."></textarea>
 
-    <div id="resultsArea" style="display: none;">
-        <div class="stats-bar">
-            <div class="stat-item">
-                <span id="statTotal" class="stat-val">0</span>
-                <span class="stat-label">Partidos</span>
-            </div>
-            <div class="stat-item">
-                <span id="statAvg" class="stat-val">0%</span>
-                <span class="stat-label">Promedio Prob.</span>
-            </div>
-            <div class="stat-item">
-                <span id="statBest" class="stat-val">0</span>
-                <span class="stat-label">> 60% Prob.</span>
-            </div>
-        </div>
+<div class="controls">
+    <button onclick="procesar()">Calcular Poisson</button>
+    <label>Filtro Over %:</label>
+    <input type="number" id="filtro" value="0">
+</div>
 
-        <div class="table-container">
-            <table id="resultsTable">
-                <thead>
-                    <tr>
-                        <th>País</th>
-                        <th>Hora</th>
-                        <th>Local</th>
-                        <th>Visitante</th>
-                        <th>λ Local</th>
-                        <th>λ Vis</th>
-                        <th>Prob. Over 2.5</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-        </div>
-    </div>
+<div class="stats">
+    <span id="total"></span> | 
+    <span id="promedio"></span>
+</div>
+
+<div class="table-container">
+<table id="tabla">
+<thead>
+<tr>
+<th>País</th>
+<th>Hora</th>
+<th>Local</th>
+<th>Visitante</th>
+<th>λ Local</th>
+<th>λ Visitante</th>
+<th>Over 2.5 %</th>
+</tr>
+</thead>
+<tbody></tbody>
+</table>
 </div>
 
 <script>
-    /**
-     * LÓGICA DE PROCESAMIENTO
-     */
-    function processData() {
-        const text = document.getElementById('rawData').value.trim();
-        const minFilter = parseFloat(document.getElementById('minProb').value) || 0;
-        if (!text) return alert("Por favor, pega algunos datos primero.");
 
-        const lines = text.split('\n');
-        const results = [];
-        let totalProbSum = 0;
-        let highProbCount = 0;
+// factorial cache
+const factCache = [1];
+function factorial(n){
+    if(factCache[n]) return factCache[n];
+    let res = factCache[factCache.length-1];
+    for(let i=factCache.length;i<=n;i++){
+        res *= i;
+        factCache[i] = res;
+    }
+    return res;
+}
 
-        lines.forEach(line => {
-            // Dividir por tabulación (formato Excel)
-            const cols = line.split('\t').map(c => c.trim());
-            
-            // Verificación básica de columnas (basado en el formato proporcionado)
-            // Local está en index 10, Visitante en index 12 aprox.
-            // Extraemos datos según la estructura descrita
-            if (cols.length < 15) return; 
+function poisson(k, lambda){
+    return Math.exp(-lambda) * Math.pow(lambda, k) / factorial(k);
+}
 
-            try {
-                const pais = cols[0];
-                const hora = cols[11] || "--:--";
-                const local = cols[10];
-                const visitante = cols[12];
-                
-                // Basado en el formato: GF local (index 5), GA local (index 4)
-                // GF visitante (index 15), GA visitante (index 17)
-                // Nota: Los índices pueden variar ligeramente según si hay columnas ocultas, 
-                // pero calibramos según el ejemplo del prompt.
-                const gfL = parseFloat(cols[5]);
-                const gaL = parseFloat(cols[4]);
-                const gfV = parseFloat(cols[15]);
-                const gaV = parseFloat(cols[17]);
-
-                if (isNaN(gfL) || isNaN(gfV)) return;
-
-                // 1. Calcular Lambdas
-                const lambdaL = (gfL + gaV) / 2;
-                const lambdaV = (gfV + gaL) / 2;
-
-                // 2. Calcular Probabilidad Over 2.5
-                const probOver25 = calculateOver25(lambdaL, lambdaV);
-                const probPercent = (probOver25 * 100).toFixed(2);
-
-                if (parseFloat(probPercent) >= minFilter) {
-                    results.push({
-                        pais, hora, local, visitante, 
-                        lambdaL: lambdaL.toFixed(2), 
-                        lambdaV: lambdaV.toFixed(2), 
-                        prob: parseFloat(probPercent)
-                    });
-                    
-                    totalProbSum += parseFloat(probPercent);
-                    if (probPercent > 60) highProbCount++;
-                }
-            } catch (e) {
-                console.error("Error procesando fila: ", e);
+function probOver25(lh, la){
+    let total = 0;
+    for(let i=0;i<=6;i++){
+        for(let j=0;j<=6;j++){
+            if(i + j <= 2){
+                total += poisson(i, lh) * poisson(j, la);
             }
-        });
-
-        renderTable(results);
-        updateStats(results.length, totalProbSum, highProbCount);
+        }
     }
+    return (1 - total);
+}
 
-    /**
-     * CÁLCULO DISTRIBUCIÓN POISSON
-     * P(k, λ) = (e^-λ * λ^k) / k!
-     */
-    function poisson(k, lambda) {
-        const e = Math.exp(-lambda);
-        let factorial = 1;
-        for (let i = 1; i <= k; i++) factorial *= i;
-        return (Math.pow(lambda, k) * e) / factorial;
-    }
+function esNumero(val){
+    return !isNaN(val) && val !== "";
+}
 
-    function calculateOver25(l1, l2) {
-        // Probabilidades de goles individuales
-        const pL = [poisson(0, l1), poisson(1, l1), poisson(2, l1)];
-        const pV = [poisson(0, l2), poisson(1, l2), poisson(2, l2)];
+function procesar(){
 
-        // Probabilidades Under 2.5:
-        // 0-0, 1-0, 0-1, 1-1, 2-0, 0-2
-        const p00 = pL[0] * pV[0];
-        const p10 = pL[1] * pV[0];
-        const p01 = pL[0] * pV[1];
-        const p11 = pL[1] * pV[1];
-        const p20 = pL[2] * pV[0];
-        const p02 = pL[0] * pV[2];
+    const input = document.getElementById("inputData").value.trim();
+    const filas = input.split("\n");
+    const tbody = document.querySelector("#tabla tbody");
+    const filtro = parseFloat(document.getElementById("filtro").value) || 0;
 
-        const under25 = p00 + p10 + p01 + p11 + p20 + p02;
-        return 1 - under25;
-    }
+    tbody.innerHTML = "";
 
-    /**
-     * INTERFAZ DE USUARIO
-     */
-    function renderTable(data) {
-        const tbody = document.getElementById('tableBody');
-        const area = document.getElementById('resultsArea');
-        tbody.innerHTML = "";
-        area.style.display = "block";
+    let totalPartidos = 0;
+    let sumaProb = 0;
 
-        data.forEach(item => {
-            let colorClass = "low";
-            if (item.prob > 60) colorClass = "high";
-            else if (item.prob >= 50) colorClass = "med";
+    for(let fila of filas){
 
-            const row = `<tr>
-                <td>${item.pais}</td>
-                <td>${item.hora}</td>
-                <td>${item.local}</td>
-                <td>${item.visitante}</td>
-                <td>${item.lambdaL}</td>
-                <td>${item.lambdaV}</td>
-                <td class="prob-cell ${colorClass}">${item.prob}%</td>
-            </tr>`;
+        let cols = fila.split("\t").map(x => x.trim());
+
+        if(cols.length < 20) continue;
+
+        try{
+
+            let pais = cols[0];
+
+            let local = cols[10];
+            let hora = cols[11];
+            let visitante = cols[12];
+
+            // índices fijos según tu estructura
+            let GA_local = parseFloat(cols[4]);
+            let GF_local = parseFloat(cols[5]);
+
+            let GF_visit = parseFloat(cols[15]);
+            let GA_visit = parseFloat(cols[16]);
+
+            if(![GA_local,GF_local,GF_visit,GA_visit].every(esNumero)) continue;
+
+            let lambda_local = (GF_local + GA_visit) / 2;
+            let lambda_visit = (GF_visit + GA_local) / 2;
+
+            let over = probOver25(lambda_local, lambda_visit) * 100;
+
+            if(over < filtro) continue;
+
+            totalPartidos++;
+            sumaProb += over;
+
+            let clase = "red";
+            if(over > 60) clase = "green";
+            else if(over >= 50) clase = "yellow";
+
+            let row = `
+                <tr class="${clase}">
+                    <td>${pais}</td>
+                    <td>${hora}</td>
+                    <td>${local}</td>
+                    <td>${visitante}</td>
+                    <td>${lambda_local.toFixed(2)}</td>
+                    <td>${lambda_visit.toFixed(2)}</td>
+                    <td>${over.toFixed(2)}%</td>
+                </tr>
+            `;
+
             tbody.innerHTML += row;
-        });
+
+        }catch(e){
+            continue;
+        }
     }
 
-    function updateStats(total, sum, high) {
-        document.getElementById('statTotal').innerText = total;
-        document.getElementById('statAvg').innerText = total > 0 ? (sum / total).toFixed(1) + "%" : "0%";
-        document.getElementById('statBest').innerText = high;
-    }
+    document.getElementById("total").innerText = "Partidos: " + totalPartidos;
+    document.getElementById("promedio").innerText = "Promedio Over: " + (totalPartidos ? (sumaProb/totalPartidos).toFixed(2) : 0) + "%";
+}
+
 </script>
 
 </body>
