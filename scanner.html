@@ -187,9 +187,9 @@ function procesar(){
             if(![GA_local,GF_local,GF_visit,GA_visit].every(esNumero)) continue;
 
             let lambda_local = (GF_local + GA_visit) / 2;
-            let lambda_visit = (GF_visit + GA_local) / 2;
+            let lambda_visitante = (GF_visit + GA_local) / 2;
 
-            // 🔥 FILTROS PRO (falsos over)
+            // --- Mejora de Filtros ---
             const xgTotal = lambda_local + lambda_visitante;
             const diff = Math.abs(lambda_local - lambda_visitante);
 
@@ -197,6 +197,7 @@ function procesar(){
             if(lambda_local < 0.9 || lambda_visitante < 0.9) continue;
             if(diff > 1.2) continue;
             if(xgTotal < 2.6 && diff < 0.3) continue;
+            // -------------------------
 
             let over = probOver25(lambda_local, lambda_visitante) * 100;
 
