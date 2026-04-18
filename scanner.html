@@ -189,7 +189,16 @@ function procesar(){
             let lambda_local = (GF_local + GA_visit) / 2;
             let lambda_visit = (GF_visit + GA_local) / 2;
 
-            let over = probOver25(lambda_local, lambda_visit) * 100;
+            // 🔥 FILTROS PRO (falsos over)
+            const xgTotal = lambda_local + lambda_visitante;
+            const diff = Math.abs(lambda_local - lambda_visitante);
+
+            if(xgTotal < 2.3) continue;
+            if(lambda_local < 0.9 || lambda_visitante < 0.9) continue;
+            if(diff > 1.2) continue;
+            if(xgTotal < 2.6 && diff < 0.3) continue;
+
+            let over = probOver25(lambda_local, lambda_visitante) * 100;
 
             if(over < filtro) continue;
 
@@ -207,7 +216,7 @@ function procesar(){
                     <td>${local}</td>
                     <td>${visitante}</td>
                     <td>${lambda_local.toFixed(2)}</td>
-                    <td>${lambda_visit.toFixed(2)}</td>
+                    <td>${lambda_visitante.toFixed(2)}</td>
                     <td>${over.toFixed(2)}%</td>
                 </tr>
             `;
