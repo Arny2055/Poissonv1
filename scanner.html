@@ -171,10 +171,10 @@
 
 <div class="container">
     <h1>BetAGS Statistical Model</h1>
-    <p class="subtitle">Mapeo Corregido: England & Mexico Style</p>
+    <p class="subtitle">Corrección de Lambdas y Mapeo Dinámico</p>
 
     <div class="input-section">
-        <textarea id="rawData" placeholder="Pega los datos aquí..."></textarea>
+        <textarea id="rawData" placeholder="Copia y pega las filas de la tabla aquí..."></textarea>
         <div class="controls">
             <button onclick="processData()">📊 Analizar Partidos</button>
             <button class="secondary" onclick="sortData('finalProb')">🔝 Ordenar Prob</button>
@@ -197,11 +197,11 @@
                     <th>País</th>
                     <th>Hora</th>
                     <th>Partido</th>
-                    <th>λ H</th>
-                    <th>λ A</th>
+                    <th>λ H (GF)</th>
+                    <th>λ A (GF)</th>
                     <th>xG Total</th>
                     <th>Poisson %</th>
-                    <th>U8 Prom %</th>
+                    <th>Histo %</th>
                     <th>Final %</th>
                     <th>Edge</th>
                     <th>Clasificación</th>
@@ -216,14 +216,30 @@
     let matchesData = [];
     let showOnlyHigh = false;
 
-    function factorial(n) { return (n <= 1) ? 1 : n * factorial(n - 1); }
-    function getPoisson(lambda, k) { return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k); }
+    function factorial(n) { 
+        if (n === 0 || n === 1) return 1;
+        let res = 1;
+        for (let i = 2; i <= n; i++) res *= i;
+        return res;
+    }
+
+    function getPoisson(lambda, k) { 
+        return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k); 
+    }
 
     function calculatePoissonOver25(lH, lA) {
         let probUnder3 = 0;
+        // Probabilidades de 0-0, 1-0, 0-1, 2-0, 0-2, 1-1
         const scenarios = [[0,0], [1,0], [0,1], [2,0], [0,2], [1,1]];
-        scenarios.forEach(([h, a]) => { probUnder3 += (getPoisson(lH, h) * getPoisson(lA, a)); });
-        return (1 - probUnder3) * 100;
+        scenarios.forEach(([h, a]) => { 
+            probUnder3 += (getPoisson(lH, h) * getPoisson(lA, a)); 
+        });
+        return Math.max(0, (1 - probUnder3) * 100);
+    }
+
+    function cleanNum(val) {
+        if (!val) return 0;
+        return parseFloat(val.toString().replace('%', '').replace(',', '.')) || 0;
     }
 
     function processData() {
@@ -234,47 +250,49 @@
         const results = [];
 
         lines.forEach(line => {
-            if (!line.includes('\t') || line.toLowerCase().includes('country')) return;
-            
             const cols = line.split('\t').map(c => c.trim());
-            if (cols.length < 15) return;
+            if (cols.length < 9) return;
+
+            // Detectar si es cabecera
+            if (cols[0].toLowerCase().includes('país') || cols[0].toLowerCase().includes('country')) return;
 
             try {
-                // MAPEO CORREGIDO BASADO EN TU ESTRUCTURA:
-                // [0] Country | [2] Over2.5 Home | [3] GA Home | [4] GF Home
-                // [9] Home Team | [10] Time | [11] Away Team
-                // [15] GF Away | [16] GA Away | [20] Over2.5 Away
-
                 const country = cols[0];
-                const over25H = parseFloat(cols[2]) || 0;
-                const gaH = parseFloat(cols[3]) || 0;
-                const gfH = parseFloat(cols[4]) || 0;
-                const teamH = cols[9];
-                const time = cols[10];
-                const teamA = cols[11];
-                const gfA = parseFloat(cols[15]) || 0;
-                const gaA = parseFloat(cols[16]) || 0;
-                const over25A = parseFloat(cols[20]) || 0;
-
-                const lambdaH = (gfH + gaA) / 2;
-                const lambdaA = (gfA + gaH) / 2;
+                const teamH = cols[1];
+                const time = cols[2];
+                
+                // Mapeo basado en tu ejemplo visual:
+                // Λ H suele ser el GF del Local, Λ A el GF del Visitante
+                // Si los valores son > 5, asumimos que son totales de "Last 8" y dividimos por 8
+                let rawLH = cleanNum(cols[3]);
+                let rawLA = cleanNum(cols[4]);
+                
+                // Corrección de Lambda: Si es un total de goles (ej. 14.4), normalizar a promedio por partido
+                const lambdaH = rawLH > 5 ? rawLH / 8 : rawLH;
+                const lambdaA = rawLA > 5 ? rawLA / 8 : rawLA;
+                
                 const totalXG = lambdaH + lambdaA;
 
+                // Poisson puro
                 const poissonProb = calculatePoissonOver25(lambdaH, lambdaA);
-                const historicalAvg = (over25H + over25A) / 2;
-                const finalProb = (poissonProb * 0.7) + (historicalAvg * 0.3);
+                
+                // Porcentaje histórico (U8 PROM % o similar en columna 7 u 8)
+                const historicalAvg = cleanNum(cols[7]) || cleanNum(cols[8]); 
+
+                // Algoritmo Final
+                const finalProb = (poissonProb * 0.6) + (historicalAvg * 0.4);
                 const edge = finalProb - historicalAvg;
 
                 let rank = 'LOW';
                 let rankClass = 'low';
-                if (finalProb >= 65) { rank = '🔥 HIGH'; rankClass = 'high'; }
+                if (finalProb >= 70) { rank = '🔥 HIGH'; rankClass = 'high'; }
                 else if (finalProb >= 55) { rank = '⚡ MEDIUM'; rankClass = 'medium'; }
 
                 results.push({
-                    country, time, teamH, teamA, lambdaH, lambdaA, totalXG,
+                    country, time, teamH, teamA: "vs Opp", lambdaH, lambdaA, totalXG,
                     poissonProb, historicalAvg, finalProb, edge, rank, rankClass
                 });
-            } catch (err) { console.warn(err); }
+            } catch (err) { console.error("Error en línea:", err); }
         });
 
         matchesData = results;
@@ -285,20 +303,20 @@
     function renderTable() {
         const body = document.getElementById('tableBody');
         body.innerHTML = '';
-        const data = showOnlyHigh ? matchesData.filter(m => m.finalProb >= 65) : matchesData;
+        const data = showOnlyHigh ? matchesData.filter(m => m.finalProb >= 70) : matchesData;
 
         data.forEach(m => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${m.country}</td>
                 <td>${m.time}</td>
-                <td><b>${m.teamH} vs ${m.teamA}</b></td>
+                <td><b>${m.teamH}</b></td>
                 <td>${m.lambdaH.toFixed(2)}</td>
                 <td>${m.lambdaA.toFixed(2)}</td>
                 <td style="color:var(--accent); font-weight:bold;">${m.totalXG.toFixed(2)}</td>
                 <td>${m.poissonProb.toFixed(1)}%</td>
                 <td>${m.historicalAvg.toFixed(1)}%</td>
-                <td style="font-weight:900;">${m.finalProb.toFixed(1)}%</td>
+                <td style="font-weight:900; color:var(--accent);">${m.finalProb.toFixed(1)}%</td>
                 <td style="color:${m.edge >= 0 ? '#4ade80' : '#f87171'}">${m.edge.toFixed(1)}%</td>
                 <td><span class="badge ${m.rankClass}">${m.rank}</span></td>
             `;
@@ -307,10 +325,11 @@
     }
 
     function updateSummary() {
+        if (matchesData.length === 0) return;
         document.getElementById('summary').style.display = 'grid';
         document.getElementById('countPicks').innerText = matchesData.length;
-        document.getElementById('countHigh').innerText = matchesData.filter(m => m.finalProb >= 65).length;
-        const avg = matchesData.reduce((acc, curr) => acc + curr.finalProb, 0) / (matchesData.length || 1);
+        document.getElementById('countHigh').innerText = matchesData.filter(m => m.finalProb >= 70).length;
+        const avg = matchesData.reduce((acc, curr) => acc + curr.finalProb, 0) / matchesData.length;
         document.getElementById('avgProb').innerText = avg.toFixed(1) + '%';
     }
 
