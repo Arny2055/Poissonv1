@@ -35,6 +35,7 @@ textarea {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 button {
@@ -50,6 +51,7 @@ input {
     padding: 8px;
     border-radius: 6px;
     border: none;
+    width: 60px;
 }
 
 .stats {
@@ -93,6 +95,8 @@ th {
     <button onclick="procesar()">Calcular Poisson</button>
     <label>Filtro Over %:</label>
     <input type="number" id="filtro" value="0">
+    <label>Mínimo GP:</label>
+    <input type="number" id="minGP" value="0">
 </div>
 
 <div class="stats">
@@ -157,6 +161,7 @@ function procesar(){
     const filas = input.split("\n");
     const tbody = document.querySelector("#tabla tbody");
     const filtro = parseFloat(document.getElementById("filtro").value) || 0;
+    const minGP = parseFloat(document.getElementById("minGP").value) || 0;
 
     tbody.innerHTML = "";
 
@@ -173,10 +178,16 @@ function procesar(){
         try{
 
             let pais = cols[0];
-
             let local = cols[10];
             let hora = cols[11];
             let visitante = cols[12];
+
+            // Partidos jugados (GP)
+            let gpLocal = parseFloat(cols[3]);
+            let gpVisit = parseFloat(cols[14]);
+
+            // Filtro por GP (Mínimo de partidos jugados)
+            if(gpLocal < minGP || gpVisit < minGP) continue;
 
             // índices fijos según tu estructura
             let GA_local = parseFloat(cols[4]);
@@ -204,7 +215,6 @@ function procesar(){
 
             if(over < filtro) continue;
 
-            // Guardamos en un array para poder ordenar por hora antes de imprimir
             resultados.push({
                 pais,
                 hora,
