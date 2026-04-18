@@ -3,23 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetAGS - Analizador Pro Over 2.5</title>
+    <title>Calculadora Poisson Over 2.5 - Multi Partidos</title>
     <style>
         :root {
-            --bg-color: #0f172a;
-            --card-bg: #1e293b;
-            --text-main: #f8fafc;
-            --text-dim: #94a3b8;
-            --accent: #38bdf8;
-            --high: #22c55e;
-            --medium: #eab308;
-            --low: #ef4444;
-            --border: #334155;
+            --bg-dark: #121212;
+            --card-bg: #1e1e1e;
+            --accent: #00e676;
+            --text-main: #e0e0e0;
+            --text-dim: #b0b0b0;
+            --border: #333;
+            --red: #ff5252;
+            --yellow: #ffd740;
+            --green: #69f0ae;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-dark);
             color: var(--text-main);
             margin: 0;
             padding: 20px;
@@ -30,312 +30,312 @@
 
         .container {
             width: 100%;
-            max-width: 1300px;
+            max-width: 1200px;
         }
 
-        h1 {
+        header {
             text-align: center;
-            color: var(--accent);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: var(--text-dim);
             margin-bottom: 30px;
-            font-size: 0.9rem;
         }
+
+        h1 { color: var(--accent); margin-bottom: 10px; }
 
         .input-section {
             background: var(--card-bg);
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
-            margin-bottom: 30px;
+            border-radius: 8px;
             border: 1px solid var(--border);
+            margin-bottom: 20px;
         }
 
         textarea {
             width: 100%;
-            height: 180px;
-            background: #0f172a;
-            color: #38bdf8;
+            height: 150px;
+            background: #252525;
+            color: var(--accent);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 12px;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 0.85rem;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
             resize: vertical;
             box-sizing: border-box;
         }
 
         .controls {
-            margin-top: 15px;
             display: flex;
-            gap: 10px;
+            gap: 15px;
+            margin-top: 15px;
+            align-items: center;
             flex-wrap: wrap;
         }
 
         button {
             background: var(--accent);
-            color: #0f172a;
+            color: black;
             border: none;
-            padding: 12px 20px;
-            border-radius: 6px;
+            padding: 12px 24px;
+            border-radius: 4px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            font-size: 0.8rem;
+            transition: opacity 0.2s;
         }
 
-        button:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
+        button:hover { opacity: 0.9; }
 
-        button.secondary {
-            background: #334155;
-            color: var(--text-main);
-            border: 1px solid var(--border);
-        }
-
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        .stats-bar {
+            display: flex;
             gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .summary-card {
             background: var(--card-bg);
             padding: 15px;
             border-radius: 8px;
-            text-align: center;
-            border: 1px solid var(--border);
-            border-top: 4px solid var(--accent);
+            margin-bottom: 20px;
+            border-left: 4px solid var(--accent);
         }
 
-        .summary-card b {
-            font-size: 1.8rem;
-            color: var(--text-main);
-            display: block;
+        .stat-item { flex: 1; text-align: center; }
+        .stat-val { display: block; font-size: 1.2rem; font-weight: bold; color: var(--accent); }
+        .stat-label { font-size: 0.8rem; color: var(--text-dim); text-transform: uppercase; }
+
+        .filter-section {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="number"] {
+            background: #252525;
+            border: 1px solid var(--border);
+            color: white;
+            padding: 5px;
+            width: 60px;
+            border-radius: 4px;
         }
 
         .table-container {
-            width: 100%;
-            overflow-x: auto;
             background: var(--card-bg);
-            border-radius: 12px;
+            border-radius: 8px;
+            overflow: hidden;
             border: 1px solid var(--border);
+            overflow-x: auto;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            min-width: 1100px;
         }
 
         th {
-            background: #111827;
-            padding: 15px;
-            font-size: 0.75rem;
+            background: #2c2c2c;
+            padding: 12px;
+            font-size: 0.85rem;
             color: var(--text-dim);
-            text-transform: uppercase;
             border-bottom: 2px solid var(--border);
         }
 
         td {
-            padding: 14px 15px;
+            padding: 10px 12px;
             border-bottom: 1px solid var(--border);
             font-size: 0.9rem;
         }
 
-        .badge {
-            padding: 5px 10px;
-            border-radius: 4px;
-            font-weight: 800;
-            font-size: 0.7rem;
-            display: inline-block;
-        }
+        .prob-cell { font-weight: bold; }
+        .low { color: var(--red); }
+        .med { color: var(--yellow); }
+        .high { color: var(--green); }
 
-        .high { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
-        .medium { background: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid #eab308; }
-        .low { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+        tr:hover { background: #252525; }
+
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1a1a1a; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>BetAGS Statistical Model</h1>
-    <p class="subtitle">Corrección de Lambdas y Mapeo Dinámico</p>
+    <header>
+        <h1>Calculadora Poisson Over 2.5</h1>
+        <p style="color: var(--text-dim)">Pega los datos directamente desde tu Excel para analizar múltiples partidos</p>
+    </header>
 
     <div class="input-section">
-        <textarea id="rawData" placeholder="Copia y pega las filas de la tabla aquí..."></textarea>
+        <textarea id="rawData" placeholder="Pega aquí los datos (Country... GF... GA...)"></textarea>
         <div class="controls">
-            <button onclick="processData()">📊 Analizar Partidos</button>
-            <button class="secondary" onclick="sortData('finalProb')">🔝 Ordenar Prob</button>
-            <button class="secondary" onclick="sortData('totalXG')">⚽ Ordenar xG</button>
-            <button class="secondary" onclick="toggleHighValue()" id="btnFilter">🔥 Solo High Value</button>
-            <button class="secondary" onclick="clearData()" style="color: #f87171;">🗑️ Limpiar</button>
+            <button onclick="processData()">CALCULAR POISSON</button>
+            <div class="filter-section">
+                <span>Filtrar Over 2.5 ></span>
+                <input type="number" id="minProb" value="0" min="0" max="100"> <span>%</span>
+            </div>
         </div>
     </div>
 
-    <div id="summary" class="summary-grid" style="display: none;">
-        <div class="summary-card"><span>Partidos</span><b id="countPicks">0</b></div>
-        <div class="summary-card"><span>High Value</span><b id="countHigh" style="color: var(--high);">0</b></div>
-        <div class="summary-card"><span>Promedio</span><b id="avgProb">0%</b></div>
-    </div>
+    <div id="resultsArea" style="display: none;">
+        <div class="stats-bar">
+            <div class="stat-item">
+                <span id="statTotal" class="stat-val">0</span>
+                <span class="stat-label">Partidos</span>
+            </div>
+            <div class="stat-item">
+                <span id="statAvg" class="stat-val">0%</span>
+                <span class="stat-label">Promedio Prob.</span>
+            </div>
+            <div class="stat-item">
+                <span id="statBest" class="stat-val">0</span>
+                <span class="stat-label">> 60% Prob.</span>
+            </div>
+        </div>
 
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>País</th>
-                    <th>Hora</th>
-                    <th>Partido</th>
-                    <th>λ H (GF)</th>
-                    <th>λ A (GF)</th>
-                    <th>xG Total</th>
-                    <th>Poisson %</th>
-                    <th>Histo %</th>
-                    <th>Final %</th>
-                    <th>Edge</th>
-                    <th>Clasificación</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
+        <div class="table-container">
+            <table id="resultsTable">
+                <thead>
+                    <tr>
+                        <th>País</th>
+                        <th>Hora</th>
+                        <th>Local</th>
+                        <th>Visitante</th>
+                        <th>λ Local</th>
+                        <th>λ Vis</th>
+                        <th>Prob. Over 2.5</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-    let matchesData = [];
-    let showOnlyHigh = false;
-
-    function factorial(n) { 
-        if (n === 0 || n === 1) return 1;
-        let res = 1;
-        for (let i = 2; i <= n; i++) res *= i;
-        return res;
-    }
-
-    function getPoisson(lambda, k) { 
-        return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k); 
-    }
-
-    function calculatePoissonOver25(lH, lA) {
-        let probUnder3 = 0;
-        // Probabilidades de 0-0, 1-0, 0-1, 2-0, 0-2, 1-1
-        const scenarios = [[0,0], [1,0], [0,1], [2,0], [0,2], [1,1]];
-        scenarios.forEach(([h, a]) => { 
-            probUnder3 += (getPoisson(lH, h) * getPoisson(lA, a)); 
-        });
-        return Math.max(0, (1 - probUnder3) * 100);
-    }
-
-    function cleanNum(val) {
-        if (!val) return 0;
-        return parseFloat(val.toString().replace('%', '').replace(',', '.')) || 0;
-    }
-
+    /**
+     * LÓGICA DE PROCESAMIENTO
+     */
     function processData() {
         const text = document.getElementById('rawData').value.trim();
-        if (!text) return;
+        const minFilter = parseFloat(document.getElementById('minProb').value) || 0;
+        if (!text) return alert("Por favor, pega algunos datos primero.");
 
         const lines = text.split('\n');
         const results = [];
+        let totalProbSum = 0;
+        let highProbCount = 0;
 
         lines.forEach(line => {
+            // Dividir por tabulación (formato Excel)
             const cols = line.split('\t').map(c => c.trim());
-            if (cols.length < 9) return;
-
-            // Detectar si es cabecera
-            if (cols[0].toLowerCase().includes('país') || cols[0].toLowerCase().includes('country')) return;
+            
+            // Verificación básica de columnas (basado en el formato proporcionado)
+            // Local está en index 10, Visitante en index 12 aprox.
+            // Extraemos datos según la estructura descrita
+            if (cols.length < 15) return; 
 
             try {
-                const country = cols[0];
-                const teamH = cols[1];
-                const time = cols[2];
+                const pais = cols[0];
+                const hora = cols[11] || "--:--";
+                const local = cols[10];
+                const visitante = cols[12];
                 
-                // Mapeo basado en tu ejemplo visual:
-                // Λ H suele ser el GF del Local, Λ A el GF del Visitante
-                // Si los valores son > 5, asumimos que son totales de "Last 8" y dividimos por 8
-                let rawLH = cleanNum(cols[3]);
-                let rawLA = cleanNum(cols[4]);
-                
-                // Corrección de Lambda: Si es un total de goles (ej. 14.4), normalizar a promedio por partido
-                const lambdaH = rawLH > 5 ? rawLH / 8 : rawLH;
-                const lambdaA = rawLA > 5 ? rawLA / 8 : rawLA;
-                
-                const totalXG = lambdaH + lambdaA;
+                // Basado en el formato: GF local (index 5), GA local (index 4)
+                // GF visitante (index 15), GA visitante (index 17)
+                // Nota: Los índices pueden variar ligeramente según si hay columnas ocultas, 
+                // pero calibramos según el ejemplo del prompt.
+                const gfL = parseFloat(cols[5]);
+                const gaL = parseFloat(cols[4]);
+                const gfV = parseFloat(cols[15]);
+                const gaV = parseFloat(cols[17]);
 
-                // Poisson puro
-                const poissonProb = calculatePoissonOver25(lambdaH, lambdaA);
-                
-                // Porcentaje histórico (U8 PROM % o similar en columna 7 u 8)
-                const historicalAvg = cleanNum(cols[7]) || cleanNum(cols[8]); 
+                if (isNaN(gfL) || isNaN(gfV)) return;
 
-                // Algoritmo Final
-                const finalProb = (poissonProb * 0.6) + (historicalAvg * 0.4);
-                const edge = finalProb - historicalAvg;
+                // 1. Calcular Lambdas
+                const lambdaL = (gfL + gaV) / 2;
+                const lambdaV = (gfV + gaL) / 2;
 
-                let rank = 'LOW';
-                let rankClass = 'low';
-                if (finalProb >= 70) { rank = '🔥 HIGH'; rankClass = 'high'; }
-                else if (finalProb >= 55) { rank = '⚡ MEDIUM'; rankClass = 'medium'; }
+                // 2. Calcular Probabilidad Over 2.5
+                const probOver25 = calculateOver25(lambdaL, lambdaV);
+                const probPercent = (probOver25 * 100).toFixed(2);
 
-                results.push({
-                    country, time, teamH, teamA: "vs Opp", lambdaH, lambdaA, totalXG,
-                    poissonProb, historicalAvg, finalProb, edge, rank, rankClass
-                });
-            } catch (err) { console.error("Error en línea:", err); }
+                if (parseFloat(probPercent) >= minFilter) {
+                    results.push({
+                        pais, hora, local, visitante, 
+                        lambdaL: lambdaL.toFixed(2), 
+                        lambdaV: lambdaV.toFixed(2), 
+                        prob: parseFloat(probPercent)
+                    });
+                    
+                    totalProbSum += parseFloat(probPercent);
+                    if (probPercent > 60) highProbCount++;
+                }
+            } catch (e) {
+                console.error("Error procesando fila: ", e);
+            }
         });
 
-        matchesData = results;
-        renderTable();
-        updateSummary();
+        renderTable(results);
+        updateStats(results.length, totalProbSum, highProbCount);
     }
 
-    function renderTable() {
-        const body = document.getElementById('tableBody');
-        body.innerHTML = '';
-        const data = showOnlyHigh ? matchesData.filter(m => m.finalProb >= 70) : matchesData;
+    /**
+     * CÁLCULO DISTRIBUCIÓN POISSON
+     * P(k, λ) = (e^-λ * λ^k) / k!
+     */
+    function poisson(k, lambda) {
+        const e = Math.exp(-lambda);
+        let factorial = 1;
+        for (let i = 1; i <= k; i++) factorial *= i;
+        return (Math.pow(lambda, k) * e) / factorial;
+    }
 
-        data.forEach(m => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${m.country}</td>
-                <td>${m.time}</td>
-                <td><b>${m.teamH}</b></td>
-                <td>${m.lambdaH.toFixed(2)}</td>
-                <td>${m.lambdaA.toFixed(2)}</td>
-                <td style="color:var(--accent); font-weight:bold;">${m.totalXG.toFixed(2)}</td>
-                <td>${m.poissonProb.toFixed(1)}%</td>
-                <td>${m.historicalAvg.toFixed(1)}%</td>
-                <td style="font-weight:900; color:var(--accent);">${m.finalProb.toFixed(1)}%</td>
-                <td style="color:${m.edge >= 0 ? '#4ade80' : '#f87171'}">${m.edge.toFixed(1)}%</td>
-                <td><span class="badge ${m.rankClass}">${m.rank}</span></td>
-            `;
-            body.appendChild(tr);
+    function calculateOver25(l1, l2) {
+        // Probabilidades de goles individuales
+        const pL = [poisson(0, l1), poisson(1, l1), poisson(2, l1)];
+        const pV = [poisson(0, l2), poisson(1, l2), poisson(2, l2)];
+
+        // Probabilidades Under 2.5:
+        // 0-0, 1-0, 0-1, 1-1, 2-0, 0-2
+        const p00 = pL[0] * pV[0];
+        const p10 = pL[1] * pV[0];
+        const p01 = pL[0] * pV[1];
+        const p11 = pL[1] * pV[1];
+        const p20 = pL[2] * pV[0];
+        const p02 = pL[0] * pV[2];
+
+        const under25 = p00 + p10 + p01 + p11 + p20 + p02;
+        return 1 - under25;
+    }
+
+    /**
+     * INTERFAZ DE USUARIO
+     */
+    function renderTable(data) {
+        const tbody = document.getElementById('tableBody');
+        const area = document.getElementById('resultsArea');
+        tbody.innerHTML = "";
+        area.style.display = "block";
+
+        data.forEach(item => {
+            let colorClass = "low";
+            if (item.prob > 60) colorClass = "high";
+            else if (item.prob >= 50) colorClass = "med";
+
+            const row = `<tr>
+                <td>${item.pais}</td>
+                <td>${item.hora}</td>
+                <td>${item.local}</td>
+                <td>${item.visitante}</td>
+                <td>${item.lambdaL}</td>
+                <td>${item.lambdaV}</td>
+                <td class="prob-cell ${colorClass}">${item.prob}%</td>
+            </tr>`;
+            tbody.innerHTML += row;
         });
     }
 
-    function updateSummary() {
-        if (matchesData.length === 0) return;
-        document.getElementById('summary').style.display = 'grid';
-        document.getElementById('countPicks').innerText = matchesData.length;
-        document.getElementById('countHigh').innerText = matchesData.filter(m => m.finalProb >= 70).length;
-        const avg = matchesData.reduce((acc, curr) => acc + curr.finalProb, 0) / matchesData.length;
-        document.getElementById('avgProb').innerText = avg.toFixed(1) + '%';
+    function updateStats(total, sum, high) {
+        document.getElementById('statTotal').innerText = total;
+        document.getElementById('statAvg').innerText = total > 0 ? (sum / total).toFixed(1) + "%" : "0%";
+        document.getElementById('statBest').innerText = high;
     }
-
-    function sortData(key) { matchesData.sort((a, b) => b[key] - a[key]); renderTable(); }
-    function toggleHighValue() { showOnlyHigh = !showOnlyHigh; renderTable(); }
-    function clearData() { location.reload(); }
 </script>
+
 </body>
 </html>
