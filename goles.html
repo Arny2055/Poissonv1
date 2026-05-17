@@ -272,7 +272,7 @@
             });
             const probFTDist = team.segments.map((s, idx) => {
                 const totalWeight = team.segments.reduce((acc, _, i) => acc + (parseFloat(teamScored[i]) + parseFloat(teamConceded[i]) + parseFloat(leagueAvg[i])), 0);
-                const currentWeight = (parseFloat(teamScored[idx]) + parseFloat(teamConceded[idx]) + parseFloat(leagueAvg[idx]));
+                const currentWeight = (parseFloat(teamScored[idx]) + parseFloat(teamConceded[idx]) + parseFloat(leagueAvg[i]));
                 return totalWeight > 0 ? (over25FTProb * (currentWeight / totalWeight)).toFixed(1) : 0;
             });
             return { teamScored, teamConceded, leagueAvg, probHTDist, probFTDist };
@@ -554,6 +554,16 @@
             
             if (!liga || !home || !away) return;
 
+            // Validación de la condición del xG
+            const ftLambdas = getLambdas(liga, home, away, false);
+            if (ftLambdas) {
+                const diffXg = Math.abs(ftLambdas.h - ftLambdas.a);
+                if (diffXg > 0.8) {
+                    alert(`❌ No se puede enviar el pick: La diferencia de xG es de ${diffXg.toFixed(2)}, lo cual supera el límite máximo permitido de 0.8.`);
+                    return;
+                }
+            }
+
             const { data: { session } } = await _supabase.auth.getSession();
             if (!session) { alert("Inicia sesión para guardar"); return; }
 
@@ -654,6 +664,20 @@
 
         async function enviarPronostico() {
             if (!currentAnalysis) return;
+
+            const liga = document.getElementById('selectLeague').value;
+            const home = document.getElementById('homeTeam').value;
+            const away = document.getElementById('awayTeam').value;
+            
+            // Validación de la condición del xG para el Súper Analizador
+            const ftLambdas = getLambdas(liga, home, away, false);
+            if (ftLambdas) {
+                const diffXg = Math.abs(ftLambdas.h - ftLambdas.a);
+                if (diffXg > 0.8) {
+                    alert(`❌ No se puede enviar el pronóstico: La diferencia de xG es de ${diffXg.toFixed(2)}, lo cual supera el límite máximo permitido de 0.8.`);
+                    return;
+                }
+            }
             
             const { data: { session } } = await _supabase.auth.getSession();
             if (!session) { alert("Inicia sesión para guardar"); return; }
