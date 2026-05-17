@@ -504,7 +504,26 @@
             const container = document.getElementById(`${prefix}OuTable`);
             const xgEl = document.getElementById(`${prefix}XgDisplay`);
             container.innerHTML = "";
-            xgEl.innerHTML = `xG esperado: ${(lambdas.h + lambdas.a).toFixed(2)} goles`;
+            
+            // Cálculo de la diferencia absoluta de xG entre los dos equipos
+            const diffXg = Math.abs(lambdas.h - lambdas.a);
+            let badgesMarkup = "";
+            
+            // Si estamos analizando el Full Time (ft), mostramos la alerta personalizada de tu estrategia
+            if (prefix === 'ft') {
+                if (diffXg <= 0.8) {
+                    badgesMarkup = `<div class="mt-1 inline-block bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">🎯 Diferencia de xG ≤ 0.8: Buen partido para Over 2.5 Real</div>`;
+                } else {
+                    badgesMarkup = `<div class="mt-1 inline-block bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-medium uppercase tracking-wider">⚠️ Diferencia de xG alta (>0.8)</div>`;
+                }
+            }
+
+            xgEl.innerHTML = `
+                <div>xG esperado: <span class="font-bold text-slate-800">${(lambdas.h + lambdas.a).toFixed(2)}</span> goles</div>
+                <div class="text-xs text-slate-500 mt-0.5">Diferencia xG: <span class="font-semibold text-slate-700">${diffXg.toFixed(2)}</span> (L: ${lambdas.h.toFixed(2)} vs V: ${lambdas.a.toFixed(2)})</div>
+                ${badgesMarkup}
+            `;
+            
             lines.forEach(line => {
                 const probOver = calculateOverProb(lambdas, line);
                 let overColorClass = "text-green-600";
