@@ -103,7 +103,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="card p-6 border-t-4 border-green-500">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Full Time (90 min)</h3>
-                    <div id="ftXgDisplay" class="mb-4 text-sm font-medium text-slate-600 space-y-2"></div>
+                    <div id="ftXgDisplay" class="mb-4 text-sm font-medium text-slate-600"></div>
                     <div class="overflow-hidden rounded-lg border border-gray-200">
                         <div class="grid grid-cols-4 grid-header p-2 text-center"><div>Mercado</div><div>Over</div><div>Under</div><div>Acción</div></div>
                         <div id="ftOuTable" class="divide-y divide-gray-100"></div>
@@ -111,7 +111,7 @@
                 </div>
                 <div class="card p-6 border-t-4 border-indigo-500">
                     <h3 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">Half Time (45 min)</h3>
-                    <div id="htXgDisplay" class="mb-4 text-sm font-medium text-slate-600 space-y-2"></div>
+                    <div id="htXgDisplay" class="mb-4 text-sm font-medium text-slate-600"></div>
                     <div class="overflow-hidden rounded-lg border border-gray-200">
                         <div class="grid grid-cols-3 grid-header p-2 text-center"><div>Mercado</div><div>Over</div><div>Under</div></div>
                         <div id="htOuTable" class="divide-y divide-gray-100"></div>
@@ -512,24 +512,15 @@
             // Si estamos analizando el Full Time (ft), mostramos la alerta personalizada de tu estrategia
             if (prefix === 'ft') {
                 if (diffXg <= 0.8) {
-                    badgesMarkup = `<div class="w-full text-center bg-emerald-500 text-white text-xs py-2 px-3 rounded-md font-black uppercase tracking-wider shadow-sm animate-pulse">🎯 DIFERENCIA xG ESTRATÉGICA: ${diffXg.toFixed(2)} (Paso autorizado para Over 2.5 Real)</div>`;
+                    badgesMarkup = `<div class="mt-1 inline-block bg-emerald-100 text-emerald-800 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">🎯 Diferencia de xG ≤ 0.8: Buen partido para Over 2.5 Real</div>`;
                 } else {
-                    badgesMarkup = `<div class="w-full text-center bg-rose-600 text-white text-xs py-2 px-3 rounded-md font-black uppercase tracking-wider shadow-sm">⚠️ ALERTA RIESGO xG: ${diffXg.toFixed(2)} (Diferencia muy alta)</div>`;
+                    badgesMarkup = `<div class="mt-1 inline-block bg-slate-100 text-slate-600 text-[10px] px-2 py-0.5 rounded font-medium uppercase tracking-wider">⚠️ Diferencia de xG alta (>0.8)</div>`;
                 }
             }
 
-            // Diseño ultra visible para la métrica de diferencia de xG
             xgEl.innerHTML = `
-                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-slate-900 text-white p-3 rounded-lg gap-2 shadow">
-                    <div>
-                        <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wide">Diferencia xG Absoluta</span>
-                        <span class="text-2xl font-black text-amber-400 tracking-tight">${diffXg.toFixed(2)}</span>
-                    </div>
-                    <div class="text-left sm:text-right text-xs">
-                        <div class="font-semibold text-slate-300">Total: <span class="text-white font-bold">${(lambdas.h + lambdas.a).toFixed(2)}</span></div>
-                        <div class="text-slate-400">L: ${lambdas.h.toFixed(2)} | V: ${lambdas.a.toFixed(2)}</div>
-                    </div>
-                </div>
+                <div>xG esperado: <span class="font-bold text-slate-800">${(lambdas.h + lambdas.a).toFixed(2)}</span> goles</div>
+                <div class="text-xs text-slate-500 mt-0.5">Diferencia xG: <span class="font-semibold text-slate-700">${diffXg.toFixed(2)}</span> (L: ${lambdas.h.toFixed(2)} vs V: ${lambdas.a.toFixed(2)})</div>
                 ${badgesMarkup}
             `;
             
@@ -562,16 +553,6 @@
             const away = document.getElementById('awayTeam').value;
             
             if (!liga || !home || !away) return;
-
-            // Validación de la condición del xG
-            const ftLambdas = getLambdas(liga, home, away, false);
-            if (ftLambdas) {
-                const diffXg = Math.abs(ftLambdas.h - ftLambdas.a);
-                if (diffXg > 0.8) {
-                    alert(`❌ No se puede enviar el pick: La diferencia de xG es de ${diffXg.toFixed(2)}, lo cual supera el límite máximo permitido de 0.8.`);
-                    return;
-                }
-            }
 
             const { data: { session } } = await _supabase.auth.getSession();
             if (!session) { alert("Inicia sesión para guardar"); return; }
@@ -673,20 +654,6 @@
 
         async function enviarPronostico() {
             if (!currentAnalysis) return;
-
-            const liga = document.getElementById('selectLeague').value;
-            const home = document.getElementById('homeTeam').value;
-            const away = document.getElementById('awayTeam').value;
-            
-            // Validación de la condición del xG para el Súper Analizador
-            const ftLambdas = getLambdas(liga, home, away, false);
-            if (ftLambdas) {
-                const diffXg = Math.abs(ftLambdas.h - ftLambdas.a);
-                if (diffXg > 0.8) {
-                    alert(`❌ No se puede enviar el pronóstico: La diferencia de xG es de ${diffXg.toFixed(2)}, lo cual supera el límite máximo permitido de 0.8.`);
-                    return;
-                }
-            }
             
             const { data: { session } } = await _supabase.auth.getSession();
             if (!session) { alert("Inicia sesión para guardar"); return; }
@@ -710,7 +677,6 @@
             }
         }
 
-        UX / REFACTORING
         function saveMatchSelection() {
             sessionStorage.setItem("selectedMatch", JSON.stringify({
                 liga: document.getElementById('selectLeague').value,
