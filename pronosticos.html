@@ -1,314 +1,330 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Panel de Pronósticos</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
-        .table-container { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
-        th { background-color: #f8fafc; color: #64748b; text-transform: uppercase; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; padding: 12px 16px; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
-        tr:hover { background-color: #f8fafc; }
-        input[type="number"] { width: 70px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; font-weight: bold; }
-        select { border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; font-size: 0.75rem; font-weight: 600; }
-        .status-win { background-color: #dcfce7; color: #166534; }
-        .status-loss { background-color: #fee2e2; color: #991b1b; }
-        .status-pending { background-color: #fef9c3; color: #854d0e; }
-        .stat-card { background: white; padding: 1.25rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-bottom: 4px solid #e2e8f0; }
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Pronósticos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
+        .table-container { overflow-x: auto; background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem; }
+        th { background-color: #f8fafc; color: #64748b; text-transform: uppercase; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.05em; padding: 12px 16px; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        tr:hover { background-color: #f8fafc; }
+        input[type="number"] { width: 70px; border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px 8px; font-weight: bold; }
+        select { border: 1px solid #cbd5e1; border-radius: 4px; padding: 4px; font-size: 0.75rem; font-weight: 600; }
+        .status-win { background-color: #dcfce7; color: #166534; }
+        .status-loss { background-color: #fee2e2; color: #991b1b; }
+        .status-pending { background-color: #fef9c3; color: #854d0e; }
+        .stat-card { background: white; padding: 1.25rem; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-bottom: 4px solid #e2e8f0; }
+        input[type="date"] { border: 1px solid #cbd5e1; border-radius: 4px; padding: 2px 4px; font-size: 0.8rem; font-weight: 600; color: #475569; outline: none; background: transparent; }
+    </style>
 </head>
 <body class="p-4 md:p-8">
-    <div class="max-w-6xl mx-auto">
-        <header class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">Panel de Valor</h1>
-                <p class="text-xs text-slate-500 font-bold uppercase">Gestión de Pronósticos Guardados</p>
-            </div>
-            
-            <div class="flex flex-wrap gap-2">
-                <a href="index.html" class="bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">🎯 1X2 FT/HT</a>
-                <a href="goles.html" class="bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">⚽ Goles O/U</a>
-                <a href="btts.html" class="bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">🔄 BTTS</a>
-                <a href="goles.html" class="bg-slate-800 border border-slate-900 px-3 py-2 rounded-lg shadow-sm text-xs font-bold text-white hover:bg-slate-700 transition-colors">⬅ Volver</a>
-            </div>
-        </header>
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tighter">Panel de Valor</h1>
+                <p class="text-xs text-slate-500 font-bold uppercase">Gestión de Pronósticos Guardados</p>
+            </div>
+            
+            <div class="flex flex-wrap gap-2">
+                <a href="index.html" class="bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">🎯 1X2 FT/HT</a>
+                <a href="goles.html" class="bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">⚽ Goles O/U</a>
+                <a href="btts.html" class="bg-white border border-slate-200 px-3 py-2 rounded-lg shadow-sm text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors">🔄 BTTS</a>
+                <a href="goles.html" class="bg-slate-800 border border-slate-900 px-3 py-2 rounded-lg shadow-sm text-xs font-bold text-white hover:bg-slate-700 transition-colors">⬅ Volver</a>
+            </div>
+        </header>
 
-        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
-            <div class="stat-card border-indigo-500">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">Bank Inicial</span>
-                <input type="number" id="bankInicial" onchange="guardarBankSupabase(this.value)" class="text-xl font-black text-slate-800 w-full bg-transparent outline-none" value="1000">
-            </div>
-            <div class="stat-card border-green-700">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">Bank Final</span>
-                <span id="statBankFinal" class="text-xl font-black text-slate-800">0.00</span>
-            </div>
-            <div class="stat-card border-emerald-500">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">Profit Total</span>
-                <span id="statProfit" class="text-xl font-black text-slate-800">0.00</span>
-            </div>
-            <div class="stat-card border-amber-500">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">Yield (%)</span>
-                <span id="statYield" class="text-xl font-black text-slate-800">0.0%</span>
-            </div>
-            <div class="stat-card border-blue-500">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">Acierto (%)</span>
-                <span id="statWinRate" class="text-xl font-black text-slate-800">0.0%</span>
-            </div>
-            <div class="stat-card border-slate-800">
-                <span class="text-[10px] font-bold text-slate-400 uppercase block">Apuestas</span>
-                <span id="statCount" class="text-xl font-black text-slate-800">0</span>
-            </div>
-        </div>
+        <div class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
+            <div class="stat-card border-indigo-500">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Bank Inicial</span>
+                <input type="number" id="bankInicial" onchange="guardarBankSupabase(this.value)" class="text-xl font-black text-slate-800 w-full bg-transparent outline-none" value="1000">
+            </div>
+            <div class="stat-card border-green-700">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Bank Final</span>
+                <span id="statBankFinal" class="text-xl font-black text-slate-800">0.00</span>
+            </div>
+            <div class="stat-card border-emerald-500">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Profit Total</span>
+                <span id="statProfit" class="text-xl font-black text-slate-800">0.00</span>
+            </div>
+            <div class="stat-card border-amber-500">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Yield (%)</span>
+                <span id="statYield" class="text-xl font-black text-slate-800">0.0%</span>
+            </div>
+            <div class="stat-card border-blue-500">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Acierto (%)</span>
+                <span id="statWinRate" class="text-xl font-black text-slate-800">0.0%</span>
+            </div>
+            <div class="stat-card border-slate-800">
+                <span class="text-[10px] font-bold text-slate-400 uppercase block">Apuestas</span>
+                <span id="statCount" class="text-xl font-black text-slate-800">0</span>
+            </div>
+        </div>
 
-        <div id="loading" class="text-center py-10 text-slate-400 italic">Cargando datos...</div>
-        
-        <div class="table-container hidden" id="mainTable">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Liga</th>
-                        <th>Evento</th>
-                        <th>Prob %</th>
-                        <th>Cuota Justa</th>
-                        <th>Cuota Bookie</th>
-                        <th>Valor (EV)</th>
-                        <th>Estado</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="pronosticosList">
-                </tbody>
-            </table>
-        </div>
-    </div>
+        <div id="loading" class="text-center py-10 text-slate-400 italic">Cargando datos...</div>
+        
+        <div class="table-container hidden" id="mainTable">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Liga</th>
+                        <th>Evento</th>
+                        <th>Prob %</th>
+                        <th>Cuota Justa</th>
+                        <th>Cuota Bookie</th>
+                        <th>Valor (EV)</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="pronosticosList">
+                </tbody>
+            </table>
+        </div>
+    </div>
 
-    <script>
-        // CONFIGURACIÓN SUPABASE
-        const SUPABASE_URL = 'https://idugbbdlyirhzgczpbhu.supabase.co'; 
-        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk'; 
-        
-        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-            auth: { persistSession: true }
-        });
+    <script>
+        // CONFIGURACIÓN SUPABASE
+        const SUPABASE_URL = 'https://idugbbdlyirhzgczpbhu.supabase.co'; 
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlkdWdiYmRseWlyaHpnY3pwYmh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5NDQwNTQsImV4cCI6MjA5MTUyMDA1NH0.hK5A-F6TqzlSd6tc7adVptT6xbJN6lPscnJ1xHlzhFk'; 
+        
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+            auth: { persistSession: true }
+        });
 
-        let localPronosticos = [];
-        let currentUserId = null;
+        let localPronosticos = [];
+        let currentUserId = null;
 
-        async function loadPronosticos() {
-            const { data: { session } } = await _supabase.auth.getSession();
-            const user = session?.user;
+        async function loadPronosticos() {
+            const { data: { session } } = await _supabase.auth.getSession();
+            const user = session?.user;
 
-            if (!user) {
-                document.getElementById('loading').innerHTML = `<div class="p-4 bg-rose-50 text-rose-600 rounded-lg font-bold">⚠️ Sesión no iniciada</div>`;
-                return;
-            }
+            if (!user) {
+                document.getElementById('loading').innerHTML = `<div class="p-4 bg-rose-50 text-rose-600 rounded-lg font-bold">⚠️ Sesión no iniciada</div>`;
+                return;
+            }
 
-            currentUserId = user.id;
+            currentUserId = user.id;
 
-            // Cargar Bank Inicial desde Supabase primero
-            await cargarBankSupabase();
+            // Cargar Bank Inicial desde Supabase primero
+            await cargarBankSupabase();
 
-            const { data, error } = await _supabase.from('pronosticos').select('*').eq('user_id', user.id).order('fecha', { ascending: false });
-            
-            document.getElementById('loading').classList.add('hidden');
-            const table = document.getElementById('mainTable');
-            const container = document.getElementById('pronosticosList');
+            const { data, error } = await _supabase.from('pronosticos').select('*').eq('user_id', user.id).order('fecha', { ascending: false });
+            
+            document.getElementById('loading').classList.add('hidden');
+            const table = document.getElementById('mainTable');
+            const container = document.getElementById('pronosticosList');
 
-            if (error || !data || data.length === 0) {
-                container.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-slate-400">No hay pronósticos registrados.</td></tr>`;
-                table.classList.remove('hidden');
-                return;
-            }
+            if (error || !data || data.length === 0) {
+                container.innerHTML = `<tr><td colspan="9" class="text-center py-10 text-slate-400">No hay pronósticos registrados.</td></tr>`;
+                table.classList.remove('hidden');
+                return;
+            }
 
-            localPronosticos = data;
-            table.classList.remove('hidden');
-            container.innerHTML = '';
+            localPronosticos = data;
+            table.classList.remove('hidden');
+            container.innerHTML = '';
 
-            data.forEach(p => {
-                const prob = parseFloat(p.score);
-                const cuotaJusta = (100 / prob).toFixed(2);
-                const colorProb = prob >= 70 ? 'text-emerald-600' : (prob >= 55 ? 'text-amber-600' : 'text-rose-600');
+            const hoy = new Date();
+            const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
 
-                let claseEstado = "status-pending";
-                if(p.estado === "ganada") claseEstado = "status-win";
-                if(p.estado === "perdida") claseEstado = "status-loss";
+            data.forEach(p => {
+                const prob = parseFloat(p.score);
+                const cuotaJusta = (100 / prob).toFixed(2);
+                const colorProb = prob >= 70 ? 'text-emerald-600' : (prob >= 55 ? 'text-amber-600' : 'text-rose-600');
 
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="whitespace-nowrap font-medium text-slate-500">${new Date(p.fecha).toLocaleDateString()}</td>
-                    <td class="font-bold text-slate-400 text-[10px] uppercase">${p.liga || '---'}</td>
-                    <td class="font-bold text-slate-800">${p.partido}</td>
-                    <td class="font-black ${colorProb}">${prob}%</td>
-                    <td class="font-bold text-slate-600">${cuotaJusta}</td>
-                    <td>
-                        <input type="number" step="0.01" placeholder="0.00" 
-                            value="${p.cuota_bookie || ''}"
-                            onchange="guardarCuota('${p.id}', this.value, ${prob})"
-                            oninput="calcularValor(this, ${prob}, '${p.id}')"
-                            class="focus:ring-2 focus:ring-emerald-500 outline-none">
-                    </td>
-                    <td id="valor-${p.id}" class="font-black text-slate-300">---</td>
-                    <td>
-                        <select onchange="actualizarEstado(this, '${p.id}')" class="${claseEstado}">
-                            <option value="pendiente" ${p.estado === 'pendiente' ? 'selected' : ''} class="bg-white text-slate-800">Pendiente</option>
-                            <option value="ganada" ${p.estado === 'ganada' ? 'selected' : ''} class="bg-white text-slate-800">Ganada</option>
-                            <option value="perdida" ${p.estado === 'perdida' ? 'selected' : ''} class="bg-white text-slate-800">Perdida</option>
-                        </select>
-                    </td>
-                    <td>
-                        <button onclick="eliminarPronostico('${p.id}')" class="text-rose-300 hover:text-rose-600 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                            </svg>
-                        </button>
-                    </td>
-                `;
-                container.appendChild(row);
+                let claseEstado = "status-pending";
+                if(p.estado === "ganada") claseEstado = "status-win";
+                if(p.estado === "perdida") claseEstado = "status-loss";
 
-                if(p.cuota_bookie) {
-                    const fakeInput = { value: p.cuota_bookie };
-                    calcularValor(fakeInput, prob, p.id);
-                }
-            });
+                const fechaISO = p.fecha ? p.fecha.split('T')[0] : '';
+                const esHoy = (fechaISO === hoyStr);
 
-            calculateGlobalStats();
-        }
+                const row = document.createElement('tr');
+                if (esHoy) {
+                    row.className = "bg-amber-50/70 border-l-4 border-amber-500";
+                }
+                row.innerHTML = `
+                    <td class="whitespace-nowrap font-medium text-slate-500">
+                        <input type="date" value="${fechaISO}" onchange="actualizarFecha('${p.id}', this.value)">
+                    </td>
+                    <td class="font-bold text-slate-400 text-[10px] uppercase">${p.liga || '---'}</td>
+                    <td class="font-bold text-slate-800">${p.partido}</td>
+                    <td class="font-black ${colorProb}">${prob}%</td>
+                    <td class="font-bold text-slate-600">${cuotaJusta}</td>
+                    <td>
+                        <input type="number" step="0.01" placeholder="0.00" 
+                            value="${p.cuota_bookie || ''}"
+                            onchange="guardarCuota('${p.id}', this.value, ${prob})"
+                            oninput="calcularValor(this, ${prob}, '${p.id}')"
+                            class="focus:ring-2 focus:ring-emerald-500 outline-none">
+                    </td>
+                    <td id="valor-${p.id}" class="font-black text-slate-300">---</td>
+                    <td>
+                        <select onchange="actualizarEstado(this, '${p.id}')" class="${claseEstado}">
+                            <option value="pendiente" ${p.estado === 'pendiente' ? 'selected' : ''} class="bg-white text-slate-800">Pendiente</option>
+                            <option value="ganada" ${p.estado === 'ganada' ? 'selected' : ''} class="bg-white text-slate-800">Ganada</option>
+                            <option value="perdida" ${p.estado === 'perdida' ? 'selected' : ''} class="bg-white text-slate-800">Perdida</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button onclick="eliminarPronostico('${p.id}')" class="text-rose-300 hover:text-rose-600 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                    </td>
+                `;
+                container.appendChild(row);
 
-        // --- LÓGICA DE SINCRONIZACIÓN DE BANK ---
-        async function cargarBankSupabase() {
-            if (!currentUserId) return;
-            const { data, error } = await _supabase
-                .from('perfiles')
-                .select('bank_inicial')
-                .eq('user_id', currentUserId)
-                .single();
+                if(p.cuota_bookie) {
+                    const fakeInput = { value: p.cuota_bookie };
+                    calcularValor(fakeInput, prob, p.id);
+                }
+            });
 
-            if (data) {
-                document.getElementById('bankInicial').value = data.bank_inicial;
-            } else if (error && error.code === 'PGRST116') {
-                await _supabase.from('perfiles').insert([{ user_id: currentUserId, bank_inicial: 1000 }]);
-            }
-        }
+            calculateGlobalStats();
+        }
 
-        async function guardarBankSupabase(valor) {
-            if (!currentUserId) return;
-            const bank = parseFloat(valor) || 0;
-            
-            const { error } = await _supabase
-                .from('perfiles')
-                .upsert({ user_id: currentUserId, bank_inicial: bank });
+        async function actualizarFecha(id, nuevaFecha) {
+            if (!nuevaFecha) return;
+            await _supabase.from('pronosticos').update({ fecha: nuevaFecha }).eq('id', id);
+            const p = localPronosticos.find(item => item.id === id);
+            if (p) p.fecha = nuevaFecha;
+            loadPronosticos();
+        }
 
-            if (!error) {
-                calculateGlobalStats();
-            } else {
-                console.error("Error guardando bank:", error.message);
-            }
-        }
+        // --- LÓGICA DE SINCRONIZACIÓN DE BANK ---
+        async function cargarBankSupabase() {
+            if (!currentUserId) return;
+            const { data, error } = await _supabase
+                .from('perfiles')
+                .select('bank_inicial')
+                .eq('user_id', currentUserId)
+                .single();
 
-        function calculateGlobalStats() {
-            const bankInit = parseFloat(document.getElementById('bankInicial').value) || 0;
-            let bankActual = bankInit;
-            let profit = 0;
-            let apostadoTotal = 0;
-            let ganadas = 0;
-            let perdidas = 0;
+            if (data) {
+                document.getElementById('bankInicial').value = data.bank_inicial;
+            } else if (error && error.code === 'PGRST116') {
+                await _supabase.from('perfiles').insert([{ user_id: currentUserId, bank_inicial: 1000 }]);
+            }
+        }
 
-            // Ordenar apuestas cronológicamente para el cálculo de interés compuesto
-            const apuestasOrdenadas = [...localPronosticos]
-                .filter(p => p.estado !== 'pendiente' && parseFloat(p.cuota_bookie) > 0)
-                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+        async function guardarBankSupabase(valor) {
+            if (!currentUserId) return;
+            const bank = parseFloat(valor) || 0;
+            
+            const { error } = await _supabase
+                .from('perfiles')
+                .upsert({ user_id: currentUserId, bank_inicial: bank });
 
-            apuestasOrdenadas.forEach(p => {
-                const cuota = parseFloat(p.cuota_bookie);
-                
-                // Stake dinámico = 1% del bank actual en el momento de la apuesta
-                const stake = bankActual * 0.01;
-                apostadoTotal += stake;
+            if (!error) {
+                calculateGlobalStats();
+            } else {
+                console.error("Error guardando bank:", error.message);
+            }
+        }
 
-                if (p.estado === 'ganada') {
-                    const ganancia = (stake * cuota) - stake;
-                    profit += ganancia;
-                    bankActual += ganancia;
-                    ganadas++;
-                } else if (p.estado === 'perdida') {
-                    profit -= stake;
-                    bankActual -= stake;
-                    perdidas++;
-                }
-            });
+        function calculateGlobalStats() {
+            const bankInit = parseFloat(document.getElementById('bankInicial').value) || 0;
+            let bankActual = bankInit;
+            let profit = 0;
+            let apostadoTotal = 0;
+            let ganadas = 0;
+            let perdidas = 0;
 
-            const totalFinalizadas = ganadas + perdidas;
-            const yieldVal = apostadoTotal > 0 ? (profit / apostadoTotal) * 100 : 0;
-            const winRate = totalFinalizadas > 0 ? (ganadas / totalFinalizadas) * 100 : 0;
+            const apuestasOrdenadas = [...localPronosticos]
+                .filter(p => p.estado !== 'pendiente' && parseFloat(p.cuota_bookie) > 0)
+                .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-            // Actualización de UI
-            document.getElementById('statBankFinal').innerText = bankActual.toFixed(2);
-            document.getElementById('statProfit').innerText = profit.toFixed(2);
-            document.getElementById('statProfit').className = `text-xl font-black ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
-            document.getElementById('statYield').innerText = yieldVal.toFixed(1) + "%";
-            document.getElementById('statYield').className = `text-xl font-black ${yieldVal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
-            document.getElementById('statWinRate').innerText = winRate.toFixed(1) + "%";
-            document.getElementById('statCount').innerText = totalFinalizadas;
-        }
+            apuestasOrdenadas.forEach(p => {
+                const cuota = parseFloat(p.cuota_bookie);
+                const stake = bankActual * 0.01;
+                apostadoTotal += stake;
 
-        function calcularValor(input, prob, id) {
-            const cuotaBookie = parseFloat(input.value);
-            const celdaValor = document.getElementById(`valor-${id}`);
-            
-            if (!cuotaBookie || cuotaBookie <= 0) {
-                celdaValor.innerText = "---";
-                celdaValor.className = "font-black text-slate-300";
-                return null;
-            }
+                if (p.estado === 'ganada') {
+                    const ganancia = (stake * cuota) - stake;
+                    profit += ganancia;
+                    bankActual += ganancia;
+                    ganadas++;
+                } else if (p.estado === 'perdida') {
+                    profit -= stake;
+                    bankActual -= stake;
+                    perdidas++;
+                }
+            });
 
-            const ev = ((prob / 100) * cuotaBookie) - 1;
-            const porcentajeValor = (ev * 100).toFixed(1);
-            celdaValor.innerText = porcentajeValor + "%";
-            celdaValor.className = `font-black ${ev > 0 ? 'text-emerald-500' : 'text-rose-400'}`;
-            return porcentajeValor;
-        }
+            const totalFinalizadas = ganadas + perdidas;
+            const yieldVal = apostadoTotal > 0 ? (profit / apostadoTotal) * 100 : 0;
+            const winRate = totalFinalizadas > 0 ? (ganadas / totalFinalizadas) * 100 : 0;
 
-        async function guardarCuota(id, valor, prob) {
-            const cuota = parseFloat(valor) || 0;
-            const evCalc = cuota > 0 ? (((prob / 100) * cuota) - 1) * 100 : 0;
-            
-            await _supabase.from('pronosticos').update({ 
-                cuota_bookie: cuota,
-                valor_ev: parseFloat(evCalc.toFixed(2))
-            }).eq('id', id);
+            document.getElementById('statBankFinal').innerText = bankActual.toFixed(2);
+            document.getElementById('statProfit').innerText = profit.toFixed(2);
+            document.getElementById('statProfit').className = `text-xl font-black ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+            document.getElementById('statYield').innerText = yieldVal.toFixed(1) + "%";
+            document.getElementById('statYield').className = `text-xl font-black ${yieldVal >= 0 ? 'text-emerald-600' : 'text-rose-600'}`;
+            document.getElementById('statWinRate').innerText = winRate.toFixed(1) + "%";
+            document.getElementById('statCount').innerText = totalFinalizadas;
+        }
 
-            const p = localPronosticos.find(item => item.id === id);
-            if(p) p.cuota_bookie = cuota;
-            calculateGlobalStats();
-        }
+        function calcularValor(input, prob, id) {
+            const cuotaBookie = parseFloat(input.value);
+            const celdaValor = document.getElementById(`valor-${id}`);
+            
+            if (!cuotaBookie || cuotaBookie <= 0) {
+                celdaValor.innerText = "---";
+                celdaValor.className = "font-black text-slate-300";
+                return null;
+            }
 
-        async function actualizarEstado(select, id) {
-            const val = select.value;
-            select.className = "";
-            if (val === "ganada") select.classList.add("status-win");
-            else if (val === "perdida") select.classList.add("status-loss");
-            else select.classList.add("status-pending");
+            const ev = ((prob / 100) * cuotaBookie) - 1;
+            const porcentajeValor = (ev * 100).toFixed(1);
+            celdaValor.innerText = porcentajeValor + "%";
+            celdaValor.className = `font-black ${ev > 0 ? 'text-emerald-500' : 'text-rose-400'}`;
+            return porcentajeValor;
+        }
 
-            await _supabase.from('pronosticos').update({ estado: val }).eq('id', id);
+        async function guardarCuota(id, valor, prob) {
+            const cuota = parseFloat(valor) || 0;
+            const evCalc = cuota > 0 ? (((prob / 100) * cuota) - 1) * 100 : 0;
+            
+            await _supabase.from('pronosticos').update({ 
+                cuota_bookie: cuota,
+                valor_ev: parseFloat(evCalc.toFixed(2))
+            }).eq('id', id);
 
-            const p = localPronosticos.find(item => item.id === id);
-            if(p) p.estado = val;
-            calculateGlobalStats();
-        }
+            const p = localPronosticos.find(item => item.id === id);
+            if(p) p.cuota_bookie = cuota;
+            calculateGlobalStats();
+        }
 
-        async function eliminarPronostico(id) {
-            if(!confirm("¿Deseas eliminar este registro?")) return;
-            const { error } = await _supabase.from('pronosticos').delete().eq('id', id);
-            if (!error) location.reload();
-        }
+        async function actualizarEstado(select, id) {
+            const val = select.value;
+            select.className = "";
+            if (val === "ganada") select.classList.add("status-win");
+            else if (val === "perdida") select.classList.add("status-loss");
+            else select.classList.add("status-pending");
 
-        loadPronosticos();
-    </script>
+            await _supabase.from('pronosticos').update({ estado: val }).eq('id', id);
+
+            const p = localPronosticos.find(item => item.id === id);
+            if(p) p.estado = val;
+            calculateGlobalStats();
+        }
+
+        async function eliminarPronostico(id) {
+            if(!confirm("¿Deseas eliminar este registro?")) return;
+            const { error } = await _supabase.from('pronosticos').delete().eq('id', id);
+            if (!error) location.reload();
+        }
+
+        loadPronosticos();
+    </script>
 </body>
 </html>
