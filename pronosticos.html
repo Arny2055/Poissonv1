@@ -130,6 +130,10 @@
             table.classList.remove('hidden');
             container.innerHTML = '';
 
+            // Obtener la fecha de hoy del dispositivo local del usuario sin horas (00:00:00)
+            const hoyDispositivo = new Date();
+            hoyDispositivo.setHours(0, 0, 0, 0);
+
             data.forEach(p => {
                 const prob = parseFloat(p.score);
                 const cuotaJusta = (100 / prob).toFixed(2);
@@ -139,9 +143,19 @@
                 if(p.estado === "ganada") claseEstado = "status-win";
                 if(p.estado === "perdida") claseEstado = "status-loss";
 
+                // Formatear y comparar las fechas para aplicar estilo condicional si coincide con hoy
+                const fechaPartido = new Date(p.fecha);
+                const copiaFechaPartido = new Date(fechaPartido);
+                copiaFechaPartido.setHours(0, 0, 0, 0);
+
+                let claseFecha = "whitespace-nowrap font-medium text-slate-500";
+                if (hoyDispositivo.getTime() === copiaFechaPartido.getTime()) {
+                    claseFecha = "whitespace-nowrap bg-amber-100 text-amber-900 px-2 py-1 rounded-md border border-amber-300 font-black inline-block my-1";
+                }
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
-                    <td class="whitespace-nowrap font-medium text-slate-500">${new Date(p.fecha).toLocaleDateString()}</td>
+                    <td class="whitespace-nowrap"><span class="${claseFecha}">${fechaPartido.toLocaleDateString()}</span></td>
                     <td class="font-bold text-slate-400 text-[10px] uppercase">${p.liga || '---'}</td>
                     <td class="font-bold text-slate-800">${p.partido}</td>
                     <td class="font-black ${colorProb}">${prob}%</td>
