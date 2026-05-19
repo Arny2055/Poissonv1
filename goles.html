@@ -61,9 +61,14 @@
             </div>
             <button onclick="mainCalculation()" class="w-full mt-6 bg-green-600 text-white py-3 px-4 rounded-md hover:bg-green-700 transition font-bold text-lg shadow-lg">ANALIZAR GOLES</button>
             
-            <button onclick="analizarEstrategiaOver()" class="w-full mt-3 bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 transition font-black text-lg shadow-lg">
-                ⭐ SÚPER ANALIZADOR OVER 2.5
-            </button>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                <button onclick="analizarEstrategiaOver()" class="bg-indigo-600 text-white py-3 px-4 rounded-md hover:bg-indigo-700 transition font-black text-lg shadow-lg">
+                    ⭐ SÚPER ANALIZADOR OVER 2.5
+                </button>
+                <button onclick="analizarEstrategiaUnder()" class="bg-rose-600 text-white py-3 px-4 rounded-md hover:bg-rose-700 transition font-black text-lg shadow-lg">
+                    ⭐ SÚPER ANALIZADOR UNDER 2.5
+                </button>
+            </div>
         </div>
 
         <div id="decisionLayerResult" class="hidden mb-6"></div>
@@ -432,6 +437,48 @@
             };
         }
 
+        // NUEVAS FUNCIONES DE MEJORA UNDER 2.5 (USANDO MISMA LÓGICA COHERENTE)
+        function evaluarUnder25Contexto(lambdas, probUnder25) {
+            let score = 0;
+            const xgTotal = lambdas.h + lambdas.a;
+            const probHome = 1 - poisson(0, lambdas.h);
+            const probAway = 1 - poisson(0, lambdas.a);
+
+            // Contención ofensiva real (Poco xG esperado)
+            if (xgTotal < 2.2) score += 25;
+            else if (xgTotal < 2.5) score += 15;
+
+            // Al menos uno de los equipos tiene serias dificultades para anotar
+            if (probHome < 0.65 || probAway < 0.65) score += 25;
+
+            // Probabilidad pura del Under 2.5
+            if (probUnder25 > 60) score += 25;
+            else if (probUnder25 > 55) score += 15;
+
+            // Penalización (riesgo de que sea partido abierto si ambos tienen alta efectividad)
+            if (probHome > 0.75 && probAway > 0.75) score -= 25;
+
+            return Math.max(0, Math.min(100, score));
+        }
+
+        function clasificarUnder25(score) {
+            if (score >= 75) return {
+                tipo: "🔒 ELITE UNDER",
+                accion: "ENTRAR PREMATCH",
+                color: "emerald"
+            };
+            if (score >= 60) return {
+                tipo: "🛡️ BUEN UNDER",
+                accion: "ENTRAR / LIVE",
+                color: "amber"
+            };
+            return {
+                tipo: "❌ EVITAR UNDER",
+                accion: "NO APOSTAR",
+                color: "rose"
+            };
+        }
+
         function mainCalculation() {
             const liga = document.getElementById('selectLeague').value;
             const home = document.getElementById('homeTeam').value;
@@ -446,6 +493,7 @@
             
             const probOver05HT = htLambdas ? calculateOverProb(htLambdas, 0.5) : 0;
             const probOver25FT = ftLambdas ? calculateOverProb(ftLambdas, 2.5) : 0;
+            const probUnder25FT = 100 - probOver25FT;
 
             const homeSegments = getSegmentPercentages(liga, home, 'Time Segment Home', probOver05HT, probOver25FT);
             const awaySegments = getSegmentPercentages(liga, away, 'Time Segment Away', probOver05HT, probOver25FT);
@@ -462,7 +510,7 @@
                 document.getElementById('probIfHomeScores').textContent = calculateOverIfGoal(ftLambdas, 'home', 2.5).toFixed(1) + '%';
                 document.getElementById('probIfAwayScores').textContent = calculateOverIfGoal(ftLambdas, 'away', 2.5).toFixed(1) + '%';
 
-                // INTEGRACIÓN CAPA AVANZADA
+                // INTEGRACIÓN CAPA AVANZADA (Se decide dinámicamente según la última estrategia analizada o por defecto Over)
                 const contextoOver = evaluarOver25Contexto(ftLambdas, probOver25FT);
                 const clasificacion = clasificarOver25(contextoOver);
                 
@@ -635,7 +683,111 @@
                 <div class="p-5 rounded-xl border-2 ${colorClase} shadow-md relative overflow-hidden">
                     <div class="flex justify-between items-start mb-4">
                         <div>
-                            <h4 class="font-black uppercase text-xs mb-1">🔍 Diagnóstico: ${tipoPartido}</h4>
+                            <h4 class="font-black uppercase text-xs mb-1">🔍 Diagnóstico Over: ${tipoPartido}</h4>
+                            <p class="text-lg font-bold leading-tight">Recomendación: ${recomendacion}</p>
+                            <p class="text-xs mt-2 opacity-90 font-medium">${diagnosticoTxt}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-[10px] font-black uppercase opacity-70">Confianza</span>
+                            <span class="text-3xl font-black">${confidence.toFixed(1)}%</span>
+                        </div>
+                    </div>
+                    <button onclick="enviarPronostico()" class="w-full bg-white text-slate-800 border-2 border-slate-300 py-2 rounded font-black uppercase text-xs hover:bg-slate-50 transition">
+                        📥 ENVIAR A MIS PRONÓSTICOS
+                    </button>
+                </div>
+            `;
+            analyzerDiv.classList.remove('hidden');
+        }
+
+        // NUEVA FUNCIÓN PARA EL SÚPER ANALIZADOR UNDER 2.5
+        function analizarEstrategiaUnder() {
+            mainCalculation();
+            const liga = document.getElementById('selectLeague').value;
+            const home = document.getElementById('homeTeam').value;
+            const away = document.getElementById('awayTeam').value;
+            const ftLambdas = getLambdas(liga, home, away, false);
+            const htLambdas = getLambdas(liga, home, away, true);
+            
+            if (!ftLambdas || !htLambdas) return;
+            
+            const probO25 = calculateOverProb(ftLambdas, 2.5);
+            const probU25 = 100 - probO25;
+            const xGTotal = ftLambdas.h + ftLambdas.a;
+            
+            let tipoPartido = "";
+            let recomendacion = "";
+            let diagnosticoTxt = "";
+            let colorClase = "";
+            let confidence = 0;
+
+            // LÓGICA DE CLASIFICACIÓN CORRESPONDIENTE PARA UNDER
+            if (xGTotal <= 2.1 && probU25 >= 58) {
+                tipoPartido = "TIPO A (DEFENSIVO / CERRADO)";
+                recomendacion = "Under 2.5 fuerte";
+                diagnosticoTxt = `Volumen ofensivo muy bajo detectado. El xG total combinado de ${xGTotal.toFixed(2)} y la alta probabilidad de Poisson del ${probU25.toFixed(1)}% sugieren un encuentro táctico y cerrado.`;
+                colorClase = "bg-emerald-100 border-emerald-500 text-emerald-800";
+                confidence = Math.min(probU25 + 10, 99);
+            } 
+            else if (xGTotal <= 2.4 && (ftLambdas.h < 1.1 || ftLambdas.a < 1.1)) {
+                tipoPartido = "TIPO B (INOPERANCIA UNILATERAL)";
+                recomendacion = "Under 2.5 moderado / Live";
+                diagnosticoTxt = `Dificultad de ataque detectada. Uno de los bandos presenta un xG individual < 1.10. El control defensivo del rival neutralizará el trámite regular.`;
+                colorClase = "bg-amber-100 border-amber-500 text-amber-800";
+                confidence = Math.min(probU25 + 5, 85);
+            } 
+            else if (xGTotal > 2.6 && probU25 < 45) {
+                tipoPartido = "TIPO C (ALTA FLUIDEZ)";
+                recomendacion = "No apostar Under";
+                diagnosticoTxt = `Excesivo volumen ofensivo proyectado. Tanto el xG total (${xGTotal.toFixed(2)}) como el modelo matemático desaconsejan buscar líneas inferiores en este emparejamiento.`;
+                colorClase = "bg-rose-100 border-rose-500 text-rose-800";
+                confidence = probU25;
+            } 
+            else {
+                tipoPartido = "ESTÁNDAR / NEUTRAL";
+                recomendacion = "Evaluar en Live";
+                diagnosticoTxt = "Condiciones medias. No se aprecian tendencias defensivas u ofensivas determinantes. Observar ritmo de juego en directo.";
+                colorClase = "bg-slate-100 border-slate-500 text-slate-800";
+                confidence = probU25;
+            }
+
+            // Actualizar la estructura global antes de enviar a Supabase
+            currentAnalysis = {
+                liga, 
+                match: `${home} vs ${away} (${tipoPartido})`, 
+                score: confidence.toFixed(1) 
+            };
+
+            // Inyección de la tarjeta de decisión estructural dinámica con el contexto Under
+            const contextoUnder = evaluarUnder25Contexto(ftLambdas, probU25);
+            const clasificacionU = clasificarUnder25(contextoUnder);
+            const decisionDiv = document.getElementById('decisionLayerResult');
+            decisionDiv.innerHTML = `
+                <div class="card p-6 border-t-4 border-${clasificacionU.color}-500 text-center">
+                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Decisión Estructural Under 2.5</h4>
+                    <div class="flex flex-col md:flex-row items-center justify-around gap-4">
+                        <div>
+                            <span class="block text-4xl font-black text-slate-800">${contextoUnder}%</span>
+                            <span class="text-[10px] font-bold text-slate-500 uppercase">Score de Coherencia</span>
+                        </div>
+                        <div class="px-6 py-2 rounded-full bg-${clasificacionU.color}-100 text-${clasificacionU.color}-700 font-black text-lg">
+                            ${clasificacionU.tipo}
+                        </div>
+                        <div>
+                            <span class="block text-sm font-bold text-slate-700">${clasificacionU.accion}</span>
+                            <span class="text-[10px] text-slate-400 uppercase">Sugerencia de Entrada</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            decisionDiv.classList.remove('hidden');
+
+            const analyzerDiv = document.getElementById('advancedAnalyzerResult');
+            analyzerDiv.innerHTML = `
+                <div class="p-5 rounded-xl border-2 ${colorClase} shadow-md relative overflow-hidden">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h4 class="font-black uppercase text-xs mb-1">🔍 Diagnóstico Under: ${tipoPartido}</h4>
                             <p class="text-lg font-bold leading-tight">Recomendación: ${recomendacion}</p>
                             <p class="text-xs mt-2 opacity-90 font-medium">${diagnosticoTxt}</p>
                         </div>
