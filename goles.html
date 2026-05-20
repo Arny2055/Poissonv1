@@ -653,7 +653,7 @@
             else if (xGTotal >= 2.3 && (ftLambdas.h >= 1.5 || ftLambdas.a >= 1.5)) {
                 tipoPartido = "TIPO B (DESBALANCEADO)";
                 recomendacion = "Over 2.5 moderado / Live";
-                diagnosticoTxt = `Desbalance detectado. Uno de los equipos tiene un xG individual >= 1.50. El valor viene de la superioridad de un bando sobre la defensa rival.`;
+                diagnosticoTxt = `Desbalance detectado. Uno de los equipos tiene un xG individual >= 1.50. El valor viene de la superioridad de un bando sobre la defense rival.`;
                 colorClase = "bg-amber-100 border-amber-500 text-amber-800";
                 confidence = Math.min(probO25 + 5, 85);
             } 
@@ -701,7 +701,7 @@
             analyzerDiv.classList.remove('hidden');
         }
 
-        // NUEVA FUNCIÓN PARA EL SÚPER ANALIZADOR UNDER 2.5
+        // NUEVA FUNCIÓN PARA EL SÚPER ANALIZADOR UNDER 2.5 CORREGIDA (100% - OVER)
         function analizarEstrategiaUnder() {
             mainCalculation();
             const liga = document.getElementById('selectLeague').value;
@@ -759,9 +759,11 @@
                 score: confidence.toFixed(1) 
             };
 
-            // Inyección de la tarjeta de decisión estructural dinámica con el contexto Under
-            const contextoUnder = evaluarUnder25Contexto(ftLambdas, probU25);
+            // CORRECCIÓN MATEMÁTICA: El Score de Coherencia Under se calcula restando 100% menos el Score de Coherencia Over
+            const contextoOver = evaluarOver25Contexto(ftLambdas, probO25);
+            const contextoUnder = 100 - contextoOver;
             const clasificacionU = clasificarUnder25(contextoUnder);
+            
             const decisionDiv = document.getElementById('decisionLayerResult');
             decisionDiv.innerHTML = `
                 <div class="card p-6 border-t-4 border-${clasificacionU.color}-500 text-center">
